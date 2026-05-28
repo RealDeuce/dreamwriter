@@ -62,6 +62,9 @@ The reset vector is at the end of the 1 MiB CPU address space and jumps into
 ROM startup code. Real-mode segment aliases matter; always track `CS`, `DS`,
 `ES`, and `SS` when interpreting near references.
 
+Working notes are split by topic under `docs/`. Start with `docs/README.md`.
+Address, string, and direct branch/call inspection helpers are in `tools/rom2.py`.
+
 ## Boot Path
 
 Startup begins at `C000:0000`:
