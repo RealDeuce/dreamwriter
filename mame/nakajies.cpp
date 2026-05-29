@@ -105,13 +105,20 @@ I/O Map:
        16 = 01 -> ROM file 40000-5ffff
        17 = 00 -> ROM file 60000-7ffff
 
-0020 - unknown
-       Startup writes 0x00.
+0020 - CSiMON monitor-entry/status handshake candidate
+       Normal DreamWriter startup writes 0x00. The high-ROM CSiMON entry stub
+       at file 0x7fdf5 writes 0x20 after it is already running, initializes
+       buzzer/control/USART state, and enters a serial/CS-relative dispatch loop
+       that can reach the CSiMON-88 region around file 0x7c000. Exact hardware
+       role is unknown; no retained power-off path writes this port, and no ROM
+       read/branch on this port has been found.
 
 0030 - control latch mirrored at 6D94
-       Bits 0-2 select the external RS-232 baud-clock divider, bit 4 is set
-       during RS-232 setup, bit 5 is pulsed for Centronics -STB, and bit 7 is
-       toggled by diagnostic commands.
+       Bits 0-2 select the external RS-232 baud-clock divider, bit 3 is pulsed
+       during USART setup, bit 4 is set during RS-232 setup, bit 5 is pulsed
+       for Centronics -STB, and bit 7 is written by diagnostic T/N commands.
+       No confirmed firmware use has been found for bit 6, and no confirmed
+       firmware read of this port has been found.
 
 0040 - Centronics parallel data output latch
        Startup/idle writes 0xff. Printer output writes bytes here.
@@ -122,17 +129,25 @@ I/O Map:
        Firmware writes a 16-bit divisor to 50/51, writes 0x7f to 52 to enable,
        and writes 0xff to 52 to disable.
 
-0060 - IRQ enable/mask register
-       Firmware mirrors writes at 6D4F. The low-level idle path writes 6D4F
-       immediately before sti/hlt; Centronics ACK output clears bit 6 while the
-       byte feeder is active and sets it when the buffer ends.
+0060 - IRQ/source mask latch
+       Firmware mirrors writes at 6D4F. Bits appear active-low and map in
+       ascending vector order: bit 0 = F8, bit 1 = F9, ..., bit 7 = FF. This is
+       reversed from the port 90 active/clear bit order used by this driver.
+       The low-level idle path writes 6D4F immediately before sti/hlt;
+       Centronics ACK output clears bit 6 while the byte feeder is active and
+       sets it when the buffer ends.
 
 0061 - keyboard scan/idle control candidate
-       Keyboard scan helpers write 0xfe and 0xff here. Exact hardware role is
-       still unconfirmed.
+       Keyboard scan helpers write only 0xfe and 0xff here. The row-scan reset
+       helper pulses 0xfe -> 0xff before enabling row IRQs; after repeated empty
+       scans, the row ISR writes 0xfe while switching back to the scan-cycle
+       source. Likely controls or resets the external keyboard row sequencer.
 
-0070 - warm/reset/power transition control candidate
-       Warm diagnostic and auto-off paths write 0x01 before halting in a loop.
+0070 - terminal power/reset transition control candidate
+       The ROM only writes 0x01 here, immediately before a terminal loop. Warm
+       diagnostic, auto-off, and RTC alarm fallback paths converge here after
+       retained-state checksum and RTC alarm setup. Likely hands control to
+       external power/reset sequencing logic rather than acting as a normal IRQ.
 
 0090 - interrupt source clear
        b7 clears irq vector f8
@@ -151,7 +166,7 @@ I/O Map:
        b3 - main battery low, active high
        b2 - CR2032 memory-retention battery low, active high
        b1 - Centronics BUSY, active high
-       b5,b0 - unknown
+       b5,b0 - no confirmed firmware consumer found
 
 00B0 - keyboard row input
        Returns the row selected by the keyboard scan state.
@@ -162,7 +177,11 @@ I/O Map:
 
 00D0-00DF - RTC register block
        MAME maps this to RP5C01. Firmware reads/writes D0-DC as 4-bit BCD
-       time/date registers and uses DD-DF as RTC control/mode registers.
+       time/date registers. DD is the RP5C01 mode register, DE is test, and
+       DF is reset. The retained power transition selects the next scheduler or
+       WORLD CLOCK daily alarm, programs mode-1 alarm fields, enables the alarm
+       bit in DD, writes 0x01 to port 70, then loops. The RTC alarm output is
+       not yet wired in this driver.
 
 
 IRQ 0xF8:

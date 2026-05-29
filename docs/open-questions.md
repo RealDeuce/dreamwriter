@@ -43,8 +43,10 @@
 14. Confirm the RS-232 baud-clock source. Firmware behavior matches an
     8251/8251A-compatible USART at data port `0xC0` and status/control port
     `0xC1`, likely a NEC uPD71051, with baud selected by port `0x30` bits
-    `0..2`. Hardware evidence says RTS/CTS and DTR are present, DTR duplicates
-    RTS, and there is no CD/carrier-detect signal.
+    `0..2`; port `0x30` bit `0x08` is also pulsed during USART setup and may
+    reset or load nearby baud-clock glue. Hardware evidence says RTS/CTS and
+    DTR are present, DTR duplicates RTS, and there is no CD/carrier-detect
+    signal.
 15. Confirm the physical Centronics and PCMCIA status wiring on port `0xA0`.
     Firmware clearly maps bit `0x02` to Centronics `BUSY`, bit `0x08` to main
     battery low, bit `0x04` to CR2032 retention battery low, bit `0x80` to a
@@ -85,11 +87,12 @@
     handlers. The compact 40x40 icon/label table consumer is now identified;
     remaining work is to name each wrapper, its return-key dispatch, and the
     submenu-specific handler targets.
-26. Confirm the physical RTC chip and control-register semantics. MAME maps
-    ports `0xD0..0xDF` to a Ricoh `RP5C01`, and firmware now clearly treats
-    `0xD0..0xDC` as BCD time/date nibbles, but the exact meaning of the
-    `0xDD..0xDF` control writes and the `0xD6` weekday/status register should
-    be checked against the board or datasheet.
+26. Confirm the physical RTC chip and alarm wiring. MAME maps ports
+    `0xD0..0xDF` to a Ricoh `RP5C01`, and the observed `0xDD..0xDF` control
+    writes now match that device's mode/test/reset registers. The remaining
+    hardware question is whether the RP5C01 alarm output is wired into the
+    power/reset logic, an IRQ source, or both. The `0xD6` weekday/status field
+    also still needs board/datasheet confirmation.
 27. Ask the MAME team how `rp5c01_device` should be initialized for this driver.
     The generic MAME startup path calls `set_rtc_datetime()` for battery-backed
     RTC devices after `nvram_load()`, and `RP5C01` implements both the RTC and
@@ -97,3 +100,9 @@
     manually setting the time/date. Before adding a driver-specific
     `set_current_time()` call, confirm whether this is expected `RP5C01`
     behavior, a driver configuration issue, or a core/device bug.
+28. Determine how the high-ROM `CSiMON-88` monitor path is selected. The entry
+    stub at `FFDF:0005` initializes the USART and dispatches into the CSiMON
+    region around `0xFC000`, but no normal firmware branch to that stub and no
+    ROM read/branch on port `0x20` has been found. Hardware tracing should check
+    whether a fixture strap, reset-vector overlay, or external serial/boot mode
+    can select this monitor.

@@ -489,6 +489,14 @@ Subcommand dispatch from `DC98:B67C`:
 | `F` / `f` | `DC98:AD1B`; display format. |
 | `A` / `a` | `DC98:B457`; daily alarm. |
 
+`DC98:B457` / file `0x67DD7`, the DAILY ALARM handler, edits four rows. Each
+row is stored at `89F2 + row * 0x17`: the first word is minutes after midnight
+or `0xFFFF` for disabled, and the text field begins at `+2`. These rows are not
+just local WORLD CLOCK UI state. `DC98:D3BB`, called from the retained
+power-transition path, scans them after the scheduler alarm table and copies the
+next daily alarm into the low-RAM alarm buffer at `6D41..6D4C` for the RTC alarm
+programmer. Daily alarm selections are marked as `6D4C = 0x0100 + row`.
+
 `DC98:AAD5` / file `0x67455`, the SET TIME/DATE handler, redraws the right
 panel line script at `F104:000C` and the SET TIME/DATE text resource at
 `F116:0000` / file `0x71160`. It reads the current RTC-backed date/time through

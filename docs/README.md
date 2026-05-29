@@ -21,6 +21,7 @@ Start here:
 | [`bitmaps.md`](bitmaps.md) | Confirmed LCD bitmap icons and candidate UI/icon resources. |
 | [`strings.md`](strings.md) | String/resource landmarks for application-level mapping. |
 | [`open-questions.md`](open-questions.md) | Working hypotheses and next traces. |
+| [`reference/csimon.pdf`](reference/csimon.pdf) | CSi-Mon User's Guide v5.0, useful background for the high-ROM `CSiMON-88` monitor code. |
 
 Reusable helpers live in `tools/rom2.py` at the repository root; see
 [`tools/README.md`](../tools/README.md) for the command reference.

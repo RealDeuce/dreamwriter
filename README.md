@@ -87,6 +87,7 @@ the command reference.
 | [`docs/bitmaps.md`](docs/bitmaps.md) | Confirmed LCD bitmap icons and candidate UI/icon resources. |
 | [`docs/strings.md`](docs/strings.md) | String/resource landmarks for application-level mapping. |
 | [`docs/open-questions.md`](docs/open-questions.md) | Working hypotheses and traces still worth resolving. |
+| [`docs/reference/csimon.pdf`](docs/reference/csimon.pdf) | CSi-Mon User's Guide v5.0, useful background for the high-ROM `CSiMON-88` monitor code. |
 | [`tools/README.md`](tools/README.md) | Command reference for `tools/rom2.py`. |
 
 ## Boot Path
@@ -335,8 +336,9 @@ Current high-confidence findings:
 - `DC98:124C` renders the horizontal icon menus from table records containing
   text and bitmap far pointers.
 - `DC98:2B75` is the `ROM CARD` loader for `EROMCARD.X`.
-- RS-232 setup uses an 8251-like control/data interface at `0xC1`/`0xC0`; the
-  Centronics printer path uses data port `0x40` and status bits on `0xA0`.
+- RS-232 setup uses an 8251-like control/data interface at `0xC1`/`0xC0`; port
+  `0x30` selects its baud-clock divider and also carries the Centronics strobe.
+  The printer path uses data port `0x40` and status bits on `0xA0`.
 - Battery warning icons are selected from `C000:4D30` and drawn via the
   `C000:4C39` path, with status helpers around `C000:0A6A`.
 

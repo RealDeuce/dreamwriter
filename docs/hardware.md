@@ -4,6 +4,19 @@
 
 Raw keyboard rows are stored in low RAM at `6D06..6D0F`.
 
+Port `0x61` appears to control or reset the external keyboard row-scan sequencer.
+Only three direct writes have been found, all in keyboard scan code:
+
+```asm
+C000:050F  mov  al,0FE
+C000:0511  out  61,al       ; stop/idle row scan after repeated empty scans
+
+C000:107B  mov  al,0FE
+C000:107D  out  61,al
+C000:107F  mov  al,0FF
+C000:1081  out  61,al       ; pulse before starting/resetting row scan
+```
+
 Keyboard scan ISR excerpt:
 
 ```asm
@@ -23,6 +36,15 @@ C000:053C  call C000:5645
 
 The firmware stores level state, not just key edges. Normal key repeat is
 handled higher up using state around `6EB0..6EB3`.
+
+The scan flow now looks like this:
+
+| Step | Firmware behavior |
+| --- | --- |
+| Scan-cycle IRQ `FA` | `C000:04AE` sets port `0x60` bit `0x04`, then calls `C000:106F`. |
+| Start/reset row scan | `C000:106F` clears port `0x60` bit `0x08`, writes the IRQ/source mask, dummy-reads `0xB0`, pulses port `0x61` from `0xFE` to `0xFF`, and clears row index `[6D29]`. |
+| Row IRQ `FB` | `C000:04D1` reads port `0xB0` into `6D06..6D0F`, using `[6D29]` as the row index. |
+| Empty-idle fallback | After ten full scans with no active row, the ISR writes `0xFE` to port `0x61`, clears port `0x60` bit `0x04`, sets bit `0x08`, and returns to the scan-cycle source. |
 
 MAME models a 10-row, active-high keyboard matrix. The periodic keyboard timer
 currently runs at `X301 / 20480`, or about `960 Hz` from the known 19.66 MHz
@@ -128,20 +150,202 @@ C000:08A2  retf
 | ---: | --- |
 | `0x00` | LCD scanout base select. Boot writes `0x08`. |
 | `0x10..0x17` | Bank select registers for eight 128 KiB CPU windows. Values `0x00..0x07` select ROM banks, and values with bit `0x10` set select RAM. The current MAME patch also enables bit `0x08` as RAM for specific DreamWriter configs that need it for their startup/internal-store windows; for that bit-3-only case the RAM page follows the CPU window. |
-| `0x20` | Startup writes `0x00`. |
-| `0x30` | Control latch mirrored at `[6D94]`. Diagnostic `T`/`N` toggles bit `0x80`; RS-232 setup writes bit `0x10` plus inverted baud index in bits `0..2`; Centronics output pulses bit `0x20` for `-STB`. |
+| `0x20` | CSiMON monitor-entry/status handshake candidate. Normal DreamWriter startup writes `0x00` at `C000:005B`; the high-ROM CSiMON entry stub at `FFDF:0005` writes `0x20` after it is already running. No reads or other confirmed values have been found. |
+| `0x30` | Control latch mirrored at `[6D94]`. Bits `0..2` select the RS-232 baud-clock divider, bit `0x08` is pulsed during USART setup, bit `0x10` is a persistent RS-232 enable/setup bit, bit `0x20` is pulsed for Centronics `-STB`, and diagnostic `T`/`N` temporarily writes bit `0x80`. No confirmed firmware read has been found. |
 | `0x40` | Centronics parallel data output latch. Startup/idle writes `0xFF`. |
 | `0x50..0x52` | Buzzer/tone counter. Firmware writes a 16-bit divisor to `0x50`/`0x51`, writes `0x7F` to `0x52` to enable, and writes `0xFF` to `0x52` to disable. |
 | `0x53` | Timer latch for IRQ `F9`. Firmware writes small counts through `C000:0B3C`; observed values are `0x0A`, `0x56`, and `0x60`. Current MAME models this as a one-shot driven by `X301 / 20480`, so `0x60` expires at almost exactly 10 Hz. The latch value currently looks like a count only, not an interrupt-vector selector. |
 | `0x60` | IRQ/source control register in MAME; firmware mirrors the written value at `[6D4F]`. The idle wait at `C000:4A94` writes `[6D4F]` here immediately before `sti; hlt`; Centronics output clears bit `0x40` while ACK-driven output is active and sets it when the buffer empties. The `F9` timer arm helper clears bit `0x02` here, while its disarm helper sets bit `0x02`, so this port is probably more than a plain IRQ mask. |
-| `0x61` | Keyboard idle path writes `0xFE`. |
-| `0x70` | Warm diagnostic IRQ path writes `0x01` before halting in a loop. |
+| `0x61` | Keyboard row-scan sequencer control candidate. `C000:106F` pulses `0xFE -> 0xFF` when starting/resetting row scanning; the row-scan ISR writes `0xFE` after repeated empty scans while switching back to the scan-cycle source. |
+| `0x70` | Terminal power/reset transition control candidate. The ROM only writes `0x01`, at `C000:0372`, then spins forever. Warm diagnostic, auto-off, and RTC alarm re-arm paths all converge here after saving/checksumming retained state and preparing RTC alarm state. |
 | `0x90` | IRQ active/source clear register in MAME. Bit `n` clears vector `FF-n`; confirmed uses include bit 7 for vector `F8`, bit 5 for keyboard scan-cycle/reset vector `FA`, bit 4 for keyboard row-scan vector `FB`, bit 3 for serial receive vector `FC`, bit 1 for Centronics ACK vector `FE`, and bit 0 for vector `FF`. |
-| `0xA0` | Shared status input. Printer output tests bit `0x02` as Centronics `BUSY`; battery/card helpers test bits `0x04`, `0x08`, `0x10`, `0x40`, and `0x80`. Current battery-warning mapping is bit `0x08` main battery low, bit `0x04` CR2032 retention battery low, and PCMCIA SRAM-card battery low when bit `0x80` is clear and bit `0x10` is clear. Bit `0x40` is likely SRAM-card write-protect. |
+| `0xA0` | Shared status input. Printer output tests bit `0x02` as Centronics `BUSY`; battery/card helpers test bits `0x04`, `0x08`, `0x10`, `0x40`, and `0x80`. Current battery-warning mapping is bit `0x08` main battery low, bit `0x04` CR2032 retention battery low, and PCMCIA SRAM-card battery low when bit `0x80` is clear and bit `0x10` is clear. Bit `0x40` is likely SRAM-card write-protect. No confirmed firmware consumer has been found for bits `0x01` or `0x20`. |
 | `0xB0` | Keyboard row input port; returns the row selected by the keyboard timer state. |
 | `0xC0` | RS-232 USART data register. Firmware writes transmit bytes here and reads receive bytes here. |
 | `0xC1` | RS-232 USART status/control register. Firmware reads status here and writes reset/mode/command bytes here. |
 | `0xD0..0xDF` | RTC register block. MAME maps this range to a Ricoh `RP5C01`; firmware reads/writes `0xD0..0xDC` as 4-bit BCD time/date registers and uses `0xDD..0xDF` as control/mode registers. |
+
+## Port `0x60` IRQ/Source Mask
+
+Port `0x60` appears to be an active-low IRQ/source mask latch mirrored at
+`[6D4F]`. Firmware never reads port `0x60` directly; it updates `[6D4F]`, writes
+the mirror to the port, and uses port `0x90` separately to clear active IRQ
+sources.
+
+The bit order is likely opposite the port `0x90` clear register:
+
+| Port `0x60` bit | Likely vector/source | Evidence |
+| ---: | --- | --- |
+| `0x01` | IRQ `F8` / power-management source | `C000:106A` clears it during keyboard/source reset setup; diagnostic error path writes raw `0x7E`, leaving this bit clear. `C000:0534` temporarily ORs bit `0x01` into the value written during high-level keyboard processing, without updating `[6D4F]`. |
+| `0x02` | IRQ `F9` / `0x53` timer | `C000:0B3C` clears it before writing the timer count to port `0x53`; `C000:0B50` sets it when disarming. |
+| `0x04` | IRQ `FA` / keyboard scan-cycle source | IRQ `FA` handler `C000:04AE` sets it, then calls the keyboard scan reset helper. The row-scan ISR clears it after repeated empty scans. |
+| `0x08` | IRQ `FB` / keyboard row-scan source | `C000:106F` clears it when starting/resetting row scanning. The row-scan ISR sets it after repeated empty scans, apparently switching back to the scan-cycle source. |
+| `0x10` | IRQ `FC` / USART receive-related source | Serial initialization at `C000:0C58` clears bits `0x10` and `0x20`; serial shutdown/idle helper `C000:0D25` sets them. |
+| `0x20` | IRQ `FD` / USART transmit-ready-related source | Same serial initialization/shutdown evidence as bit `0x10`; IRQ `FD` is the short transmit-ready acknowledge handler at `C000:0724`. |
+| `0x40` | IRQ `FE` / Centronics ACK source | Centronics output starter clears this bit before ACK-driven output; IRQ `FE` handler sets it when the byte stream ends. |
+| `0x80` | IRQ `FF` / power or warm diagnostic source | `C000:106A` clears it during source reset setup; diagnostic error path writes raw `0x7E`, leaving it clear. Exact hardware source still needs confirmation. |
+
+This active-low, ascending-vector interpretation explains why the old MAME
+commented mask did not work: MAME stores active IRQ bits in port `0x90` order,
+where bit `0x01` is vector `FF` and bit `0x80` is vector `F8`. Port `0x60`
+appears to use bit `0x01` for vector `F8` and bit `0x80` for vector `FF`, so
+the mask must be bit-reversed before applying it to MAME's current `m_irq_active`
+representation.
+
+## Port `0x30` Control Latch
+
+Port `0x30` appears to be a write-only control latch with its persistent value
+mirrored at `[6D94]`. No confirmed firmware read of port `0x30` has been found;
+the direct `in 0x30` byte patterns inspected so far fall in text/data regions.
+Firmware updates the mirror for persistent RS-232 baud state, but some callers
+write temporary pulse values derived from the mirror without storing them back.
+
+| Port `0x30` bit | Likely role | Evidence |
+| ---: | --- | --- |
+| `0x01..0x04` | RS-232 baud-clock divider select | `C000:0C58` writes `([6D2A] ^ 0xFF) & 0x07` into bits `0..2` while setting bit `0x10`, then stores the result in `[6D94]`. The high-ROM CSiMON entry stub writes `0x11`, matching the documented 9600 8N1 monitor setup under the current baud-divider model. |
+| `0x08` | USART/baud-clock setup strobe candidate | `C000:0C30` writes `[6D94] | 0x08`, delays for four `nop`s, then writes the same value with bit `0x08` clear. `C000:0C58` calls this immediately after programming the baud bits, before the 8251-style command sequence. The CSiMON entry stub performs the same high-then-low pulse. |
+| `0x10` | RS-232 enable/setup state | `C000:0C58` sets this bit while programming serial and stores it in `[6D94]`. `C000:0BDF` clears it when `[6DA5]` counts down to zero, then writes the mirror back to port `0x30`. |
+| `0x20` | Centronics `-STB` pulse | `C000:0920` and IRQ `FE` at `C000:0738` write `[6D94] | 0x20`, delay for four `nop`s, then write the value with bit `0x20` clear after outputting a byte on port `0x40`. |
+| `0x40` | No confirmed firmware use | Searches have not found a confirmed code path that sets or clears this bit. |
+| `0x80` | Diagnostic external-control bit candidate | The diagnostic `T`/`N` commands at `C000:131C..1328` write either `[6D94] & 0x7F` or `[6D94] | 0x80` to port `0x30`, without updating `[6D94]`. The command text labels this area as `Card Attribute` / `COM`, so the physical target is still uncertain. |
+
+## Port `0x70` Power Transition Strobe
+
+Port `0x70` has only one confirmed access in the ROM:
+
+```asm
+C000:0370  mov  al,01
+C000:0372  out  70,al
+C000:0374  jmp  C000:0374
+```
+
+No reads or alternate written values have been found. That makes it look less
+like a multi-bit control register and more like a terminal strobe/latch for
+external power/reset hardware. Several routes converge on this same write:
+
+| Route | Path into `out 0x70,0x01` |
+| --- | --- |
+| Warm/diagnostic IRQ `FF` branch | `C000:02EE` sets warm/diagnostic retained state, disarms the `F9` timer through `C000:0B50`, then jumps to `C000:0370`. |
+| Auto-off / foreground retained transition | Idle loops save a resume target through `C000:4A25`, `4A34`, or `4A43`, then jump to `C000:035D`. |
+| RTC alarm fallback re-arm | `C000:0784` can program the current-minute+1 fallback alarm and jump to `C000:0370`. |
+
+The fuller retained transition at `C000:035D` runs preparation before the port
+write:
+
+```asm
+C000:035D  call C000:0438     ; checksum saved CPU/resume state into [6D83]
+C000:0360  cmp  byte [7036],00
+C000:0367  call C000:044B     ; if [7036] set, checksum 1800:0008..7FFF
+C000:036A  call C000:047D     ; disarm timer, reload auto-off counter, serial cleanup
+C000:036D  call C000:0376     ; select/program next RTC alarm
+C000:0370  out  70,01
+```
+
+`[7036]` is cleared during startup and set by filesystem/storage write-like
+paths, including format/open-write/write/delete-ish handlers. When it is set,
+`C000:044B` computes a checksum over the built-in store window at `1800:0008`
+through `1800:7FFF` and stores the result at `1800:0006` before power
+transition.
+
+The most likely hardware role is therefore "commit retained power transition"
+or "request external reset/wake sequencing", not a normal interrupt source. The
+ROM reaches this write in terminal loops, sometimes after `cli`, so the real
+machine likely relies on external power/reset glue, the power switch, or the RTC
+alarm output to bring the CPU back through reset/warm startup.
+
+## Port `0x20` CSiMON Handshake Candidate
+
+Port `0x20` has only direct writes in early-startup style code. Normal
+DreamWriter startup clears it:
+
+```asm
+C000:0055  mov  al,08
+C000:0057  out  00,al       ; LCD scanout base
+C000:0059  mov  al,00
+C000:005B  out  20,al
+```
+
+A separate high-ROM CSiMON entry stub at physical `0xFFDF5` / file `0x7FDF5`
+writes bit `0x20` instead:
+
+```asm
+FFDF:0005  cli
+...
+FFDF:0041  mov  al,20
+FFDF:0043  out  20,al
+FFDF:0045  mov  al,08
+FFDF:0047  out  00,al
+```
+
+That high-ROM block mirrors the reset/startup bank setup, programs the buzzer,
+toggles port `0x30`, initializes the USART at `0xC0/0xC1`, waits for serial
+input, transmits `0x78` repeatedly, and then enters a small `CS:`-relative
+dispatch/decode loop. With the initial bytes at `FFDF:0000`, that dispatcher
+selects the table entry at `FFDF:0114`, which is a far jump to `FC0A:07FA`
+(physical `0xFC89A` / file `0x7C89A`).
+
+The target region is not anonymous DreamWriter application code. It contains
+strings identifying `CSiMON-88 - Rommed V4.02 (No other software)` and a
+`Copyright (C) 1990-1994 Concurrent Sciences Inc.` notice near physical
+`0xFC0A3`. That makes the high-ROM path look more like an embedded CSiMON
+monitor, manufacturing diagnostic, or fixture-selected loader/debug path than a
+normal user-visible boot feature. No ROM branch from normal startup to
+`FFDF:0005` has been found.
+
+The local [`csimon.pdf`](reference/csimon.pdf) manual is for CSi-Mon v5.0 from
+1998, not the v4.02 `CSiMON-88` image embedded here, so it should be treated as
+a nearby-family reference rather than exact source. It still lines up closely:
+the manual describes CSi-Mon as a Soft-Scope target monitor for embedded
+systems, says ROM/RAM needs are roughly 20K ROM and 8K RAM, lists NEC `V20`
+processor support, lists Intel `8251` UART support, and describes both serial
+and ROM-socket/PromICE communication paths.
+
+The ROM command dispatcher at `FC0A:086A` / physical `0xFC90A` accepts the same
+broad command families described in the v5 manual's command tables:
+execution/breakpoint commands such as `B`, `D`, `S`, `w`, and `x`; memory and
+I/O commands such as `F`, `f`, `I`, `i`, `O`, `o`, `Q`, and `q`; register
+commands `R`/`r`; configuration and version/reset commands `C`, `c`, `E`, `V`,
+`v`, and `z`. The ROM also branches on a few additional or version-specific
+characters (`M`, `X`, `a`, `m`, and some control characters) that still need
+routine-by-routine decoding.
+
+The v5 manual's troubleshooting section says ROMmed monitors should place the
+public `hardware_reset` symbol at the processor's hardware reset address. This
+DreamWriter ROM does not do that for the normal V20 reset vector: `FFFF:0000`
+still jumps through `F8DC:0000` to the DreamWriter firmware. Therefore the
+CSiMON path is probably selected by hardware outside the normal firmware path:
+a fixture strap, ROM-emulator/PromICE style setup, reset-vector overlay, or
+some other board-level mode. For MAME-only testing, the direct entry should be:
+
+```text
+PS = FFDF
+PC = 0005
+```
+
+Do not enter it by setting only the linear debugger `GENPC` while `PS` still
+names the normal reset segment. The entry stub uses `CS:`-relative data at
+`FFDF:0000`, so it needs `CS/PS == FFDF`. The stub leaves the USART configured
+as 9600 8N1 in the current MAME model (`port 0x30 = 0x11`, 8251 mode `0x4E`),
+then transmits `0x78` repeatedly before entering the monitor.
+
+Because the write happens after the high-ROM entry is already executing, and no
+firmware read/branch on port `0x20` has been found, port `0x20` is unlikely to
+be the software-selected trigger for CSiMON. It is more plausibly a handshake or
+status output to external monitor/fixture hardware: normal firmware advertises
+"not in monitor" with `0x00`, while the CSiMON entry advertises "monitor path
+active" with bit `0x20`. The actual selection mechanism still looks external to
+normal firmware.
+
+References:
+
+- Local CSi-Mon User's Guide Version 5.0:
+  [`docs/reference/csimon.pdf`](reference/csimon.pdf)
+- Concurrent UNIX Review, June 1991, "Soft-Scope III Cross Debugger And
+  Software Monitor":
+  <https://jacobfilipp.com/DrDobbs/articles/CUJ/1991/9106/newprod/newprod.htm>
+
+Current evidence does not tie port `0x20` to the retained power-off handoff.
+The `C000:035D`/`out 0x70,0x01` terminal power path never writes it.
 
 ## RTC
 
@@ -198,11 +402,81 @@ C000:09AE  ; write time shadow 6D96..6D9B to ports D0..D5
 C000:09C9  ; write date shadow 6D9C..6DA2 to ports D6..DC
 ```
 
-Before writes, `C000:09EC` emits a small control sequence through `0xDD`,
-`0xDF`, `0xDE`, and `0xDA`; afterwards the write helpers restore `0xDD` to
-`0xF8`. The exact RP5C01 mode/control interpretation should be checked against
-the physical board or a chip datasheet before naming those bits as more than
-firmware-observed control writes.
+The control writes now line up well with MAME's `RP5C01` model. The device only
+uses the low nibble of each written byte, so the firmware's `0xF?` values are
+effectively `0x0?` register values:
+
+| Port | RP5C01 role | Firmware use |
+| ---: | --- | --- |
+| `0xDD` | Mode register: low bits select mode, bit `0x04` enables alarm output, bit `0x08` enables timer advance. | Startup writes `0xF8`, meaning mode 0 with timer enabled. RTC write setup uses `0xF1` and `0xF0` to access mode 1/control state with timer/alarm disabled. Alarm setup uses `0xF9`, then restores `0xF8`. The retained power-off helper ORs in bit `0x04` before leaving, enabling alarm output. |
+| `0xDE` | Test register. | Startup and RTC write setup write `0xF0`, so the test register is cleared. |
+| `0xDF` | Reset register: bit `0x01` resets alarm registers, bit `0x02` is timer reset, bits `0x04`/`0x08` disable the 16 Hz and 1 Hz output gates in MAME's model. | RTC write setup writes `0xFF`. Alarm programming writes `0xFD`, clearing only the timer-reset bit while leaving the alarm reset and output-gate disable bits set. |
+| `0xDA` | Mode 0: month tens. Mode 1: 12/24-hour select. | RTC write setup writes `0x01` while in mode 1, matching 24-hour mode selection. Date writes later write `0xDA` as the month tens nibble while in mode 0. |
+
+Two helpers program mode 1 alarm registers. `C000:0A11` copies low nibbles from
+`6D45..6D4A` into alarm ports `0xD8` down through `0xD2`, skipping weekday port
+`0xD6`; on an RP5C01 those are day, hour, and minute alarm fields. `C000:0A3F`
+programs only the minute alarm fields at `0xD2/0xD3` to current minute + 1,
+wrapping at 60.
+
+The stored-alarm buffer is fed by `DC98:D3BB`, which is called during the
+retained power-transition path. It reads the current date/time through the same
+`DC98:0D2A`/`0D4E` wrappers used by WORLD CLOCK, then scans two user-visible
+alarm sources:
+
+| Source | Storage | Selection marker |
+| --- | --- | --- |
+| Scheduler alarms | Up to `0xC8` records beginning at `82C8`, with date/time words compared against the current date/time. | `6D4C = scheduler index`. |
+| WORLD CLOCK daily alarms | Four rows at `89F2 + row * 0x17`; the first word is minutes after midnight, or `0xFFFF` for disabled. | `6D4C = 0x0100 + row`. |
+
+`DC98:D3BB` writes the next selected alarm into `6D41..6D4C`. `6D41 == 0xFF`
+marks "no pending alarm"; otherwise `6D41..6D46` hold the selected alarm date
+nibbles, `6D47` is copied into the RTC weekday/status shadow before compare,
+`6D48..6D4B` hold the selected alarm time nibbles, and `6D4C` records the
+selected source/index. This means the WORLD CLOCK daily alarm feeds the RTC
+alarm path rather than being only a foreground software compare.
+
+The retained power-transition helper at `C000:0376` temporarily clears the
+timer-enable bit in `0xDD`, checks stored alarm/schedule state, restores the
+timer-enable bit, calls either `C000:0A11` or `C000:0A3F`, then enables the
+alarm bit before returning to the `out 0x70,0x01; jmp $` terminal loop.
+`C000:0A11` is used when the selected scheduler/daily alarm is still in the
+future. If the selected alarm already compares equal to the current RTC
+date/time, or equal by the shorter day/time compare, the helper uses `C000:0A3F`
+to program current minute + 1 instead. That looks like an anti-retrigger or
+short fallback wake while powering down. Together, the ROM behavior strongly
+suggests port `0x70` controls an external power/reset latch and the RP5C01 alarm
+output is intended to wake the unit for scheduled and daily alarms; the remaining
+unknown is the exact external wiring.
+
+The IRQ handlers themselves do not appear to read an alarm-status bit directly.
+The periodic foreground wait loops do, however, check a warm/power-management
+marker that IRQ `FF` can set. In the fall-through branch, `C000:02EE` writes
+`[6809] = 0x1992` and returns with `iret`; in its warm/diagnostic branch it
+prepares retained state and reaches the `out 0x70,0x01` terminal loop. The
+timer-driven idle loops at `C000:4A04`, `C000:4A8D`, and `C000:4B1D` repeatedly
+call `C000:4961`; that helper sets carry when `[680D] == 0` and
+`[6809] == 0x1992`, causing the idle loop to save a resume target and enter the
+retained power-transition path. `[680D]` is set while alarm UI/service code is
+active, so it appears to suppress re-entering that transition while the alarm is
+already being handled. This makes IRQ `FF` part of the warm/power-state
+machinery, not clear evidence that it is the RTC alarm interrupt itself.
+
+After a wake/reset reaches startup code, `C000:0807` calls `C000:0784`; if that
+returns with carry clear, the caller plays the configured power-on buzzer and
+restores the saved screen. `C000:0784` is the deeper RTC alarm discriminator:
+
+| Path | Meaning |
+| --- | --- |
+| `[6D4E] == 0` | Normal stored scheduler/daily alarm path. `C000:0B90` snapshots the RTC and compares the full selected alarm buffer `6D41..6D4B` against current RTC date/time. If that is not equal, `C000:0B7C` compares the shorter day/hour/minute portion. |
+| `[6D4E] != 0` | Current-minute+1 fallback path. `C000:0BAF` snapshots the RTC and checks whether seconds are `00`, apparently to avoid immediately retriggering while the minute fallback is active. |
+
+The likely hardware model is therefore: the RTC alarm output causes external
+power/reset hardware to bring the firmware back through a warm/startup path, and
+the firmware then verifies whether the wake corresponds to a selected
+scheduler/daily alarm or to the fallback minute alarm. If there is a dedicated
+CPU interrupt for the RTC alarm line, it is not obvious from the ROM as a
+handler that reads a status bit.
 
 ## RS-232C USART
 
@@ -488,10 +762,12 @@ reports a card-access failure. Current best read is therefore:
 
 | Port `0xA0` bit | Current interpretation |
 | ---: | --- |
+| `0x01` | No confirmed firmware consumer found. |
 | `0x02` | Centronics `BUSY`, active high. |
 | `0x04` | CR2032 memory-retention battery low, active high. |
 | `0x08` | Main battery low, active high. |
 | `0x10` | PCMCIA SRAM-card battery status, active-low low-battery indication when a card is present. |
+| `0x20` | No confirmed firmware consumer found. |
 | `0x40` | Likely SRAM-card write-protect; `C000:0ACE` sets carry when this bit is set and card write paths report error `0x0B`. |
 | `0x80` | PCMCIA card absent/not-ready gate; `C000:0AC4` sets carry when this bit is set. |
 
@@ -618,6 +894,12 @@ to the same `C000:035D` transition. This timeout route terminates through the
 IRQ `FF`-style `out 0x70,0x01; jmp $` sequence, rather than the IRQ `F8`
 handler's `out 0xDD,0xF8; jmp $` sequence.
 
+Port `0x70` itself is not written throughout the countdown; it is written only
+after the retained transition has saved/checksummed state and programmed the RTC
+alarm. This argues that `0x70` is the final hardware handoff, while ports
+`0x53`, `0x60`, `0xDD..0xDF`, and the retained RAM fields perform the software
+preparation.
+
 Keyboard activity resets the timer in this idle path. `C000:4B2D` checks the
 keyboard/event ring buffer using read/write offsets at `[70E2]` and `[70E3]`;
 if a key/event is available, the caller branches through `C000:4AF2`, reloads
@@ -728,8 +1010,9 @@ MAME does not model a named power key or switch. It exposes a synthetic debug
 input port where host `F8` asserts IRQ vector `F8` and host `F1` asserts IRQ
 vector `FF`.
 
-The firmware handlers make those two vectors look like opposite sides of the
-power path:
+The firmware handlers make `F8` look like the save/suspend side of the power
+path, while `FF` is the warm/diagnostic/power-management side we used in MAME to
+make the copyright path reproducible:
 
 ```asm
 C000:03AE  ; IRQ F8
@@ -743,24 +1026,27 @@ C000:03AE  ; IRQ F8
 C000:02EE  ; IRQ FF
   out 90,01          ; clear IRQ FF source
   inspect [6809] and saved/warm state
-  optional warm/diagnostic setup
-  out 70,01
-  jmp $              ; wait for hardware reset/wake transition
+  common branch: [6809]=1992; sti; iret
+  warm/diagnostic branch: save warm target under 6D79..6D87
+  out 70,01          ; terminal branch only
+  jmp $              ; wait for external power/reset transition
 ```
 
 That fits a physical power control better than a normal scanned keyboard key.
 A latching switch could plausibly present one edge/state as the suspend/save
-interrupt and another as the wake/reset interrupt, with external hardware doing
-the actual power or reset transition while the CPU spins in those terminal
-loops. The exact electrical behavior is still unconfirmed.
+interrupt, with another external line or reset path bringing the machine back
+through the warm/copyright logic. The exact electrical behavior is still
+unconfirmed.
 
 ## Low RAM State
 
 | Address | Meaning seen so far |
 | ---: | --- |
 | `6807` | Cleared on diagnostic chord in warm IRQ path. |
-| `6809` | Startup/warm state marker. Values include `0001`, `1992`, `1995`, `1999`. |
+| `6809` | Startup/warm/power-management state marker. Values include `0001`, `1992`, `1995`, `1999`; IRQ `FF` writes `1992` in its fall-through branch, and periodic idle helper `C000:4961` tests for that value. |
 | `680B` | Active auto power-off countdown. Reloaded from `[6D31]` and decremented in idle paths. |
+| `680D` | Alarm/power service guard. When zero, `C000:4961` allows `[6809] == 0x1992` to force the retained power-transition path; alarm display/service code sets it nonzero while handling the event. |
+| `7036` | Built-in store dirty/checksum-needed flag. Cleared at startup; storage write/format/delete-like paths set it. If nonzero during the `C000:035D` retained transition, `C000:044B` checksums `1800:0008..7FFF` into `1800:0006` before the port `0x70` power handoff. |
 | `6D06..6D0F` | Raw keyboard matrix rows. |
 | `6D28` | Keyboard scan state/idle counter. |
 | `6D29` | Keyboard scan row index. |
@@ -768,6 +1054,7 @@ loops. The exact electrical behavior is still unconfirmed.
 | `6D2F` | Auto power-off period index from WP -> OTHERS -> SYSTEM: `0..6` = `2`, `3`, `5`, `10`, `15`, `20`, `UNLIMITED`. |
 | `6D30` | Power-on buzzer setting: `0..2` = types 1..3, `3` = no buzzer. |
 | `6D31` | Auto power-off countdown reload value, selected from `[6D2F]`; `0` disables timeout. |
+| `6D41..6D4C` | Next alarm selection written by `DC98:D3BB`. `6D41 == 0xFF` means no pending alarm; otherwise date/time BCD nibbles feed the RP5C01 alarm programmer at `C000:0A11`. `6D4C < 0x0100` identifies a scheduler alarm record; `6D4C >= 0x0100` identifies a WORLD CLOCK daily-alarm row. |
 | `6D4F` | Port `0x60` state mirror. |
 | `6D51` | Flags; diagnostic paths clear bit `0x08`. |
 | `6D52` | Battery-warning display state. Values `2..4` select main, CR2032, or PCMCIA SRAM-card battery warning checks; bit `0x80` marks that an icon is currently displayed. |

@@ -85,8 +85,8 @@ short `0x42`-byte startup banner.
 
 No port `0xA0` card-status check appears in this banner/parser path. The
 PCMCIA status helpers that read `0xA0` are in the storage/card routines, while
-the diagnostic `T`/`N` commands here update port `0x30` bit 7 through the
-`[6D94]` control-latch mirror.
+the diagnostic `T`/`N` commands here write port `0x30` bit 7 using temporary
+values derived from the `[6D94]` control-latch mirror.
 
 The parser recognizes command letters including:
 

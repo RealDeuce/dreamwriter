@@ -8,6 +8,7 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | --- | ---: | --- |
 | `FFFF:0000` | `0x7FFF0` | CPU reset vector. Jumps to `F8DC:0000`. |
 | `F8DC:0000` | `0x78DC0` | Reset trampoline. Initializes ports `0x16`/`0x17`, then jumps to `C000:0000`. |
+| `FFDF:0005` | `0x7FDF5` | High-ROM CSiMON monitor/loader entry candidate. Mirrors reset bank setup, writes `0x20` to port `0x20`, initializes buzzer/control/USART state, waits on serial input, sends `0x78` repeatedly, then enters a small `CS:`-relative dispatch/decode loop. With the bytes at `FFDF:0000`, the dispatcher reaches a far jump to `FC0A:07FA` / physical `0xFC89A`, near strings identifying `CSiMON-88 - Rommed V4.02`. Reachability is not yet known. |
 | `C000:0000` | `0x40000` | Main startup entry. Begins with `jmp C000:0029`. |
 | `C000:0006` | `0x40006` | `INT 21h` vector target installed by `C000:0ED6`; jumps to `C000:5098`. |
 | `C000:0009` | `0x40009` | IRQ `F8` stub, jumps to `C000:03AE` for save/suspend context. |
@@ -17,9 +18,13 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:0015` | `0x40015` | IRQ `FC` stub, jumps to `C000:0550`; RS-232 receive path. |
 | `C000:0018` | `0x40018` | IRQ `FD` stub, jumps to `C000:0724`; very short acknowledge/flag-clear handler. |
 | `C000:001B` | `0x4001B` | IRQ `FE` stub, jumps to `C000:0738`; Centronics ACK-driven output path. |
-| `C000:001E` | `0x4001E` | IRQ `FF` stub, jumps to `C000:02EE` wake/reset-ish handler. |
-| `C000:02EE` | `0x402EE` | Warm IRQ path; checks diagnostic chord and sets resume state. |
+| `C000:001E` | `0x4001E` | IRQ `FF` stub, jumps to `C000:02EE` warm/power-management handler. |
+| `C000:02EE` | `0x402EE` | Warm/power-management IRQ path. Checks existing warm markers and diagnostic chord; either sets `[6809]=1992` and returns or prepares warm/diagnostic state before the `out 0x70,0x01` terminal loop. |
+| `C000:035D` | `0x4035D` | Retained power-transition path used by auto-off and related suspend routes. Checksums saved state, prepares RTC alarm/power state, writes `0x01` to port `0x70`, then loops. |
+| `C000:0376` | `0x40376` | RTC alarm/power-off preparation helper. Temporarily disables RTC timer advance, selects a stored alarm or current-minute+1 alarm, then enables the RP5C01 alarm bit. |
 | `C000:03AE` | `0x403AE` | Save/suspend context path. Stores general registers and far return state under `6D65..6D87`. |
+| `C000:044B` | `0x4044B` | Built-in store checksum helper used during retained power transition when `[7036] != 0`. Checksums `1800:0008..7FFF` into `1800:0006`. |
+| `C000:047D` | `0x4047D` | Retained transition cleanup helper. Disarms the `F9` timer, reloads `[680B]` from `[6D31]`, snapshots `[6D4F]`, and performs serial cleanup if receive IRQs are enabled. |
 | `C000:049A` | `0x4049A` | IRQ `F9` acknowledge handler. Clears port `0x90` bit `0x40`, clears `[6DA9]` bit `0x01`, then `iret`. Candidate simple periodic wake source. |
 | `C000:04AE` | `0x404AE` | IRQ `FA` keyboard scan-cycle/reset helper. Updates the IRQ mask and calls `C000:106F` to reset keyboard row scan state. |
 | `C000:04D1` | `0x404D1` | IRQ `FB` keyboard row scan ISR. Reads port `0xB0`, stores rows at `6D06..6D0F`, and calls `C000:5645` after the tenth row. |
@@ -28,8 +33,10 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:0724` | `0x40724` | IRQ `FD` acknowledge handler. Clears port `0x90` bit `0x04`, clears `[70A5]` bit `0x08`, then `iret`. |
 | `C000:0738` | `0x40738` | IRQ `FE` Centronics ACK handler. Clears IRQ source bit `0x02`, emits the next byte from `[6D92]` through port `0x40`, and pulses port `0x30` bit `0x20`. |
 | `C000:077C` | `0x4077C` | Far-call buzzer preview wrapper. Calls `C000:0B16` with `AL` selecting a sound sequence. |
+| `C000:0784` | `0x40784` | Alarm wake discriminator used after warm/startup paths. Checks `[6D4E]`, compares the RTC against the selected alarm buffer, and branches into alarm display or fallback re-arm handling. Can reprogram the minute+1 fallback alarm and jump to the terminal port `0x70` transition. |
 | `C000:07E9` | `0x407E9` | LCD/framebuffer copy candidate, `0x1000 -> 0x94F0`. |
 | `C000:07F4` | `0x407F4` | LCD/framebuffer copy candidate, `0x94F0 -> 0x1000`. |
+| `C000:0807` | `0x40807` | Alarm wake wrapper. Calls `C000:0784`; when an alarm is accepted, plays the configured power-on buzzer and restores the saved screen. |
 | `C000:08E7` | `0x408E7` | Centronics idle helper. Writes `0xFF` to parallel data port `0x40`. |
 | `C000:08EC` | `0x408EC` | Centronics output starter. Enables the ACK-driven path, marks `[6DA4]=1`, and sends the first byte through `C000:0920`. |
 | `C000:08DA` | `0x408DA` | Diagnostic gate on warm path. Calls `C000:1240`. |
@@ -37,6 +44,9 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:096A` | `0x4096A` | Tone helper. Programs sound divisor through ports `0x50`/`0x51`, gates output through `0x52`, and busy-waits for duration. |
 | `C000:09AE` | `0x409AE` | RTC time write helper. Writes BCD shadow bytes `6D96..6D9B` to RTC ports `0xD0..0xD5`. |
 | `C000:09C9` | `0x409C9` | RTC date write helper. Writes BCD shadow bytes `6D9C..6DA2` to RTC ports `0xD6..0xDC`. |
+| `C000:09EC` | `0x409EC` | RTC write setup. Selects RP5C01 mode 1, resets/clears control state, sets 24-hour mode through port `0xDA`, then returns to mode 0 with timer disabled for the caller's BCD writes. |
+| `C000:0A11` | `0x40A11` | Stored RTC alarm programmer. Writes low nibbles from `6D45..6D4A` into RP5C01 mode 1 day/hour/minute alarm registers. |
+| `C000:0A3F` | `0x40A3F` | Short RTC alarm programmer. Writes current minute + 1 into RP5C01 mode 1 minute alarm registers. |
 | `C000:0A6A` | `0x40A6A` | Combined battery-warning status query. Returns `AL=1..3` for main, CR2032 retention, or PCMCIA SRAM-card battery low, or zero when none are active. |
 | `C000:0A93` | `0x40A93` | Main battery low helper. Tests port `0xA0` bit `0x08` twice. |
 | `C000:0AA4` | `0x40AA4` | CR2032 memory-retention battery low helper. Tests port `0xA0` bit `0x04` twice. |
@@ -45,7 +55,11 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:0ACE` | `0x40ACE` | PCMCIA card write-protect helper candidate. Sets carry when port `0xA0` bit `0x40` is set. |
 | `C000:0B16` | `0x40B16` | Table-driven buzzer sequence player used by the WP SYSTEM `POWER ON BUZZER` preview. |
 | `C000:0B60` | `0x40B60` | RTC snapshot helper. Reads ports `0xD0..0xDC` into BCD shadow buffer `6D96..6DA2`, low nibble only. |
+| `C000:0B7C` | `0x40B7C` | Short RTC alarm compare helper. Compares selected alarm day/hour/minute fields against the RTC shadow. |
+| `C000:0B90` | `0x40B90` | Full RTC alarm compare helper. Compares selected alarm date/time fields `6D41..6D4B` against the RTC shadow. |
+| `C000:0BAF` | `0x40BAF` | Minute-fallback RTC compare helper. Checks whether RTC seconds are `00`. |
 | `C000:0ED6` | `0x40ED6` | Interrupt/vector setup. Fills most IVT entries with `C000:118B`, installs IRQ stubs, installs `INT 21h` as `C000:0006`, installs `INT 1` as `C000:157D`, and copies a far-call table to RAM `0x0200`. |
+| `C000:106F` | `0x4106F` | Keyboard row-scan reset/start helper. Enables the `FB` row-scan source through port `0x60`, dummy-reads `0xB0`, pulses port `0x61` from `0xFE` to `0xFF`, and clears row index `[6D29]`. |
 | `C000:1240` | `0x41240` | Diagnostic entry routine. Calls chord compare, then diagnostic UI/loop. |
 | `C000:1252` | `0x41252` | Compares RAM `6D06..6D0F` with expected `SPACE+F+J` matrix bytes. |
 | `C000:1272` | `0x41272` | Diagnostic draw/init routine. |
@@ -62,6 +76,7 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:311E` | `0x4311E` | Private `INT 21h AX=4429` DreamLink finish/flush helper; returns success without action for non-DreamLink handles. |
 | `C000:3C08` | `0x43C08` | Card-storage capacity probe used during format. Write-tests the banked card window in 32 KiB steps and records the detected count. |
 | `C000:49C2` | `0x449C2` | Auto power-off countdown check in an idle path. Decrements `[680B]`; when it reaches zero and `[6D31] != 0`, saves resume target `4977` and jumps to the retained power-transition path at `C000:035D`. |
+| `C000:4961` | `0x44961` | Periodic idle warm/power marker check. Sets carry when `[680D] == 0` and `[6809] == 0x1992`, causing timer-driven wait loops to enter the retained power-transition path. |
 | `C000:4A8D` | `0x44A8D` | Main keyboard/event idle loop. Uses `C000:4B2D` to check the keyboard ring buffer, reloads `[680B]` from `[6D31]` on keyboard activity, and enters the retained power-transition path on timeout. |
 | `C000:4A94` | `0x44A94` | Low-level keyboard/event idle routine. Restores IRQ mask to port `0x60`, executes `sti; hlt`, then returns. |
 | `C000:4B2D` | `0x44B2D` | Keyboard/event ring-buffer dequeue helper. Uses `[70E2]` and `[70E3]`; sets `[70A5]` bit `0x01` when no event is available. |
@@ -106,6 +121,7 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C688:AAA6` | `0x51326` | WP `PRINTER` -> `PRINT OUT` flow. Presents print dialogs/ranges and routes formatted output toward the printer emitter. |
 | `C688:EC9F` | `0x5551F` | Shared application menu/event loop after first-screen branch setup. |
 | `C000:0BFC` | `0x40BFC` | Builds the RS-232C USART async mode byte from `6D2B..6D2D`. |
+| `C000:0C30` | `0x40C30` | Pulses port `0x30` bit `0x08` high then low using the `[6D94]` mirror, likely a USART/baud-clock setup strobe. |
 | `C000:0C58` | `0x40C58` | Programs RS-232C: baud latch on port `0x30`, 8251-style reset/mode/command sequence on port `0xC1`, and IRQ/buffer state. |
 | `C000:0CBC` | `0x40CBC` | Serial initialization wrapper. Validates `6D2A..6D2E`, then calls `C000:0C58`. |
 | `C000:0D4F` | `0x40D4F` | Serial transmit-ready/status check using port `0xC1`. |
@@ -143,7 +159,9 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `DC98:A0CC` | `0x66A4C` | Organizer WORLD CLOCK map redraw helper. Emits the static map resource and overlays the two city markers from city-table coordinates. |
 | `DC98:AAD5` | `0x67455` | WORLD CLOCK -> SET TIME/DATE handler. Draws the edit screen, reads date/time through `DC98:0D2A`/`0D4E`, edits fields, then writes accepted values through `DC98:0D72`/`0D8F`. |
 | `DC98:AD1B` | `0x6769B` | WORLD CLOCK -> DISPLAY FORM handler. Edits `[6808]` between 24-hour and 12-hour display modes. |
+| `DC98:B457` | `0x67DD7` | WORLD CLOCK -> DAILY ALARM handler. Edits four daily-alarm rows stored at `89F2`, each with a time word plus label text. |
 | `DC98:B67C` | `0x67FFC` | Organizer WORLD CLOCK main screen. Draws the city labels, map/header/menu resources, blinks the selected city marker, and dispatches the `H`/`2`/`S`/`F`/`A` subcommands. |
+| `DC98:D3BB` | `0x69D3B` | Next-alarm selector called by the retained power-transition path. Scans scheduler alarm entries and WORLD CLOCK daily alarms, then writes the selected date/time into `6D41..6D4C` for the RP5C01 alarm programmer. |
 | `DC98:CF12` | `0x69892` | Organizer ADDRESS BOOK handler. Confirmed to enter normally in MAME after the built-in store banking fix. |
 | `DC98:E946` | `0x6B2C6` | File open wrapper used by the ROM-card loader before reading `EROMCARD.X`. |
 | `DC98:EE08` | `0x6B788` | File read wrapper around DOS-like `int 21h AH=3F`; ROM-card loader reads into `0xA4F0` through this path. |
