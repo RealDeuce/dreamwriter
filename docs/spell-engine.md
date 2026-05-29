@@ -587,6 +587,13 @@ ROM map:
 | `3000:B0E6` | Dictionary membership/check wrapper used by the inflection handlers. |
 | `3000:B116` | Expands a compressed dictionary entry into caller-provided buffers. |
 | `3000:B4D4` | Binary-searches compressed word pages for the query word. |
+| `3000:A1AA` | Builds candidate metadata and per-candidate record-pointer arrays from packed dictionary records. |
+| `3000:A45C` | Builds the selected candidate's related-word pointer list and string pool for Thesaurus/meaning expansion. |
+| `3000:A6A2` | Copies or normalizes related-word text into the shared output string pool, splitting on internal `0x0E` and `/` separators. |
+| `3000:A7C2` | Chooses a related record pointer from small threshold/pointer tables, with special type remaps through `3000:83E4`. |
+| `3000:AA54` | Tests whether a slash/compound-separated expanded string already contains a target fragment. |
+| `3000:AB4C` | Resolves a dictionary entry position by loading a 1 KiB compressed page and scanning expanded entries. |
+| `3000:AC48` | Expands a packed record pointer into caller text, loading the required compressed page when the low pointer bit is set. |
 
 ## Candidate List Manager
 
@@ -617,6 +624,12 @@ Observed state in `3C00`:
 | `0x7130` | Pointer to an auxiliary related-word list built by `3000:A45C`. |
 | `0x7132` | Dictionary structure pointer returned by `3000:88A0`. |
 | `0x7134` | Current parser/search record pointer used by formatter helpers. |
+| `0x7730`/`0x7734`/`0x7736`/`0x7738`/`0x773A` | Dictionary header-derived widths/pointers used by packed record and line-list readers. |
+| `0x7750..0x7756` | Current packed record bitmask/stream-position fields loaded by `3000:A1AA` and tested by related-word filters. |
+| `0x7762` | Candidate/search mode. Values `2`, `4`, and `7` are accepted by `3000:A45C`; other modes reject related-word expansion. |
+| `0x7764..0x7767` | Candidate class/count and current normalized candidate word buffer. |
+| `0x77C7..0x77FF` | Per-candidate saved pointers, record pointers, and stream positions used while walking packed records. |
+| `0x7940..0x7953` | Scratch state for packed candidate class bits, output-pool bounds, and temporary record-pointer arrays during related-word expansion. |
 
 Service-facing helpers around `3000:5016..5216` wrap this candidate manager.
 `3000:5016` initializes the candidate state through `3000:66D4`. The following
@@ -628,8 +641,41 @@ candidate's related-word list as comma-separated text through `3000:6892`.
 
 Small helpers around `3000:677A..688F` copy the active candidate, move to the
 next/previous candidate, and return the current candidate's first or later
-space-separated fields. The code around `3000:6892..6962` lazily builds and
-walks an auxiliary related-word list via `3000:A45C`.
+space-separated fields. `3000:6892` lazily builds an auxiliary related-word
+list on first use: when `[7130] == 0`, it calls `3000:A45C([712E]+1, &7130)`,
+resets `[6E5C]` to `FFFF`, then walks the word-pointer array at `[7130]`.
+Each nonzero word in that array points at a NUL-terminated string in a RAM
+string pool; `3000:6892` copies one string to the caller and returns its
+length. `3000:690A` is the reverse-walk companion for the same pointer list.
+
+`3000:A45C` is now the main confirmed Thesaurus/meaning expansion builder. It
+takes a one-based result number, rejects it if it is outside `[7764]`, and only
+continues when the candidate/search mode in `[7762]` is `2`, `4`, or `7`. It
+then:
+
+- calls `3000:A1AA` to load packed metadata for the selected result,
+- chooses threshold and record-pointer state through `3000:A7C2`,
+- expands packed record pointers through `3000:AC48`,
+- normalizes/copies candidate text through `3000:A6A2`, and
+- writes a zero-terminated word-pointer list followed by a shared string pool.
+
+The pointer list is returned through the caller pointer argument, which is
+`0x7130` in the Thesaurus path. The first word in the list is initialized from
+`[7943]`, and later entries are taken from the string-pool cursor `[794A]`.
+The string-pool cursor is bounded by `[794C]`; if an appended string would
+reach or exceed that bound, `3000:A45C` aborts by returning `0`.
+
+`3000:A1AA` is the deeper packed-record reader. It reads bit fields through
+`3000:ADBE`, loads compressed pages through `3000:B076` as needed, and builds
+temporary candidate/record arrays around `0x77C7`, `0x77E8`, `0x7943`,
+`0x7946`, `0x794E`, and `0x7950`. In the normal UI-facing case it also formats
+candidate display text through `3000:6964`; in the Thesaurus related-word case,
+`3000:A45C` consumes the arrays directly and builds the related-word list.
+
+This means the traced Thesaurus path is currently tied to the confirmed
+compressed dictionary stream and its packed record metadata. The low slot-0
+page data is still possible common engine data, but this selected-result
+Thesaurus expansion path does not yet prove a direct slot-0 page-data read.
 
 `3000:6964` formats numbered suggestion lines. It writes a digit, `") "`,
 then formats a candidate based on packed record fields and appends text through

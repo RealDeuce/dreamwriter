@@ -119,9 +119,12 @@
     around `0xE4000..0xFF412` would wrap to this area in the reader's 20-bit
     segment math, but the confirmed stream API rejects positive seeks above
     `0x14000`.
-30. Decode the Thesaurus service handlers behind the traced editor path. The
-    `F8` / observed Alt+8 entry now reaches `C688:E274`, draws resource `0x76`,
-    and uses banked services `0x46`, `0x47`, and `0x3C + selected-number`.
-    The remaining question is whether those handlers consume the slot-0 page
-    data as thesaurus-specific data, grammar-specific data, or common
-    linguistic engine data.
+30. Decode the packed record fields behind Thesaurus related-word expansion.
+    The `F8` / observed Alt+8 path now reaches `C688:E274`, draws resource
+    `0x76`, uses banked services `0x46`, `0x47`, and `0x3D..0x45`, and the
+    selected-number path reaches `3000:A45C` through `3000:5026`/`3000:6892`.
+    That builder consumes compressed dictionary records and constructs a RAM
+    pointer list/string pool for related words. The remaining question is the
+    exact packed field layout produced by `3000:A1AA` and consumed by
+    `3000:A45C`/`3000:A7C2`, plus whether any slot-0 page data participates in
+    less direct grammar/thesaurus decisions.

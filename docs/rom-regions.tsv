@@ -49,7 +49,7 @@ start	end	type	confidence	segment	label	notes
 0x38A0E	0x395B6	code	probable	3000	dictionary-search-helpers	Dictionary string normalization, table search, and candidate/search helper routines.
 0x395B6	0x396D6	code	confirmed	3000	dictionary-read-string-helpers	Exact-length stream read, byte-pair word conversion, and local C-string helpers.
 0x396D6	0x39848	code	confirmed	3000	compressed-stream-opener	Opens the compressed word stream and loads runtime tables used by entry expansion/search.
-0x39848	0x3AD84	code	probable	3000	dictionary-candidate-search	Dictionary lookup, candidate generation, and parser/search routines that feed the formatter.
+0x39848	0x3AD84	code	probable	3000	dictionary-candidate-search	Dictionary lookup, candidate generation, parser/search routines, and Thesaurus related-word expansion helpers that feed the formatter and candidate-list UI.
 0x3AD84	0x3ADBE	code	confirmed	3000	candidate-normalization-wrapper	Normalizes candidate text through helpers at 3000:9532 and 3000:947C.
 0x3ADBE	0x3AFB4	code	confirmed	3000	bitstream-readers	Compressed bitstream readers including arbitrary-width reads and 8-bit reads.
 0x3AFB4	0x3B076	code	confirmed	3000	bitstream-skip-helper	Skips forward in the compressed bitstream, loading pages when needed.
