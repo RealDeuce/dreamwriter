@@ -100,8 +100,24 @@ start	end	type	confidence	segment	label	notes
 0x4A247	0x4A4E8	code	confirmed	C688	editor-block-heap-manager	C688:39C7..3C68 allocation/free/read/write helpers for the word-processor editor block heap.
 0x4A4E8	0x5072B	mixed	rough	C688	app-code-and-ui-tables-tail	Main application code, tables, and UI resources before the WP status-label bitmap; needs further splitting.
 0x5072B	0x5075B	bitmap	confirmed	C688	wp-status-label-bitmap	12x24 1bpp stacked Pag/Lin/Col bitmap used by the word-processor status display; referenced by FF42 record at file 0x50B5F.
-0x5075B	0x53800	mixed	rough	C688	app-code-and-ui-tables-tail-after-status-bitmap	Main application code, display scripts, tables, and UI resources after the WP status-label bitmap; needs further splitting.
-0x53800	0x58000	resource	confirmed	D380	wp-menu-and-ui-resources	Main application menu and word-processor UI strings/resources.
+0x5075B	0x50AD0	code	confirmed	C688	wp-editor-text-flow-before-status-script	WP/editor text-flow helper code after the status-label bitmap; code returns at file 0x50ACE/0x50ACF immediately before the display-script island.
+0x50AD0	0x50BD5	resource	confirmed	C688	wp-status-display-script	Display-script/resource island containing the FF42 record at file 0x50B5F that draws the 12x24 Pag/Lin/Col bitmap.
+0x50BD5	0x50DA7	code	confirmed	C688	wp-printer-token-expander	Formatter/output helper code after the WP status display-script island; expands internal control bytes into staged printer/output tokens.
+0x50DA7	0x50ECB	table	confirmed	C688	wp-printer-token-vector-table	Word vector table for formatter/output token cases; many default entries point to C688:AA73.
+0x50ECB	0x517B6	mixed	probable	C688	wp-printer-merge-address-code	WP print/merge/address code with inline printer escape records and embedded :MERGE.FIL and :ADDRESS.ODB file-name strings.
+0x517B6	0x518D7	table	confirmed	C688	wp-printer-merge-handler-tables	Word-pointer tables and zero-filled slots for WP print/merge/address handlers before code resumes at C688:B057.
+0x518D7	0x52317	mixed	rough	C688	app-code-and-ui-tables-before-printer-escape-tables	Main application code, display scripts, tables, and UI resources before the printer escape dispatch tables; still contains real code targets and data tables.
+0x52317	0x5244B	table	probable	C688	printer-escape-dispatch-tables	Pointer tables and zero-filled slots for printer escape/control handlers; nearby code reaches these through SI-loaded tables.
+0x5244B	0x527B8	mixed	probable	C688	printer-escape-output-helpers	Printer output helpers and inline ESC/P-style literal strings, including pitch, line-spacing, underline, and paper-feed sequences.
+0x527B8	0x52827	data	confirmed	C688	printer-output-table-padding	Zero padding before the printer character output vector table.
+0x52827	0x528D7	table	confirmed	C688	printer-character-output-vector-table	Word vector table for printer character/control output; most entries point to C688:C057, with selected entries pointing to C688:C05A..C0D2 stubs.
+0x528D7	0x52974	code	confirmed	C688	printer-character-output-stubs	Short output stubs selected by the C688:BFA7 table plus printer setup-state loader from 6D59..6D5B into 829E/82A3.
+0x52974	0x52F00	table	confirmed	C688	printer-character-map-and-width-tables	Printer character translation and width/style tables, including ASCII-ish maps and repeated fixed-width rows.
+0x52F00	0x534E1	code	confirmed	C688	printer-text-formatting-helpers	Printer text formatting helpers that consume the character tables and route bytes through the common output emitter.
+0x534E1	0x53602	table	confirmed	C688	printer-text-handler-vector-table	Word vector table with many default C688:C6E8 entries and selected handlers for printer text/control cases.
+0x53602	0x53800	code	confirmed	C688	printer-text-formatting-tail	Continuation of printer text formatting and cursor/spacing helpers before the final character output tail.
+0x53800	0x53885	code	confirmed	C688	printer-character-output-tail	Final printer/character output helpers before the startup/menu resource block; C688:CFF1 calls the spacing flush helper, emits AL through C688:C82A, then clears CL.
+0x53885	0x58000	resource	confirmed	C688	wp-menu-and-ui-resources	Main application startup banner, menu, and word-processor UI strings/resources; display-script stream proper begins at file 0x53888 / C688:D008.
 0x58000	0x5C8B6	font	confirmed	D800	font-runs	Main thin/bold/small/narrow/sparse font runs and width metadata.
 0x5C8B6	0x6EFC2	mixed	rough	DC98	organizer-wp-app-mixed	Organizer/WP application code mixed with resources; needs function-boundary pass.
 0x6EFC2	0x70500	resource	confirmed	EF70	comm-printer-romcard-icons	Communication, printer, ROM-card, and DreamLink menu icons/strings.

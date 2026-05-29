@@ -143,6 +143,11 @@ tools/rom2.py bitmap --base 0x5072b --row-bytes 2 --height 24 --columns 12
 This is used by the word processor status display in the top-left corner of the
 LCD.
 
+The record sits inside a larger display-script/resource island at file
+`0x50AD0..0x50BD5` / `C688:A250..A355`. The preceding bytes
+`0x5075B..0x50AD0` are executable WP/editor text-flow code, and code resumes at
+`C688:A355`, so code sweeps should skip only the resource island as data.
+
 ## Horizontal Menu Icon Tables
 
 The word-processor and organizer menus use compact icon/label tables, not

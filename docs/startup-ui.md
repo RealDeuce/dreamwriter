@@ -486,7 +486,8 @@ show version/copyright messages. The ROM has exactly that resource block
 immediately before the first menu resource:
 
 ```text
-file 0x53888 / C688:D008: resource script header
+file 0x53885 / C688:D005: three-byte resource prefix before the banner stream
+file 0x53888 / C688:D008: display-script opcode stream
 file 0x53892 / C688:D012: INITIALIZING
 file 0x538AA / C688:D02A: WORD PROCESSOR                      LINGUISTIC TECHNOLOGY
 file 0x538E9 / C688:D069: (C) 1992 NER Inc. Ver. 3.00         (C) 1983 Proximity Technology Inc.

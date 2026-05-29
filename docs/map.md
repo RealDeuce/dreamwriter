@@ -92,8 +92,8 @@ uses it for code-only I/O sweeps.
 | `0x46A1D..0x46D12` | `0xC6A1D..0xC6D12` | C688 diagnostic/card wrappers, ROM-card execution helpers, inline display-script entry, and small state tables. |
 | `0x46D13..0x49258` | `0xC6D13..0xC9258` | Early C688 editor/display and text-flow helpers with inline display-script bytes. |
 | `0x49259..0x4A4E7` | `0xC9259..0xCA4E7` | Main application startup, inline display-script dispatcher/table area, and confirmed editor block heap manager. |
-| `0x4A4E8..0x537FF` | `0xCA4E8..0xD37FF` | Mixed firmware code/tables, including the confirmed 12x24 WP `Pag/Lin/Col` status-label bitmap at file `0x5072B`. Needs further function-boundary pass. |
-| `0x53800..0x57FFF` | `0xD3800..0xD7FFF` | Main application menu and word-processor UI strings. |
+| `0x4A4E8..0x53884` | `0xCA4E8..0xD3884` | Mixed firmware code/tables, including the confirmed 12x24 WP `Pag/Lin/Col` status-label bitmap at file `0x5072B`, its display-script island at `0x50AD0..0x50BD5`, WP print/merge/address helpers at `0x50BD5..0x518D7`, and a split printer formatting/output cluster at `0x52317..0x53885`. Needs further function-boundary pass outside the confirmed subranges. |
+| `0x53885..0x57FFF` | `0xD3885..0xD7FFF` | Startup banner, main application menu, and word-processor UI strings/resources; the banner display-script stream begins at `0x53888` / `C688:D008`. |
 | `0x58000..0x6F6FF` | `0xD8000..0xEF6FF` | Mixed application code/resources. Needs a call-reference pass from menu handlers. |
 | `0x6F700..0x704FF` | `0xEF700..0xF04FF` | ROM card, communication, printer/image, and DreamLink UI strings. |
 | `0x70500..0x7FFFF` | `0xF0500..0xFFFFF` | Typing tutor lessons/resources, including version text at file `0x788D3`, reset trampoline at file `0x78DC0`, and final reset vector at file `0x7FFF0`. |

@@ -682,6 +682,18 @@ The setup strings start around `0x6FC3D` and include `PRINTER SET UP`,
 `PRINTER`, `INTERFACE : {PARALLEL} {SERIAL}`, and
 `PAPER FEED: {AUTOMATIC} {MANUAL}`.
 
+The printer formatter has C688-side print/merge helpers beginning at
+`0x50BD5`, then a denser escape/control and text-output cluster at
+`0x52317..0x53885`. The earlier run includes a token vector table at
+`C688:A527`, inline printer escape records, and embedded `:MERGE.FIL` /
+`:ADDRESS.ODB` file-name strings. The later cluster includes dispatch tables
+followed by helpers that emit short literal ESC/P-style sequences such as
+`ESC &d0D`, `ESC &d@`, `ESC (s0B`, `ESC &a+36V`, `ESC &l1x`, `ESC (s10h`, and
+`ESC (s0p10h12V`. The tail has two word-vector tables (`C688:BFA7` and
+`C688:CC61`), printer character translation/width tables at
+`C688:C0F4..C680`, and common output helpers ending just before the startup/menu
+resource block at `0x53885`.
+
 The low-level parallel path matches a simple output-only Centronics interface.
 The manual only names `-STB`, `BUSY`, and `-ACK`, and the firmware has not shown
 any readback path from the printer data latch.

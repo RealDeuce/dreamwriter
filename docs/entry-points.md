@@ -126,6 +126,12 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C688:9541` | `0x4FDC1` | Screen resource loader used by menu setup wrappers such as `C688:7689`. Loads resource IDs or CS pointer blocks into `0x7F28` and interprets their payload. |
 | `C688:96E1` | `0x4FF61` | Invalidates the `C688:9541` `AL=5` resource cache by setting `[7574]`/`[7575]` to `FF`. |
 | `C688:AAA6` | `0x51326` | WP `PRINTER` -> `PRINT OUT` flow. Presents print dialogs/ranges and routes formatted output toward the printer emitter. |
+| `C688:BA91` | `0x52311` | Printer helper table launcher. Points `SI` at the `C688:BA97` table and jumps through shared table handling. |
+| `C688:BBCB` | `0x5244B` | Start of printer escape/control handler cluster after the dispatch tables; nearby handlers emit ESC/P-style setup sequences. |
+| `C688:C057` | `0x528D7` | Default printer character/control output stub reached through the C688:BFA7 vector table; selected neighboring stubs load alternate output bytes and jump to `C688:CFF1`. |
+| `C688:C680` | `0x52F00` | Printer character table consumer and formatter front end. Uses the character-map/width tables at `C688:C0F4..C680`, then dispatches selected handlers through later printer text tables. |
+| `C688:CD82` | `0x53602` | Printer text formatting tail after the C688:CC61 handler vector table; contains small wrappers around the common printer byte/spacing helpers. |
+| `C688:CFF1` | `0x53871` | Printer/character output tail. Calls the spacing/position flush helper, emits `AL` through `C688:C82A`, then calls the backspace/spacing restore helper before returning. |
 | `C688:EC9F` | `0x5551F` | Shared application menu/event loop after first-screen branch setup. |
 | `C000:0BFC` | `0x40BFC` | Builds the RS-232C USART async mode byte from `6D2B..6D2D`. |
 | `C000:0C30` | `0x40C30` | Pulses port `0x30` bit `0x08` high then low using the `[6D94]` mirror, likely a USART/baud-clock setup strobe. |
