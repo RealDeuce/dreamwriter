@@ -672,6 +672,39 @@ temporary candidate/record arrays around `0x77C7`, `0x77E8`, `0x7943`,
 candidate display text through `3000:6964`; in the Thesaurus related-word case,
 `3000:A45C` consumes the arrays directly and builds the related-word list.
 
+Three call sites currently reach `3000:A1AA`:
+
+| Caller | Fourth argument | Working mode |
+| --- | ---: | --- |
+| `3000:98F8` | `2` | Visible candidate/result-list construction from `3000:9848`. This path can call `A1AA` repeatedly while advancing a caller-provided result count. |
+| `3000:9F09` | `1` | Packed-record skip/scan path. The caller accumulates offsets with `3000:ADBE` and helper `3000:9F14`, stores the stream position in `7758:775A`, then enters `A1AA`. |
+| `3000:A4B9` | `0` | Full selected-result expansion used by `3000:A45C` for Thesaurus related words. |
+
+The first field read by `A1AA` is `dict[0x36]` bits wide:
+
+```asm
+3000:A265  push word [7736]
+3000:A269  call 3000:ADBE
+3000:A26F  mov [7940],al
+3000:A274  and ax,00F0
+3000:A279  shr ax,4
+3000:A27B  mov [bp-0D8],ax
+3000:A27F  and byte [7940],0F
+```
+
+So the low nibble in `[7940]` is the selected record class used by filters and
+by `3000:A7C2`; the high nibble is a small mask/index passed to `3000:A7A0`.
+`A7A0` scans for the next set bit and returns a one-based slot number, which
+decides which candidate bucket receives following packed counts. The per-bucket
+counts live at `7942 + bucket`, although the current firmware configuration
+only loops over one bucket in this path.
+
+After that class byte, `A1AA` reads repeated 4-bit count chunks. Each chunk is
+added to the current bucket count; a chunk value of `0x0F` is an extension
+marker, so chunks continue until a non-`0x0F` nibble appears. Later in the full
+mode, it reads up to `0x28` packed record pointers using `dict[0x34]` bits
+each and stores them as dwords at the temporary array `[7950]`.
+
 This means the traced Thesaurus path is currently tied to the confirmed
 compressed dictionary stream and its packed record metadata. The low slot-0
 page data is still possible common engine data, but this selected-result

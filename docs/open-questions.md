@@ -124,7 +124,10 @@
     `0x76`, uses banked services `0x46`, `0x47`, and `0x3D..0x45`, and the
     selected-number path reaches `3000:A45C` through `3000:5026`/`3000:6892`.
     That builder consumes compressed dictionary records and constructs a RAM
-    pointer list/string pool for related words. The remaining question is the
-    exact packed field layout produced by `3000:A1AA` and consumed by
-    `3000:A45C`/`3000:A7C2`, plus whether any slot-0 page data participates in
-    less direct grammar/thesaurus decisions.
+    pointer list/string pool for related words. The first `A1AA` field is now
+    decoded as a `dict[0x36]`-bit class byte whose low nibble selects the
+    record class and high nibble selects bucket/mask handling, followed by
+    extended 4-bit count chunks and `dict[0x34]`-bit record pointers. The
+    remaining question is the exact meaning of those classes, buckets, and
+    pointer flags, plus whether any slot-0 page data participates in less
+    direct grammar/thesaurus decisions.
