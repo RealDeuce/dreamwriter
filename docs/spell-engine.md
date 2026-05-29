@@ -593,7 +593,7 @@ ROM map:
 | `3000:A7C2` | Chooses a related record pointer from small threshold/pointer tables, with special type remaps through `3000:83E4`. |
 | `3000:AA54` | Tests whether a slash/compound-separated expanded string already contains a target fragment. |
 | `3000:AB4C` | Resolves a dictionary entry position by loading a 1 KiB compressed page and scanning expanded entries. |
-| `3000:AC48` | Expands a packed record pointer into caller text, loading the required compressed page when the low pointer bit is set. |
+| `3000:AC48` | Expands a packed 17-bit record pointer into caller text, either by copying from the resident word table or by loading a 1 KiB dictionary page. |
 
 ## Candidate List Manager
 
@@ -704,6 +704,29 @@ added to the current bucket count; a chunk value of `0x0F` is an extension
 marker, so chunks continue until a non-`0x0F` nibble appears. Later in the full
 mode, it reads up to `0x28` packed record pointers using `dict[0x34]` bits
 each and stores them as dwords at the temporary array `[7950]`.
+
+`3000:AC48` is the first concrete consumer of those packed record pointers in
+the Thesaurus builder. `A45C` passes it a 17-bit value: the low word plus bit 0
+of the high word. `AC48` splits that value this way:
+
+```text
+page_index = packed_pointer >> 9
+low_part   = packed_pointer & 0x01FF
+```
+
+`page_index` must be below `dict[0x0C]`. It is also stored in `[8A5A]` for
+later helpers. If `low_part == 0`, `AC48` takes the fast path: it treats
+`dict[0x18]` as a resident word-pointer table and copies entry `page_index`
+directly to the caller.
+
+If `low_part != 0`, `AC48` loads logical dictionary page
+`(dict[0x22] + page_index) * 0x400` through `3000:66AE`/`3000:660F`, staging
+the page at `0x864E`. It divides `low_part` by `dict[0x06]` and caps the
+quotient at seven, then walks that many page records by adding each record's
+lead byte plus `dict[0x06]`. The final record pointer is stored at `dict[0x26]`
+and the base word copied from `dict[0x18][page_index]` is staged at `0x8A5C`.
+The normal dictionary expansion helpers `3000:8B0A` and `3000:8F06` then walk
+within that page until the selected inline record has been materialized.
 
 This means the traced Thesaurus path is currently tied to the confirmed
 compressed dictionary stream and its packed record metadata. The low slot-0
