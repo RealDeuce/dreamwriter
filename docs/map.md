@@ -9,9 +9,12 @@ SHA256: bb6a437d4c25f90eb7a0b8bc3d41e1ca2c74196aabe60954a598c66405397757
 
 ## Address Model
 
-MAME loads the 512 KiB ROM at ROM region offset `0x00000..0x7FFFF`, and the
-reset bank state maps the last 128 KiB ROM bank into every 128 KiB CPU window.
-That is why the reset vector at CPU physical `0xFFFF0` reads file `0x7FFF0`.
+Current `mame/nakajies.cpp` loads the v2.1 BIOS into the MAME `bios` region at
+region offset `0x80000..0xFFFFF`, because that driver also carries a 1 MiB v3.1
+BIOS. These notes use offsets into the standalone 512 KiB `t4_ir_2.1.ic303`
+file. For that standalone image, the reset bank state maps the last 128 KiB ROM
+bank into every 128 KiB CPU window, so the reset vector at CPU physical
+`0xFFFF0` corresponds to standalone file offset `0x7FFF0`.
 
 For the normal 2.1 `C000:xxxx` code window, current notes use:
 
@@ -57,7 +60,7 @@ are zero, which maps the last ROM bank into every CPU window.
 
 The DreamWriter T400 has 256 KiB RAM in MAME.
 
-Use `../tools/rom2.py` for conversion checks:
+Use `tools/rom2.py` for conversion checks:
 
 ```sh
 tools/rom2.py verify

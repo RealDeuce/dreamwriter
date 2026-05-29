@@ -54,8 +54,8 @@
 | `C000:3C08` | `0x43C08` | Card-storage capacity probe used during format. Write-tests the banked card window in 32 KiB steps and records the detected count. |
 | `C000:4A94` | `0x44A94` | Low-level keyboard/event idle routine. Restores IRQ mask to port `0x60`, executes `sti; hlt`, then returns. |
 | `C000:4C39` | `0x44C39` | Battery-warning icon restore/clear helper. Restores the saved 48x40 screen area if a warning icon is active, then clears `[6D52]`. |
-| `C000:4C4F` | `0x44C4F` | LCD/framebuffer copy candidate, `0x94F0 -> 0x131B`. |
-| `C000:4C6E` | `0x44C6E` | LCD/framebuffer copy candidate, `0x131B -> 0x94F0`. |
+| `C000:4C4F` | `0x44C4F` | Battery-warning screen-area restore helper, `0x94F0 -> 0x131B`. |
+| `C000:4C6E` | `0x44C6E` | Battery-warning screen-area save helper, `0x131B -> 0x94F0`. |
 | `C000:4C91` | `0x44C91` | Battery-warning poll/display state machine. Rotates `[6D52]` through main, CR2032, and PCMCIA SRAM-card battery warning slots. |
 | `C000:4CDC` | `0x44CDC` | Force-display the main battery low warning icon. Sets `[6D52]=2`, saves the screen area, and draws icon index `0`. |
 | `C000:4D07` | `0x44D07` | Draws a 48x40 battery warning icon selected by `AL` from the table at `C000:4D30`. |

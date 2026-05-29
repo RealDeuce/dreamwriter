@@ -20,7 +20,9 @@ Start here:
 | `strings.md` | String/resource landmarks for application-level mapping. |
 | `open-questions.md` | Working hypotheses and next traces. |
 
-Reusable helpers live in `../tools/rom2.py`.
+Reusable helpers live in `tools/rom2.py` at the repository root.
 
-The local MAME driver snapshot in `../mame/nakajies.c` is used as supporting
-evidence for banking, IRQ, keyboard, LCD, RTC, and machine configuration notes.
+The local MAME driver snapshots in `mame/` are used as supporting evidence for
+banking, IRQ, keyboard, LCD, RTC, and machine configuration notes. Prefer the
+current-style `mame/nakajies.cpp`; `mame/nakajies.c` is kept as an older
+comparison point.

@@ -232,20 +232,24 @@ Display geometry in MAME:
 4096-byte scanout block
 ```
 
-Likely screen buffer routines:
+Screen buffer routines:
 
 ```asm
 C07E9  copy 0x1000 -> 0x94F0
 C07F4  copy 0x94F0 -> 0x1000
-C4C4F  copy 0x94F0 -> 0x131B, 40 rows of 6 bytes with 0x3A stride
-C4C6E  copy 0x131B -> 0x94F0, same layout
+C4C4F  restore battery-warning screen area, 0x94F0 -> 0x131B
+C4C6E  save battery-warning screen area, 0x131B -> 0x94F0
 ```
+
+The `C000:4C4F`/`C000:4C6E` pair is tied to the documented battery-warning
+icons, not a general LCD buffer swap. It copies 40 rows of 6 bytes with a
+`0x3A` row gap, matching a 48x40-pixel warning area.
 
 Working model: the original hardware has LCD scanout from RAM, either true
 dual-ported RAM or bus-stealing/arbitrated video RAM. The firmware probably
 does not bit-bang the LC7940/LC7942 refresh.
 
-## ROM Card / PCMCIA Strings
+## ROM Card / PCMCIA Storage
 
 Useful strings in 2.1:
 
@@ -261,19 +265,26 @@ FORMAT SETTING
 Card Memory-
 ```
 
-Current hypothesis: `ROM CARD` menu path tries to open or execute
-`EROMCARD.X`, then validates a ROM-card ID/header. Evidence is string-based so
-far; the loader path still needs mapping.
+The `ROM CARD` menu path is decoded at `DC98:2B75`. It builds
+`([0x6805]+1):EROMCARD.X`, falls back to `[0x6805]:EROMCARD.X`, opens it via
+the DOS-like file services, loads it to `0xA4F0`, validates header words
+`[0xA4F0] == 0xA4F0` and `[0xA4F2] == 0x1997`, then calls the far entry stored
+at `[0xA4F4]`.
+
+The `FILE` menu storage paths distinguish built-in RAM, card storage, and
+DreamLink transfer. The local storage layer is FAT12-derived but uses a custom
+volume header/geometry block; see `docs/file-system.md`.
 
 ## Open Questions
 
-- Exact call graph and segment model for startup and shell.
-- Which interrupt or hardware event real machines use to trigger `C02EE`.
-- Whether MAME's reset preserves or clears the retained RAM needed after `C0329`.
-- Actual LCD hardware scanout implementation.
-- PCMCIA card electrical mode: SRAM/attribute/ROM card behavior.
-- `EROMCARD.X` loader path and executable format.
-- Menu/resource table formats for original-shell cloning.
+- Physical power/wake path and why MAME reset shows `INITIALIZING` instead of
+  the documented copyright banner.
+- Board-level wiring for port `0xA0` battery, card, and printer-status bits.
+- Full `EROMCARD.X` header format, drive mapping, and whether PCMCIA memory can
+  execute in place.
+- Custom FAT12-derived volume header and geometry details.
+- Remaining display/resource script opcodes and status-icon cluster.
+- Recursive disassembler/function-boundary tooling for broader call graphs.
 
 ## Initial Tooling Goals
 
@@ -297,6 +308,13 @@ Current high-confidence findings:
 - `-steadykey` is bad for this driver; do not use it.
 - The LCD is modeled as RAM scanout selected by I/O port `0x00`; the firmware
   is probably not bit-banging the LCD refresh.
+- `DC98:124C` renders the horizontal icon menus from table records containing
+  text and bitmap far pointers.
+- `DC98:2B75` is the `ROM CARD` loader for `EROMCARD.X`.
+- RS-232 setup uses an 8251-like control/data interface at `0xC1`/`0xC0`; the
+  Centronics printer path uses data port `0x40` and status bits on `0xA0`.
+- Battery warning icons are selected from `C000:4D30` and drawn via the
+  `C000:4C39` path, with status helpers around `C000:0A6A`.
 
 Useful debugger checks:
 

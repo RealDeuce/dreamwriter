@@ -15,9 +15,10 @@ tools/rom2.py bank 0x11 0x02 --cpu 0x30000
 
 On V20 reset, execution starts at physical `0xFFFF0` (`FFFF:0000` in the current
 notes). MAME reset selects the ROM view for all eight 128 KiB windows and sets
-all ROM banks to entry `0x0F`. For the 512 KiB T400 ROM, MAME mirrors oversized
-bank entries, so entry `0x0F` maps the final physical ROM bank
-`0x60000..0x7FFFF`.
+all ROM banks to entry `0x0F`. For the standalone 512 KiB T400 v2.1 ROM image,
+that entry corresponds to the final image bank, file `0x60000..0x7FFFF`. In the
+current `mame/nakajies.cpp` BIOS region, those same bytes live at region offset
+`0xE0000..0xFFFFF` because v2.1 is loaded at region offset `0x80000`.
 
 That means the reset vector at CPU physical `0xFFFF0` reads file `0x7FFF0`:
 

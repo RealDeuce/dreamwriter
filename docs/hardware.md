@@ -76,14 +76,14 @@ MAME renders 60 bytes per row, most-significant bit first, from:
 main_ram + (lcd_memory_start << 9) + y * 64 + x
 ```
 
-Confirmed/candidate screen buffer routines:
+Screen buffer routines:
 
 | Address | File offset | Operation |
 | --- | ---: | --- |
 | `C000:07E9` | `0x407E9` | Calls `C000:4C39`, then copies `0x1000 -> 0x94F0` for `0x800` words. |
 | `C000:07F4` | `0x407F4` | Copies `0x94F0 -> 0x1000` for `0x800` words. |
-| `C000:4C4F` | `0x44C4F` | Candidate copy `0x94F0 -> 0x131B`, 40 rows of 6 bytes with `0x3A` stride. |
-| `C000:4C6E` | `0x44C6E` | Candidate copy `0x131B -> 0x94F0`, same layout. |
+| `C000:4C4F` | `0x44C4F` | Battery-warning area restore, `0x94F0 -> 0x131B`, 40 rows of 6 bytes with `0x3A` stride. |
+| `C000:4C6E` | `0x44C6E` | Battery-warning area save, `0x131B -> 0x94F0`, same layout. |
 
 Font table notes are in `fonts.md`. Bitmap and UI resource notes are in
 `bitmaps.md`.
@@ -111,7 +111,7 @@ C000:08A2  retf
 | `0x61` | Keyboard idle path writes `0xFE`. |
 | `0x70` | Warm diagnostic IRQ path writes `0x01` before halting in a loop. |
 | `0x90` | IRQ active/source clear register in MAME. Bit `n` clears vector `FF-n`; confirmed uses include bit 7 for vector `F8`, bit 3 for serial receive vector `FC`, bit 1 for Centronics ACK vector `FE`, and bit 0 for vector `FF`. |
-| `0xA0` | Shared status input. Printer output tests bit `0x02` as Centronics `BUSY`; battery/card helpers test bits `0x04`, `0x08`, `0x10`, `0x40`, and `0x80`. Current battery-warning mapping is bit `0x08` main battery low, bit `0x04` CR2032 retention battery low, and bit `0x10` PCMCIA SRAM-card battery OK/low gated by bit `0x80` card presence. Bit `0x40` is likely SRAM-card write-protect. |
+| `0xA0` | Shared status input. Printer output tests bit `0x02` as Centronics `BUSY`; battery/card helpers test bits `0x04`, `0x08`, `0x10`, `0x40`, and `0x80`. Current battery-warning mapping is bit `0x08` main battery low, bit `0x04` CR2032 retention battery low, and PCMCIA SRAM-card battery low when bit `0x80` is clear and bit `0x10` is clear. Bit `0x40` is likely SRAM-card write-protect. |
 | `0xB0` | Keyboard row input port; returns the row selected by the keyboard timer state. |
 | `0xC0` | RS-232 USART data register. Firmware writes transmit bytes here and reads receive bytes here. |
 | `0xC1` | RS-232 USART status/control register. Firmware reads status here and writes reset/mode/command bytes here. |
@@ -152,7 +152,8 @@ C000:0C53  mov al,37
 C000:0C55  out dx,al       ; command: TxEN, DTR, RxEN, error reset, RTS
 ```
 
-The mode-byte construction also matches an 8251 async mode word:
+For the normal user-configured setup path, the mode-byte construction also
+matches an 8251 async mode word:
 
 ```asm
 C000:0BFC  mov al,4A       ; 7 data bits, no parity, 1 stop bit, 16x clock
@@ -161,6 +162,10 @@ C000:0C17  or  al,C0       ; 2 stop bits
 C000:0C20  or  al,10       ; parity enable
 C000:0C29  or  al,20       ; even parity
 ```
+
+`C000:0BFC` has one special case before that normal path: when `[8294] bit 0` is
+set, it starts from mode byte `0x4E` and skips the user bit-length, stop-bit, and
+parity modifications. The exact mode that sets `[8294]` still needs naming.
 
 Baud selection is not done with 8250 divisor latches. `C000:0C58` writes the
 inverted baud index into bits `0..2` of port `0x30`, while preserving the rest of

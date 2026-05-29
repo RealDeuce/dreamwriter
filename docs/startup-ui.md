@@ -424,9 +424,9 @@ DA -> C688:92CC
 ```
 
 So the first-level key handling is real code, not speculation. The shared menu
-loop after `C688:8419` is now split out in `menu-dispatch.md`; what is still
-not named is the deeper routine that binds the later menu tables at `0x6FA98`
-and `0x708D8` to the drawn horizontal icon/menu screen.
+loop after `C688:8419` is now split out in `menu-dispatch.md`; the later
+horizontal icon/menu table consumer is `DC98:124C`, documented in
+`menu-dispatch.md` and `bitmaps.md`.
 
 The next-level menus are not in the first-menu `C688:D133` resource block. They
 live in later menu/table clusters:
@@ -438,9 +438,10 @@ live in later menu/table clusters:
 
 Both screens are horizontal icon menus. The visible labels are fixed-width text
 entries after compact metadata/pointer tables; they are not found by the
-`FF 42` bitmap-record scanner. The exact consumer for these table clusters is
-not yet identified. Arrow keys move the highlighted/inverted label, Enter
-selects it, and number keys can jump directly to an item.
+`FF 42` bitmap-record scanner because `DC98:124C` builds the bitmap records
+dynamically from far pointers in the menu table. Arrow keys move the
+highlighted/inverted label, Enter selects it, and number keys can jump directly
+to an item.
 
 One input wrapper stores the newly-read key/event byte back to `[0x794A]`:
 
