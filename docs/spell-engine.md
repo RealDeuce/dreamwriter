@@ -136,14 +136,16 @@ calling `3000:0000`:
 | CPU range | Bank port/value | ROM file range | Confirmed use |
 | ---: | --- | ---: | --- |
 | `0x30000..0x3FFFF` | `0x11 = 0x02` | `0x30000..0x3FFFF` | Banked spell code. |
-| `0x60000..0x7B41F` | `0x13 = 0x03` | `0x00000..0x1B41F` | Dense mapped payload; no confirmed reader yet. |
+| `0x60000..0x7B412` | `0x13 = 0x03` | `0x00000..0x1B412` | Dense mapped payload; no confirmed reader yet. |
+| `0x7B413..0x7B41F` | `0x13 = 0x03` | `0x1B413..0x1B41F` | All-zero tail/padding after the dense payload. |
 | `0x7B420..0x7BFFF` | `0x13 = 0x03` | `0x1B420..0x1BFFF` | All `0xFF` padding before the copyright block. |
 | `0x7C000..0x7FFFF` | `0x13 = 0x03` | `0x1C000..0x1FFFF` | Copyright/padding at logical stream offset `0`; dictionary header starts at offset `0x100`. |
 | `0x80000..0x8FFFF` | `0x14 = 0x02` | `0x20000..0x2FFFF` | Continuation of the confirmed dictionary stream. |
 
 The key reader is `3000:660F`. It treats `[3C00:9684]:[3C00:9682]` as a
-logical byte offset, converts that offset to a 1 KiB page, and copies from
-segment `7C00 + page * 0x40`:
+signed-capable logical byte offset, then computes a source `DS:SI` pair from
+that offset. The segment value is not literal; it is built in `DX` and then
+loaded into `DS`:
 
 ```asm
 3000:665D  mov ax,[9682]
@@ -154,26 +156,30 @@ segment `7C00 + page * 0x40`:
 3000:6681  rep movsw
 ```
 
-Logical offset `0` therefore maps to CPU `0x7C000`, file `0x1C000`. The known
-seek callers set offsets inside this logical stream. No explicit
-`6000`-segment reader has been found in the banked linguistic code, so the earlier
-`0x00000..0x1B420` former `banked-dictionary-data` label is currently only a
-mapped payload, not a decoded format. It is followed by all-`0xFF` erased
-padding through `0x1C000`. Since the product also has grammar checking, this
-low mapped payload should be treated as possible grammar/linguistic data, not
-only a spelling dictionary.
+Logical offset `0` maps to CPU `0x7C000`, file `0x1C000`. Negative logical
+offsets are possible at the arithmetic level: offset `-0x1C000` maps back to
+CPU `0x60000`, file `0x00000`, and offsets through about `-0xBED` cover the
+dense low mapped payload. `3000:66AE` only rejects seeks above `0x14000`; it
+does not reject negative offsets. That means the low mapped payload is
+reachable through the normal stream reader if a caller intentionally seeds a
+negative logical offset.
 
-An odd segment base was checked as a possible way to skip the copyright/header
-area and read the lower mapped chunk. The banked code has no confirmed
-`0x6000..0x7BFF` segment load in this path; the only confirmed ROM source
-segment load is the computed `7C00 + page * 0x40` form in `3000:660F`.
-`3000:66AE` does not explicitly reject negative logical offsets, so a
-pre-biased seek could theoretically land below CPU `0x7C000`, but the known
-callers use non-negative offsets derived from the dictionary header and page
-indexes.
+The unresolved part is therefore the caller, not the addressing mechanism. The
+known seek callers inspected so far use non-negative offsets derived from the
+dictionary header, dictionary page indexes, or caller-supplied search offsets.
+The placement of the erased area argues against treating the low payload as a
+natural negative-offset prelude to the dictionary stream: the unused `0xFF`
+block is immediately before logical offset zero, whereas a backwards-growing
+prelude would more naturally leave erased space at the low end of the mapped
+window.
+The `0x00000..0x1B413` former `banked-dictionary-data` label remains a mapped
+payload, not a decoded format. It is followed by a 13-byte zero tail at
+`0x1B413..0x1B420`, then all-`0xFF` erased padding through `0x1C000`. Since the
+product also has grammar checking, this low mapped payload should be treated
+as possible grammar/linguistic data, not only a spelling dictionary.
 
 The `0x1C000..0x30000` stream was also scanned as data for references back into
-`0x00000..0x1B420`. Individual byte patterns can look like low absolute
+`0x00000..0x1B413`. Individual byte patterns can look like low absolute
 addresses, especially inside compressed data, but no monotonic pointer-table
 run was found for 24-bit/32-bit absolute offsets or signed negative 1 KiB page
 deltas. The single 32-bit value that decodes as a signed negative stream offset
@@ -279,7 +285,14 @@ nibble-oriented:
 word, and `3000:B116` expands matching entries into caller-provided buffers.
 This explains the readable letter-order data around file `0x24C00`, including
 the subheader tables, while keeping the lower mapped payload at
-`0x00000..0x1B420` unresolved for now.
+`0x00000..0x1B413` unresolved for now.
+
+A follow-up byte-shape pass found no plain strings of length 8 or more and no
+simple `mov r16,0x6000..0x7BFF` / `mov sreg,r16` load sequence in the banked
+`3000` code. The low payload has much less zero density than the confirmed
+dictionary stream (`~1.3%` versus `~8.5%` in the compressed word region), which
+argues against treating it as just another page of the same dictionary stream
+without a confirmed reader.
 
 Low-level helpers in the late part of the `3000` bank are now separated in the
 ROM map:

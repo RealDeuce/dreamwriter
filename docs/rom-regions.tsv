@@ -3,8 +3,9 @@
 # code, monitor-code, table, text, font, bitmap, resource, mixed, data, unknown.
 # confidence values: confirmed, probable, rough.
 start	end	type	confidence	segment	label	notes
-0x00000	0x1B420	data	rough		low-banked-linguistic-payload	Dense mapped payload at CPU 0x60000..0x7B41F during the banked spell/grammar call; no confirmed reader has been isolated yet.
-0x1B420	0x1C000	data	confirmed		low-bank-erased-padding	All 0xFF padding between the unresolved low mapped payload and the Proximity copyright block.
+0x00000	0x1B413	data	rough		low-banked-linguistic-payload	Dense mapped payload at CPU 0x60000..0x7B412 during the banked spell/grammar call; no confirmed reader has been isolated yet.
+0x1B413	0x1B420	data	confirmed		low-payload-zero-tail	All-zero tail/padding after the unresolved low mapped payload.
+0x1B420	0x1C000	data	confirmed		low-bank-erased-padding	All 0xFF padding between the low payload zero tail and the Proximity copyright block.
 0x1C000	0x1C070	text	confirmed		proximity-copyright	Merriam-Webster/Proximity copyright strings plus terminator/control bytes before the dictionary header padding.
 0x1C070	0x1C100	data	confirmed		dictionary-header-padding	Zero padding between the Proximity copyright block and the dictionary stream header at file 0x1C100.
 0x1C100	0x30000	data	confirmed		dictionary-stream	Dictionary stream consumed by 3000:660F; header at file 0x1C100 and compressed word data beginning around file 0x24C00.

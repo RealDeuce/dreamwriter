@@ -107,10 +107,12 @@
     whether a fixture strap, reset-vector overlay, or external serial/boot mode
     can select this monitor.
 29. Identify the real consumer, if any, for the low mapped linguistic payload at
-    file `0x00000..0x1B420`. The banked linguistic wrapper maps it at CPU
-    `0x60000..0x7B41F`, followed by `0xFF` padding through CPU `0x7BFFF`,
-    but the confirmed dictionary reader at `3000:660F`
-    starts at CPU `0x7C000` / file `0x1C000`, and no explicit `6000`-segment
-    reader has been found in the banked linguistic code yet. Because the
-    product supports grammar checking as well as spelling, this range may hold
-    grammar or other linguistic tables rather than dictionary words.
+    file `0x00000..0x1B413`. The banked linguistic wrapper maps it at CPU
+    `0x60000..0x7B412`, followed by a short zero tail and then `0xFF` padding
+    through CPU `0x7BFFF`. The confirmed dictionary reader at `3000:660F`
+    can address this area in principle if handed a negative logical stream
+    offset, but the known seek callers use non-negative offsets so far. The
+    erased block's position immediately before logical offset zero also argues
+    against a simple backwards-growing dictionary prelude. Because the product
+    supports grammar checking as well as spelling, this range may hold grammar
+    or other linguistic tables rather than dictionary words.
