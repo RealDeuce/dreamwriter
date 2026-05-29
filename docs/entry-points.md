@@ -119,13 +119,30 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C688:77B4` | `0x4E034` | Copies first menu/graphic resource block from `C688:D133` / file `0x539B3`. |
 | `C688:77C1` | `0x4E041` | Copies a `C688` resource block to low RAM `0x7F28`, then calls `C688:6B8C`. |
 | `C688:8312` | `0x4EB92` | First menu/input dispatcher reached after the startup menu resource is copied. |
+| `C688:8CFB` | `0x4F57B` | Document/list flow after the `LIST OF DOC.` template. Handles current selection state, inline key dispatch, and returns to the shared application event loop. |
+| `C688:9187` | `0x4FA07` | Shared document picker entry. Calls the storage-target setup path, invokes `DC98:52E5` with `[6806] | 0x40`, then copies the selected name into the caller buffer. |
 | `C688:92DF` | `0x4FB5F` | Inline key dispatch trampoline. Consumes caller-embedded key/target entries and rewrites the return address. |
 | `C688:9364` | `0x4FBE4` | Far-call wrapper for `C000:170E`. |
 | `C688:93B5` | `0x4FC35` | Keyboard/event wrapper; calls `C688:5358` and stores the returned byte in `[0x794A]`. |
 | `C688:9461` | `0x4FCE1` | Selectable menu/list drawing layer. Calls the cached `AL=5` path in `C688:9541`, then runs inline `C688:0240` scripts for per-item work. |
 | `C688:9541` | `0x4FDC1` | Screen resource loader used by menu setup wrappers such as `C688:7689`. Loads resource IDs or CS pointer blocks into `0x7F28` and interprets their payload. |
 | `C688:96E1` | `0x4FF61` | Invalidates the `C688:9541` `AL=5` resource cache by setting `[7574]`/`[7575]` to `FF`. |
+| `C688:9A12` | `0x50292` | Editor accented-character output helper. Checks accent/compose state, consults the C688:9A90 tables, and emits `0xF4`/`0xF5` control bytes plus the composed character. |
+| `C688:9AF6` | `0x50376` | Accented-character trigger lookup. Scans the C688:9A98 trigger list in CS and returns a pointer used by `C688:9B0A`. |
+| `C688:9B0A` | `0x5038A` | Accented-character table walker. Uses the C688:9A99 pointer table and returns the matching character/glyph pair or the zero terminator. |
+| `C688:9B2B` | `0x503AB` | WP status/layout refresh front end. Rebuilds status RAM templates, applies display-state flags, and dispatches selected records through the C000 renderer. |
+| `C688:9D79` | `0x505F9` | WP status metric formatter. Formats current page/line/column-ish values into `0x76E4`, `0x76F6`, and `0x770E`, blanking leading zeroes. |
+| `C688:9DFB` | `0x5067B` | WP status offset calculator. Derives `[79C1]` from free heap count and editor layout state before status resources are refreshed. |
+| `C688:9E7E` | `0x506FE` | WP status resource copy tail. Copies a fixed 0x14-byte template from `C688:EAD9` to `0x8231`, then renders the `C688:EACE` record. |
+| `C688:A647` | `0x50EC7` | First printer token handler after the C688:A527 vector table. Emits the inline record at `C688:A65F`, then chains through style/setup handlers. |
+| `C688:AA76` | `0x512F6` | Shared printer inline-record emitter. Waits for the printer/output queue through `C688:AA84`, then emits the caller-selected CS record through `C688:CC1F`. |
 | `C688:AAA6` | `0x51326` | WP `PRINTER` -> `PRINT OUT` flow. Presents print dialogs/ranges and routes formatted output toward the printer emitter. |
+| `C688:AD5C` | `0x515DC` | Opens `H:ADDRESS.ODB`, reads 0x18/0x1E-byte chunks through the DOS-like API, and emits address-book fields into the output/editor stream. |
+| `C688:AE5F` | `0x516DF` | Second `H:ADDRESS.ODB` reader/dump helper. Opens the same filename and steps through records using `C688:AF10` sector/record reads. |
+| `C688:AF10` | `0x51790` | Address-book record reader. Seeks to `DX`, reads 0x1E bytes into `0x8259`, stores returned count in `[8258]`, and resets `[8257]`. |
+| `C688:B056` | `0x518D6` | Printer table-dispatch helper. Uses `AL=[829E] & 7` as an index into the `CS:SI` table selected by the caller, then jumps through the selected word pointer. |
+| `C688:B171` | `0x519F1` | Printer motion table setup helper. Selects table bases at `C688:B223`/`B28B` or `C688:B223`/`B547`, emits the selected byte templates, and adjusts spacing state. |
+| `C688:B803` | `0x52083` | Printer spacing increment helper. Updates `[8298]`, emits spacing escape sequences according to `[829E]`, and shares the `C688:B862` byte-output helper. |
 | `C688:BA91` | `0x52311` | Printer helper table launcher. Points `SI` at the `C688:BA97` table and jumps through shared table handling. |
 | `C688:BBCB` | `0x5244B` | Start of printer escape/control handler cluster after the dispatch tables; nearby handlers emit ESC/P-style setup sequences. |
 | `C688:C057` | `0x528D7` | Default printer character/control output stub reached through the C688:BFA7 vector table; selected neighboring stubs load alternate output bytes and jump to `C688:CFF1`. |

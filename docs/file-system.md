@@ -54,6 +54,12 @@ C688:9197  mov  bx,7555
 C688:919A  call DC98:52E5
 ```
 
+The surrounding ROM range is now bounded in the region map as
+`0x4F57B..0x50310`: it starts immediately after the `LIST OF DOC.` template,
+contains the shared document picker at `C688:9187`, and continues through the
+inline key-dispatch/resource-loader helpers before the accented-character table
+at `C688:9A90`.
+
 So the user-visible storage choice controls the source/destination endpoint for
 file operations. `TAB` is still treated specially by these handlers (`AL=0x09`)
 and returns to the change-directory/current-target path.

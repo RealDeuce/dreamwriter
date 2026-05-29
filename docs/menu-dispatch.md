@@ -208,12 +208,19 @@ After the cache check, `C688:9541`:
 
 ```text
 1. Applies the display/profile byte through C688:4473.
-2. Copies a template from C688:8C9C into low RAM at 0x78E3.
+2. Copies a template from C688:8C9C / file `0x4F51C..0x4F57B` into low RAM at
+   0x78E3. The template contains the `LIST OF DOC.` title and fixed layout
+   bytes; code resumes immediately afterward at C688:8CFB.
 3. Calls C688:76BF with the caller's SI value to load a resource into 0x7F28.
 4. Parses a small header into 0x78D5, 0x78DB/0x78DF, and 0x78DD/0x78E1.
 5. Interprets the remaining resource bytes, emitting characters via C688:5B83
    and inline display script bytes through C688:0240.
 ```
+
+This loader is part of the post-template block now mapped as
+`0x4F57B..0x50310`; the block remains `mixed` rather than pure code because it
+contains inline key-dispatch tables and display-script bytes consumed by the
+local trampolines.
 
 `C688:76BF` has two modes:
 

@@ -477,7 +477,8 @@ the boot screen is up and the firmware is waiting for keyboard input.
 Several apparent `hlt` hits in the `C688` UI area are false positives from
 linear disassembly through resource data or through byte values used as
 characters/control codes. In particular, the cluster around `C688:9A4F` compares
-or emits `0xF4` and `0xF5` as data; it is not the CPU idle instruction.
+or emits `0xF4` and `0xF5` as data while consulting the accented-character
+tables at `C688:9A90..9AF5`; it is not the CPU idle instruction.
 
 ## Startup Banner Resource Block
 

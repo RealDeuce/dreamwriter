@@ -98,15 +98,29 @@ start	end	type	confidence	segment	label	notes
 0x4A0F9	0x4A11F	code	confirmed	C688	inline-display-script-dispatcher	C688:3879 dispatcher entered by C688:0240; consumes caller-embedded opcodes and jumps through the C688:38A4 table.
 0x4A11F	0x4A247	mixed	probable	C688	display-script-dispatch-tables	Display-script dispatch table/header plus nearby inline display-script bytes before the editor heap routines.
 0x4A247	0x4A4E8	code	confirmed	C688	editor-block-heap-manager	C688:39C7..3C68 allocation/free/read/write helpers for the word-processor editor block heap.
-0x4A4E8	0x5072B	mixed	rough	C688	app-code-and-ui-tables-tail	Main application code, tables, and UI resources before the WP status-label bitmap; needs further splitting.
+0x4A4E8	0x4F51C	mixed	rough	C688	app-code-and-ui-tables-tail-before-doc-template	Main application code, tables, and inline resources before the document-list template; needs further splitting.
+0x4F51C	0x4F57B	resource	confirmed	C688	document-list-screen-template	C688:8C9C template copied by C688:9541 into low RAM 0x78E3; contains the LIST OF DOC. title and fixed layout bytes.
+0x4F57B	0x50310	mixed	probable	C688	wp-document-picker-and-ui-loader-code	Document picker/list, key dispatch, menu/list resource loader, editor character-output helpers, and inline key/display-script bytes after the document-list template.
+0x50310	0x50376	table	confirmed	C688	wp-accent-character-composition-tables	C688:9A90 accented-character trigger, pointer, and character-to-glyph tables consumed by C688:9AF6/C688:9B0A.
+0x50376	0x506D8	code	confirmed	C688	wp-accent-and-status-refresh-helpers	Accented-character lookup helpers plus WP status/layout refresh helpers that build RAM templates at 0x76xx/0x77xx and call the C000:170E renderer.
+0x506D8	0x506FE	resource	confirmed	C688	wp-status-vtab-display-records	Small C688:9E58..9E7D display/text records selected by C688:9D50 for WP status/header refresh, including the literal vtab marker.
+0x506FE	0x5072B	code	confirmed	C688	wp-status-resource-copy-tail	C688:9E7E copies a 0x14-byte template from C688:EAD9 to 0x8231, invokes the C688:EACE display record through C000:170E, then re-enters the status refresh path.
 0x5072B	0x5075B	bitmap	confirmed	C688	wp-status-label-bitmap	12x24 1bpp stacked Pag/Lin/Col bitmap used by the word-processor status display; referenced by FF42 record at file 0x50B5F.
 0x5075B	0x50AD0	code	confirmed	C688	wp-editor-text-flow-before-status-script	WP/editor text-flow helper code after the status-label bitmap; code returns at file 0x50ACE/0x50ACF immediately before the display-script island.
 0x50AD0	0x50BD5	resource	confirmed	C688	wp-status-display-script	Display-script/resource island containing the FF42 record at file 0x50B5F that draws the 12x24 Pag/Lin/Col bitmap.
 0x50BD5	0x50DA7	code	confirmed	C688	wp-printer-token-expander	Formatter/output helper code after the WP status display-script island; expands internal control bytes into staged printer/output tokens.
-0x50DA7	0x50ECB	table	confirmed	C688	wp-printer-token-vector-table	Word vector table for formatter/output token cases; many default entries point to C688:AA73.
-0x50ECB	0x517B6	mixed	probable	C688	wp-printer-merge-address-code	WP print/merge/address code with inline printer escape records and embedded :MERGE.FIL and :ADDRESS.ODB file-name strings.
-0x517B6	0x518D7	table	confirmed	C688	wp-printer-merge-handler-tables	Word-pointer tables and zero-filled slots for WP print/merge/address handlers before code resumes at C688:B057.
-0x518D7	0x52317	mixed	rough	C688	app-code-and-ui-tables-before-printer-escape-tables	Main application code, display scripts, tables, and UI resources before the printer escape dispatch tables; still contains real code targets and data tables.
+0x50DA7	0x50EC7	table	confirmed	C688	wp-printer-token-vector-table	Word vector table for formatter/output token cases; many default entries point to C688:AA73, with the final entries pointing to C688:AA25..AA46 before code resumes at C688:A647.
+0x50EC7	0x51312	mixed	probable	C688	wp-printer-token-handler-code-and-escape-records	Printer/output token handlers plus inline escape/control records emitted through C688:AA76/C688:AA7D.
+0x51312	0x51326	table	confirmed	C688	wp-printout-flow-vector-table	Small word-pointer table used by the C688:AAA6 printout flow via [75EF], with entries around C688:AAE0, C688:AB69, C688:ABA4, C688:ABC1, and C688:AC99.
+0x51326	0x514FF	code	confirmed	C688	wp-printout-and-merge-flow-code	WP PRINTER -> PRINT OUT and merge/list selection flow before the inline :MERGE.FIL filename.
+0x514FF	0x5150D	text	confirmed	C688	merge-file-name-string	Null-terminated :MERGE.FIL filename copied to the file-picker buffer during the merge path.
+0x5150D	0x516BA	code	confirmed	C688	wp-merge-and-address-flow-code	Merge/address-book flow after the :MERGE.FIL string; includes the C688:AD5C address-book reader setup before the inline H:ADDRESS.ODB filename.
+0x516BA	0x516C9	text	confirmed	C688	address-book-file-name-string	Null-terminated H:ADDRESS.ODB filename opened by C688:AD5C and the later address-book dump helper.
+0x516C9	0x517B6	code	confirmed	C688	wp-addressbook-record-dump-code	Address-book file open/read helpers that seek/read 0x1E-byte records from H:ADDRESS.ODB and emit tab/newline-delimited fields into the editor/output stream.
+0x517B6	0x518D6	table	confirmed	C688	wp-printer-merge-handler-tables	Word-pointer tables and zero-filled slots for WP print/merge/address handlers before code resumes at C688:B056.
+0x518D6	0x51AA3	code	confirmed	C688	wp-printer-motion-output-helpers	Printer motion/control output helpers that dispatch through caller-selected CS tables and emit bytes via C688:C82A.
+0x51AA3	0x52083	table	confirmed	C688	wp-printer-motion-and-spacing-tables	Printer motion/spacing pointer tables, escape templates, and fixed bit-pattern tables consumed through C688:B056/B171.
+0x52083	0x52317	code	confirmed	C688	wp-printer-spacing-output-helpers	Printer spacing/line-feed helpers and the C688:BA91 table launcher immediately before the printer escape dispatch tables.
 0x52317	0x5244B	table	probable	C688	printer-escape-dispatch-tables	Pointer tables and zero-filled slots for printer escape/control handlers; nearby code reaches these through SI-loaded tables.
 0x5244B	0x527B8	mixed	probable	C688	printer-escape-output-helpers	Printer output helpers and inline ESC/P-style literal strings, including pitch, line-spacing, underline, and paper-feed sequences.
 0x527B8	0x52827	data	confirmed	C688	printer-output-table-padding	Zero padding before the printer character output vector table.
