@@ -441,6 +441,29 @@ This confirms `0x00000..0x1B413` is consumed as a separate nibble-coded slot
 page stream. It is not the same format as the 1 KiB compressed dictionary pages
 loaded by `3000:B076` and walked by `3000:8B0A`/`3000:8F06`.
 
+The active table selected through `[9360]` is a mixed data/callback table. For
+slot `0`, `[9360] = 0x0CAE`; for slot `1`, `[9360] = 0x219A`. The first words
+are data-table pointers used by the slot-page parser, while later words are
+near callbacks invoked by the parser driver:
+
+| Table offset | Slot 0 value | Slot 1 value | Observed use |
+| ---: | ---: | ---: | --- |
+| `+00` | `0x0CDC` | `0x161A` | Initial stream-cursor table read by `3000:1D5A`. |
+| `+02` | `0x0CE0` | `0x161E` | Four-byte records indexed after `3000:20F8` in one `3000:1E6C` branch. |
+| `+04` | `0x10E0` | `0x1A1E` | Four-byte records used by `3000:1D7E`/`3000:1E6C` for low-nibble-zero classes. |
+| `+06` | `0x1120` | `0x1A5E` | Byte table indexed by an extended nibble count in `3000:1E6C`. |
+| `+0A` | `0x1600` | `0x6156` | Parser callback called by `3000:1A16`. |
+| `+0C` | `0x1694` | `0x6184` | Parser callback called by `3000:1A16`. |
+| `+0E` | `0x1530` | `0x5F4C` | Parser callback called by `3000:1A16`. |
+| `+10` | `0x12DE` | `0x5C30` | Parser callback called by `3000:1990` and `3000:1A16`. |
+
+`3000:1D5A` copies three bytes from the table at `[ [9360] + 0 ]` into a caller
+cursor buffer: a word for `[8EE6]` and a byte for `[8EE8]`. Slot `0` starts with
+cursor record `33 AE 16`, i.e. offset `0x33AE` and state byte `0x16`. Since
+`0x16 & 7 == 6`, that points into descriptor 6, file `0x18000 + 0x33AE =
+0x1B3AE`, close to the end of the short final low block. Slot `1` starts with
+cursor record `D8 28 11`, selecting descriptor 1 with offset `0x28D8`.
+
 The direct references to stream cursor words `[9682]` and `[9684]` are still
 limited to the stream reset/read/seek helpers at `3000:65FE`, `3000:660F`, and
 `3000:66AE`; the newly confirmed low-block consumer is this page-descriptor
@@ -649,6 +672,7 @@ ROM map:
 | `3000:963A` | Finds a byte in a NUL-terminated string. |
 | `3000:9666` | Finds the last occurrence of a byte in a NUL-terminated string. |
 | `3000:969E` | Lexicographic string compare helper. |
+| `3000:1D5A` | Seeds a slot-page stream cursor from the active table at `[ [9360] + 0 ]`, copying a word offset and byte state. |
 | `3000:1D7E` | Slot-page parser stepper using descriptor index `[8EE8] & 7`, stream offset `[8EE6]`, and the nibble reader at `3000:20C2`. |
 | `3000:1E6C` | Slot-page parser/record builder using the same descriptor stream; saves/restores stream cursor state when consulting callback-table data. |
 | `3000:2D5C` | Selects a six-byte active slot descriptor from `[9104] + index * 6` and loads its far pointer into `[8EFC:8EFE]`. |
