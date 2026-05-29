@@ -13,6 +13,7 @@ Start here:
 | [`startup-ui.md`](startup-ui.md) | Cold-start UI path, inline display scripts, boot update sequence, and first menu graphic. |
 | [`menu-dispatch.md`](menu-dispatch.md) | Inline key dispatch tables and the shared application menu event loop. |
 | [`file-system.md`](file-system.md) | FILE menu storage flow, DOS-like file API wrappers, and directory/DTA evidence. |
+| [`wp-editor-heap.md`](wp-editor-heap.md) | Word-processor live document heap, block allocator, and cross-application use evidence. |
 | [`diagnostics.md`](diagnostics.md) | Diagnostic chord, command loop, banner/help strings, and warm IRQ entry. |
 | [`hardware.md`](hardware.md) | Keyboard, LCD/framebuffer, I/O ports, and low RAM state seen so far. |
 | [`fonts.md`](fonts.md) | Main glyph table, candidate width table, and font variants. |

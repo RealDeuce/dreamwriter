@@ -35,6 +35,71 @@ than removal of the source. The copy direction selector at file
 `0x60F3F..0x60FC9` updates `[6806]`, the active storage target byte, after
 deriving it from `[6805]` and the selected Built-in/Card/DreamLink direction.
 
+## RECALL And The Working Document
+
+`RECALL` is part of the word-processor file workflow rather than a global
+system shell. The handler at `C688:7B41` draws the `RECALL` resource
+(`SI=0x62`), enters the shared document picker at `C688:9187`, and only then
+loads the selected file into the editor.
+
+The picker path passes the active storage target byte, `[6806] | 0x40`, to the
+common file-list routine at `DC98:52E5`:
+
+```asm
+C688:9187  call C688:910F
+C688:918C  call C688:91BB
+C688:9190  mov  al,[6806]
+C688:9193  or   al,40
+C688:9197  mov  bx,7555
+C688:919A  call DC98:52E5
+```
+
+So the user-visible storage choice controls the source/destination endpoint for
+file operations. `TAB` is still treated specially by these handlers (`AL=0x09`)
+and returns to the change-directory/current-target path.
+
+Once a directory entry is selected, `RECALL` checks its flags at `[BX+4]`,
+rejects flag bit `0x01`, prompts for the flag-`0x04` case, then calls the
+actual load/parser entry:
+
+```asm
+C688:7B5D  call C688:7841     ; resolve selected entry
+C688:7B64  mov  al,[bx+04]    ; selected entry flags
+C688:7B69  test bl,01
+C688:7B70  test bl,04
+C688:7B83  call C688:8610
+C688:7B86  call C688:4F63     ; load selected document into editor state
+```
+
+After the load flow, `C688:7BC6` copies the selected filename/current document
+name from `0x778A` to `0x8DFC`:
+
+```asm
+C688:7BC6  mov  si,778A
+C688:7BC9  mov  di,8DFC
+C688:7BCC  mov  cx,0011
+C688:7BD3  mov  es,0000
+C688:7BD6  rep  movsb
+```
+
+The `STORE` path performs the inverse copy, `0x8DFC -> 0x778A`, before entering
+its save/name-confirmation flow. That makes `0x8DFC` look like the current
+document name slot, while `0x778A` is the file-picker/name-entry buffer.
+
+The recalled document itself does not appear to be copied to a single fixed
+RAM address like the ROM CARD loader does with `0xA4F0`. `C688:4F63` first
+calls `C688:1A71`, which resets editor state, then enters the inline
+word-processor stream interpreter through `C688:0240`. The editor insertion and
+stream routines (`C688:5B83`, `C688:5B9A`, `C688:3B2F`, `C688:3B62`, and
+related helpers) update pointer/state fields such as `[78E7]`, `[78EB]`,
+`[78ED]`, `[78F3]`, `[78F5]`, `[7928]`, `[792A]`, and `[793B..793E]`.
+
+Current read: the working copy is editor-internal dynamic state in RAM. The
+FILE menu can choose where documents are recalled from or stored to, but there
+is no evidence yet that it lets the user place the live editing buffer on the
+card or in any other storage window. The editor heap and block allocator are
+tracked in [`wp-editor-heap.md`](wp-editor-heap.md).
+
 ## DOS-Like API Surface
 
 The storage layer uses a DOS-like `int 21h` API. The wrappers around
