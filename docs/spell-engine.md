@@ -352,8 +352,8 @@ descriptor is immediately dereferenced:
 ```
 
 For slot `0`, that reads byte `0x04` from `6000:0000`, which is file
-`0x00000`. The byte is split into high/low nibbles and controls whether a
-second group of eight descriptors is copied:
+`0x00000`. The byte is split into high/low nibbles and feeds a loop-continuation
+test:
 
 ```asm
 3000:530D  and ax,00F0
@@ -362,6 +362,29 @@ second group of eight descriptors is copied:
 3000:531A  dec cx
 3000:531D  jl  3000:52B2
 ```
+
+However, this firmware also caps the outer loop at one descriptor group with
+`cmp [bp-04],1` / `jnl 3000:531F`, so only the first eight descriptors are
+materialized here. The high/low test may be leftover support for a larger slot
+page list, but it does not cause a second group to be copied in this ROM.
+
+The first six bytes of the even 0x4000 pages make that high/low split look
+intentional:
+
+| File offset | First six bytes | Working read |
+| ---: | --- | --- |
+| `0x00000` | `04 10 32 02 C8 FF` | block/index byte `0x04` |
+| `0x08000` | `14 10 32 02 63 2F` | block/index byte `0x14` |
+| `0x10000` | `24 10 32 02 51 DB` | block/index byte `0x24` |
+| `0x18000` | `34 10 32 02 A2 56` | block/index byte `0x34` |
+
+Odd 0x4000 pages do not have this same header shape, and the reader only skips
+six bytes when `[8EE8]` bit 0 is clear. So the stream appears to be organized as
+four logical blocks whose even half starts with a six-byte header and whose odd
+half is continuation data. The first header byte plausibly stores block index in
+the high nibble and total block count `4` in the low nibble. The final block is
+short: data ends at file `0x1B413`, before the reader would naturally wrap into
+descriptor 7 at file `0x1C000`.
 
 So the low block is no longer merely mapped by the spell/grammar wrapper; it is
 page data for slot `0`. The page header and token classes remain undecoded, but
@@ -390,8 +413,10 @@ from that list:
 3000:2D77  mov [8EFE],dx
 ```
 
-Only the first four bytes of each descriptor are used here, as the active
-far pointer `[8EFC:8EFE]`. The final two descriptor bytes are still unknown.
+Only the first four bytes of each six-byte runtime descriptor are populated by
+`3000:527C` and used here, as the active far pointer `[8EFC:8EFE]`. The two
+extra stride bytes appear to be unused or reserved padding in the descriptor
+list rather than source bytes returned by `3000:003D`.
 The parser state uses `[8EE6]` as an offset into that active stream and `[8EE8]`
 as mixed page/phase state: `[8EE8] & 7` selects the descriptor index, while bit
 `0x10` is toggled by the nibble reader.

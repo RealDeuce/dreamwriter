@@ -115,14 +115,18 @@
     `3000:18EC` selects the descriptor list in `[9104]`, `3000:2D5C` loads one
     six-byte descriptor's far pointer into `[8EFC:8EFE]`, and
     `3000:20C2`/`3000:20F8` read nibbles/bytes using offset `[8EE6]` and mixed
-    descriptor/phase state `[8EE8]`. Remaining questions are the six-byte page
-    header implied by the `[8EE6] = 6` start rule, the final two bytes of each
-    six-byte descriptor, the nibble token classes, and which higher-level
-    parser/thesaurus routines consume each page. The confirmed dictionary reader
-    at `3000:660F` can also address this area in principle if handed a
-    signed-negative logical stream offset around `-0x1CFF0..-0x1BDE`, but the
-    known seek callers use non-negative offsets so far. Large positive offsets
-    around `0xE4000..0xFF412` would wrap to this area in the reader's 20-bit
+    descriptor/phase state `[8EE8]`. `3000:527C` indexes descriptors with a
+    six-byte stride but only populates the first four far-pointer bytes, so the
+    extra stride bytes look like unused/reserved runtime padding rather than
+    source descriptor fields. Even 0x4000 pages begin with six-byte headers
+    whose first bytes are `0x04`, `0x14`, `0x24`, and `0x34`, while odd pages
+    are continuations and are not skipped by the start rule. Remaining questions
+    are the meaning of header bytes `1..5`, the nibble token classes, and which
+    higher-level parser/thesaurus routines consume each page. The confirmed
+    dictionary reader at `3000:660F` can also address this area in principle if
+    handed a signed-negative logical stream offset around `-0x1CFF0..-0x1BDE`,
+    but the known seek callers use non-negative offsets so far. Large positive
+    offsets around `0xE4000..0xFF412` would wrap to this area in the reader's 20-bit
     segment math, but the confirmed stream API rejects positive seeks above
     `0x14000`.
 30. Decode the packed record fields behind Thesaurus related-word expansion.
