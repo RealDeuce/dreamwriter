@@ -68,10 +68,10 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:170E` | `0x4170E` | Far-call service wrapper used by `C688:9364`; service `AH=06` reaches the resource/text renderer. |
 | `C000:1712` | `0x41712` | Far-call service wrapper used by `C688:936A`; service `AH=01` reaches the `D59C` resource table reader. |
 | `C000:18EE` | `0x418EE` | Resource table reader for `D59C` / file base `0x559C0`; indexes by `DL` resource ID. |
-| `C000:18A1` | `0x418A1` | Banked spell/linguistic service helper. Temporarily maps `3000:0000` to ROM file `0x30000` and calls it. |
+| `C000:18A1` | `0x418A1` | Banked spell/grammar/linguistic service helper. Temporarily maps `3000:0000` to ROM file `0x30000` and calls it. |
 | `C000:1F17` | `0x41F17` | Private format helper. Selects target drive `8/9/10`, sets `BL=A5`, and calls `INT 21h AH=FF`. |
 | `C000:2C4A` | `0x42C4A` | Private `INT 21h AH=FF` direct service. With `BL=A5`, formats built-in/card storage or jumps into the DreamLink-specific path. |
-| `3000:0000` | `0x30000` | Banked spell/linguistic service thunk. Switches to segment `3C00` and dispatches through `3000:4AA6`. |
+| `3000:0000` | `0x30000` | Banked spell/grammar/linguistic service thunk. Switches to segment `3C00` and dispatches through `3000:4AA6`. |
 | `3000:4AA6` | `0x34AA6` | Banked service dispatcher using service IDs `0x00..0x59`. |
 | `C000:3064` | `0x43064` | Private `INT 21h AX=4428` endpoint probe. Returns availability bits for built-in RAM, PCMCIA SRAM card, and DreamLink. |
 | `C000:311E` | `0x4311E` | Private `INT 21h AX=4429` DreamLink finish/flush helper; returns success without action for non-DreamLink handles. |

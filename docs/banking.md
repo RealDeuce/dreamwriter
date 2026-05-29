@@ -172,7 +172,7 @@ Those bytes disassemble as code and begin:
 3000:0004  push bp
 ```
 
-This target is now tracked as the banked spell/linguistic service thunk. See
+This target is now tracked as the banked spell/grammar/linguistic service thunk. See
 [`spell-engine.md`](spell-engine.md) for the dispatcher and diagnostic `Q/R`
 service IDs. It is
 reached from routines including `C000:02A8`, `C000:02B0`, `C000:02B8`,

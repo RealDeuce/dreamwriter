@@ -3,13 +3,27 @@
 # code, monitor-code, table, text, font, bitmap, resource, mixed, data, unknown.
 # confidence values: confirmed, probable, rough.
 start	end	type	confidence	segment	label	notes
-0x00000	0x1BFFF	data	rough		banked-dictionary-data	Dictionaries/spelling data; no confirmed executable entry points in this span yet.
+0x00000	0x1BFFF	data	rough		low-banked-linguistic-payload	Mapped into CPU 0x60000..0x7BFFF during the banked spell/grammar call; no confirmed reader has been isolated yet.
 0x1BFFF	0x1C050	text	confirmed		proximity-copyright	Merriam-Webster/Proximity copyright string area.
-0x1C050	0x2FFFF	data	rough		dictionaries-and-wordlists	Word lists and linguistic tables.
-0x30000	0x33EFC	code	probable	3000	banked-spell-service	Banked spell/linguistic service reached via C000:18A1 and 3000:0000 / 3000:4AA6.
-0x33EFC	0x33F0A	table	confirmed	3000	banked-spell-inline-table	Small inline table skipped by nearby control flow; decodes as false I/O if swept as code.
-0x33F0A	0x34C00	code	probable	3000	banked-spell-service-tail	Continuation of banked spell/linguistic service after inline data island.
-0x34C00	0x3BFFF	data	rough		banked-linguistic-data	Spell/linguistic tables around the banked service.
+0x1C050	0x30000	data	confirmed		dictionary-stream	Dictionary stream consumed by 3000:660F; header at file 0x1C100 and compressed word data beginning around file 0x24C00.
+0x30000	0x33EFC	code	probable	3000	banked-linguistic-service	Banked spell/grammar/linguistic service reached via C000:18A1 and 3000:0000 / 3000:4AA6.
+0x33EFC	0x33F0A	table	confirmed	3000	banked-linguistic-inline-table	Small inline table skipped by nearby control flow; decodes as false I/O if swept as code.
+0x33F0A	0x34C00	code	probable	3000	banked-linguistic-service-tail	Continuation of banked spell/grammar/linguistic service after inline data island.
+0x34C00	0x3660F	mixed	rough	3000	banked-linguistic-dispatch-tail	Dispatcher tail, service routines, and embedded tables after 3000:4AA6.
+0x3660F	0x366D3	code	confirmed	3000	dictionary-stream-reader	Logical seek/read helpers for the dictionary stream mapped at CPU 0x7C000 and above.
+0x366D3	0x36E9C	code	confirmed	3000	candidate-list-manager	Initializes dictionary candidate buffers, walks candidate text, and formats parser/search records.
+0x36E9C	0x36EB0	table	confirmed	3000	candidate-formatter-jump-table	Jump table for record formatter cases around 3000:6E04.
+0x36EB0	0x36ECE	code	confirmed	3000	candidate-record-formatter-tail	Tail of the parser/search-record formatter before the suffix handlers.
+0x36ECE	0x37124	code	confirmed	3000	inflection-suffix-handler-e-z	Suffix/word-form generation helper; dispatches by final letter e..z and probes variants through dictionary lookup.
+0x37124	0x37150	table	confirmed	3000	inflection-e-z-jump-table	Letter dispatch table for 3000:6ECE; not executable code.
+0x37150	0x373F2	code	confirmed	3000	inflection-suffix-handlers	Additional suffix handlers called by the candidate formatter.
+0x373F2	0x37424	table	confirmed	3000	inflection-a-y-jump-table	Letter dispatch table for 3000:721C; not executable code.
+0x37424	0x37636	code	confirmed	3000	inflection-suffix-handler-tail	Continuation of suffix/word-form generation helpers.
+0x37636	0x37666	table	confirmed	3000	inflection-b-y-jump-table	Letter dispatch table for 3000:748E; not executable code.
+0x37666	0x37724	code	confirmed	3000	inflection-combine-helper	Combines candidate strings in scratch buffers, inserts separator 0x0E when both sides are present, then dictionary-checks the result.
+0x37724	0x388A0	mixed	rough	3000	banked-linguistic-mixed	Additional spell/grammar/linguistic code and data; function boundaries still need a focused pass.
+0x388A0	0x38A0E	code	confirmed	3000	dictionary-header-loader	Loads the dictionary stream header at logical offset 0x100 and builds local lookup tables.
+0x38A0E	0x3BFFF	mixed	rough	3000	dictionary-search-and-decode	Dictionary search, compressed-page loading, bit reading, and nibble-coded word expansion routines.
 0x3C000	0x3D000	table	probable		character-tables	Character and lookup tables noted near 0x3C096.
 0x3D000	0x3FFFF	data	rough		late-low-bank-data	Unmapped data/resource area in the lower ROM banks.
 0x40000	0x40B1A	code	confirmed	C000	startup-irq-lowio	Reset/startup, IRQ stubs, power, keyboard, serial, printer, RTC, battery/card helpers.
@@ -18,7 +32,7 @@ start	end	type	confidence	segment	label	notes
 0x4103A	0x41078	table	confirmed	C000	far-call-service-table	Copied to RAM at 0x0200 by C000:0ED6.
 0x41078	0x41883	code	confirmed	C000	keyboard-diagnostic-monitor	Built-in keyboard/input setup and F+J+SPACE diagnostic command loop.
 0x41883	0x418A1	table	confirmed	C000	diagnostic-dispatch-tables	Jump tables around diagnostic/resource dispatch.
-0x418A1	0x41927	code	confirmed	C000	banked-spell-wrapper	Temporary bank mapping for spell/linguistic service and restore.
+0x418A1	0x41927	code	confirmed	C000	banked-linguistic-wrapper	Temporary bank mapping for spell/grammar/linguistic service and restore.
 0x41927	0x41F17	code	probable	C000	resource-and-diagnostic-services	Resource/text helpers and diagnostic support routines.
 0x41F17	0x43D00	code	probable	C000	dos-like-storage-services	INT 21h private services, format/probe, storage and filesystem support.
 0x43D00	0x44D30	code	probable	C000	event-storage-display-helpers	Event queue, file/storage helpers, battery screen save/restore vicinity.

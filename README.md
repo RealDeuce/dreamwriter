@@ -75,7 +75,7 @@ the command reference.
 | [`docs/map.md`](docs/map.md) | Address model, coarse ROM layout, and reset chain. |
 | [`docs/rom-regions.tsv`](docs/rom-regions.tsv) | Machine-readable first-pass code/data/resource region map. |
 | [`docs/banking.md`](docs/banking.md) | MAME bank formula and confirmed ROM bank-switching routines. |
-| [`docs/spell-engine.md`](docs/spell-engine.md) | Banked spell/linguistic service thunk and dispatcher notes. |
+| [`docs/spell-engine.md`](docs/spell-engine.md) | Banked spell/grammar/linguistic service thunk and dispatcher notes. |
 | [`docs/entry-points.md`](docs/entry-points.md) | Confirmed code entry points and direct branch/call inventory. |
 | [`docs/startup-ui.md`](docs/startup-ui.md) | Cold-start UI path, inline display scripts, boot update sequence, and first menu graphic. |
 | [`docs/menu-dispatch.md`](docs/menu-dispatch.md) | Inline key dispatch tables and the shared application menu event loop. |

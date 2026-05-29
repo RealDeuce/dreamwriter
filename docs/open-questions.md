@@ -3,7 +3,7 @@
 1. The direct branch inventory over `0x40000..0x50000` is noisy because linear
    disassembly crosses inline data. Build a function-boundary-aware pass before
    promoting new targets.
-2. Name more service IDs in the banked spell/linguistic dispatcher at
+2. Name more service IDs in the banked spell/grammar/linguistic dispatcher at
    `3000:4AA6`. Confirmed so far: startup IDs `0x00`, `0x01`, `0x3C`, `0x3D`
    and diagnostic `Q/R` IDs `0x58`, `0x59`.
 3. Trace the text rendering routine that consumes the `0x580B6` glyph table and
@@ -106,3 +106,10 @@
     ROM read/branch on port `0x20` has been found. Hardware tracing should check
     whether a fixture strap, reset-vector overlay, or external serial/boot mode
     can select this monitor.
+29. Identify the real consumer, if any, for the low mapped linguistic payload at
+    file `0x00000..0x1BFFF`. The banked linguistic wrapper maps it at CPU
+    `0x60000..0x7BFFF`, but the confirmed dictionary reader at `3000:660F`
+    starts at CPU `0x7C000` / file `0x1C000`, and no explicit `6000`-segment
+    reader has been found in the banked linguistic code yet. Because the
+    product supports grammar checking as well as spelling, this range may hold
+    grammar or other linguistic tables rather than dictionary words.
