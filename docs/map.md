@@ -96,7 +96,7 @@ uses it for code-only I/O sweeps.
 | `0x53885..0x57FFF` | `0xD3885..0xD7FFF` | Startup banner, main application menu, and word-processor UI strings/resources; the banner display-script stream begins at `0x53888` / `C688:D008`. |
 | `0x58000..0x6F6FF` | `0xD8000..0xEF6FF` | Font tail, DC98 application code, and menu resources. The main font runs continue through `0x5C8B6`, a confirmed 27-slot glyph tail runs at `0x5C8B6..0x5C98E`, DC98 code begins at file `0x5C98E`, known WP/Organizer/menu/file/WORLD CLOCK/terminal/file-wrapper code spans through `0x6DFA0`, and late display/resource tables occupy `0x6DFA0..0x6EFC2` before the confirmed icon/menu resource cluster. |
 | `0x6F700..0x704FF` | `0xEF700..0xF04FF` | ROM card, communication, printer/image, and DreamLink UI strings. |
-| `0x70500..0x7FFFF` | `0xF0500..0xFFFFF` | Typing tutor lessons/resources, including version text at file `0x788D3`, reset trampoline at file `0x78DC0`, and final reset vector at file `0x7FFF0`. |
+| `0x70500..0x7FFFF` | `0xF0500..0xFFFFF` | Organizer resources, Typin' Time resources, high-ROM monitor data/code, and reset vectors. Split resources include organizer/WORLD CLOCK UI data at `0x70500..0x71CA6`, the 222-record WORLD CLOCK city table at `0x71CA6..0x74D36`, typing-practice text and pointer tables at `0x750E0..0x787E0`, Typin' Time UI resources at `0x787E0..0x78DC0`, the reset trampoline code island at `0x78DC0..0x78DD0`, a high-ROM alternate typing-practice copy at `0x78DD0..0x7C000`, CSiMON extension records at `0x7C000..0x7C0A0`, the CSiMON monitor body and entry stub at `0x7C0A0..0x7FF0A`, and the final reset vector at `0x7FFF0`. |
 
 ## Reset Chain
 

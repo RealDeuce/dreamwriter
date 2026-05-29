@@ -155,9 +155,17 @@ start	end	type	confidence	segment	label	notes
 0x69D3B	0x6DFA0	code	probable	DC98	alarm-terminal-file-wrapper-and-late-runtime-code	Next-alarm selector, terminal ECMA-48 parser/render helpers, DOS-like file wrappers, far-call thunks, and late runtime/helper code before resource tables.
 0x6DFA0	0x6EFC2	resource	probable	EE2C	late-dc98-display-resource-tables	Display/resource tables and bitmap-like payloads referenced by late DC98 code through EE2C/EE2F segment loads before the confirmed horizontal-menu icon resources.
 0x6EFC2	0x70500	resource	confirmed	EF70	comm-printer-romcard-icons	Communication, printer, ROM-card, and DreamLink menu icons/strings.
-0x70500	0x78DC0	mixed	rough	F050	typing-tutor-and-late-resources	Typing tutor lessons/resources and mixed late-ROM code/data.
+0x70500	0x71CA6	resource	confirmed	F050	organizer-ui-and-worldclock-resources	Organizer icon-menu table, calculator/calendar/scheduler/address-book UI resources, WORLD CLOCK display scripts, map/digit bitmaps, and address-book strings before the city table.
+0x71CA6	0x74D36	table	confirmed	F050	worldclock-city-table	222 fixed 0x38-byte WORLD CLOCK city records; city name, marker/timezone bytes, and country label fields ending with ZURICH / Switzerland.
+0x74D36	0x750E0	resource	probable	F050	organizer-alarm-and-typing-resource-prelude	Bitmap/resource payloads and schedule/daily alarm display scripts before the typing-practice lesson records.
+0x750E0	0x7783C	text	confirmed	F050	typing-practice-lesson-text	Typin' Time practice/test text records: A*/P*/PG*/PGACC* labels and lesson strings through PGPUNCT.
+0x7783C	0x787E0	table	probable	F050	typing-practice-pointer-tables	Tables of far pointers into the F50E/F050 typing-practice text pools, with zero padding between groups.
+0x787E0	0x78DC0	resource	confirmed	F050	typin-time-ui-resources	Typin' Time title, copyright/version, menus, scoreboard, options, and prompt display resources before the reset trampoline code island.
 0x78DC0	0x78DD0	code	confirmed	F8DC	reset-trampoline	Reset trampoline writes bank ports 0x16/0x17 then jumps to C000:0000.
-0x78DD0	0x7C0A0	mixed	rough	F8DD	late-high-rom-mixed	High ROM mixed resources/code before CSiMON image.
+0x78DD0	0x78FC5	resource	probable	F8DD	high-rom-typing-resource-prelude	Alternate high-ROM copy of typing/alarm bitmap and display-script resources immediately after the reset trampoline.
+0x78FC5	0x7B71C	text	confirmed	F8DD	high-rom-typing-practice-text	Alternate high-ROM copy of Typin' Time practice/test text records through PGPUNCT.
+0x7B71C	0x7C000	table	probable	F8DD	high-rom-typing-pointer-tables	Alternate high-ROM far-pointer tables into the F8FC typing-practice text pool, with zero padding between groups.
+0x7C000	0x7C0A0	resource	probable	FC00	csimon-extension-records	CSiMON extension descriptor/string records before the CSiMON-88 monitor body at FC0A:0000.
 0x7C0A0	0x7FDF5	monitor-code	probable	FC0A	csimon-monitor	Embedded CSiMON-88 monitor body; contains generic monitor I/O command paths.
 0x7FDF5	0x7FF0A	monitor-code	confirmed	FFDF	csimon-entry-stub	High-ROM CSiMON entry stub; initializes banking, buzzer, USART, and dispatches to FC0A:07FA.
 0x7FF0A	0x7FFF0	unknown	rough		reset-vector-padding	Mostly zero padding before reset vector.
