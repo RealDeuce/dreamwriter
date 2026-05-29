@@ -74,14 +74,31 @@ The diagnostic UI starts at `C000:1272`; the command parser/loop starts at
 `C000:128F`. The initial visible diagnostic banner only shows the title and
 `K: Keyboard check`: `C000:1277..1280` renders `0x42` bytes from
 `C688:0086` / file `0x46906`, which stops before the longer command-help
-strings that follow in ROM. Interactive testing confirmed that typing an
-address still dumps a memory block, so the parser is more capable than the
-visible help implies.
+strings that follow in ROM. The block is a display script with embedded text,
+not plain NUL-terminated strings; it runs through file `0x46A1D`.
+Interactive testing confirmed that typing an address still dumps a memory
+block, so the parser is more capable than the visible help implies.
 
 Pressing `?` in the diagnostic UI redraws a longer help page. The parser tests
 for `0x3F` at `C000:12B9..12D0` and calls `C000:16EB`, which renders `0xF9`
 bytes from the same `C688:0086` / file `0x46906` string block instead of the
 short `0x42`-byte startup banner.
+
+Two small C688 wrappers immediately after the diagnostic script render 15-byte
+script fragments from the end of that same block:
+
+```asm
+C688:019D  mov si,017F
+C688:01A0  mov cx,000F
+C688:01A3  mov dx,cs
+C688:01A5  call C000:16E7
+
+C688:01AB  mov si,018E
+C688:01AE  jmp C688:01A0
+```
+
+Those fragments start at files `0x469FF` and `0x46A0E`. Treat them as
+diagnostic display-script resources when doing code sweeps.
 
 No port `0xA0` card-status check appears in this banner/parser path. The
 PCMCIA status helpers that read `0xA0` are in the storage/card routines, while

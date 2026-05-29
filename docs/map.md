@@ -88,8 +88,11 @@ uses it for code-only I/O sweeps.
 | --- | --- | --- |
 | `0x00000..0x3FFFF` | `0x80000..0xBFFFF` | Dictionaries, spelling/grammar data, character tables, and typing lesson text. Visible strings include Merriam-Webster/Proximity copyrights at file `0x1C000`, word lists around file `0x25987`, and character tables around file `0x3C096`. |
 | `0x40000..0x467FF` | `0xC0000..0xC67FF` | Reset/startup code, interrupt stubs, low-level keyboard/LCD/power routines, diagnostic command code, terminal-mode strings, the three 48x40 battery/error icons at `0x44D30..0x44FFF`, and the dispatcher table at `0x45000`. |
-| `0x46800..0x46BFF` | `0xC6800..0xC6BFF` | `C688:` far-call entry area plus diagnostic banner/help strings. |
-| `0x46C00..0x537FF` | `0xC6C00..0xD37FF` | Mixed firmware code/tables. Needs function-boundary pass. |
+| `0x46800..0x46A1C` | `0xC6800..0xC6A1C` | `C688:` far-call entry area plus diagnostic display script and embedded help strings. |
+| `0x46A1D..0x46D12` | `0xC6A1D..0xC6D12` | C688 diagnostic/card wrappers, ROM-card execution helpers, inline display-script entry, and small state tables. |
+| `0x46D13..0x49258` | `0xC6D13..0xC9258` | Early C688 editor/display and text-flow helpers with inline display-script bytes. |
+| `0x49259..0x4A4E7` | `0xC9259..0xCA4E7` | Main application startup, inline display-script dispatcher/table area, and confirmed editor block heap manager. |
+| `0x4A4E8..0x537FF` | `0xCA4E8..0xD37FF` | Mixed firmware code/tables, including the confirmed 12x24 WP `Pag/Lin/Col` status-label bitmap at file `0x5072B`. Needs further function-boundary pass. |
 | `0x53800..0x57FFF` | `0xD3800..0xD7FFF` | Main application menu and word-processor UI strings. |
 | `0x58000..0x6F6FF` | `0xD8000..0xEF6FF` | Mixed application code/resources. Needs a call-reference pass from menu handlers. |
 | `0x6F700..0x704FF` | `0xEF700..0xF04FF` | ROM card, communication, printer/image, and DreamLink UI strings. |

@@ -99,11 +99,17 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C688:000B` | `0x4688B` | Main firmware far entry used after cold boot initialization. |
 | `C688:000F` | `0x4688F` | Warm-path application entry. Calls into `C688:7752`, bypassing full main startup and boot-update sequence. |
 | `C688:0053` | `0x468D3` | Retained/warm RAM signature check; returns carry on mismatch. |
+| `C688:019D` | `0x46A1D` | Diagnostic display-script wrapper. Renders 15 bytes from `C688:017F` through `C000:16E7`. |
+| `C688:01AB` | `0x46A2B` | Diagnostic display-script wrapper variant. Renders 15 bytes from `C688:018E` through the same `C000:16E7` path. |
 | `C688:01E6` | `0x46A66` | ROM-card execution setup. Prepares the `0xA4F0` load context, marks `[6D54]=1`, and returns `[7A54] * 0x80` as the loader's work-memory limit. |
 | `C688:020C` | `0x46A8C` | ROM-card execution cleanup. Tears down the `0xA4F0` context and clears `[6D54]`. |
 | `C688:022B` | `0x46AAB` | ROM-card executable trampoline. Calls the far entry pointer loaded at `[0xA4F4]`. |
 | `C688:0240` | `0x46AC0` | Inline display/script interpreter entry; jumps to `C688:3879`. |
+| `C688:042D` | `0x46CAD` | Display/script state-bit helper. Uses the byte mask table at `C688:0475` and RAM-pointer table at `C688:047D`. |
 | `C688:29D9` | `0x49259` | Main application startup reached by `C688:000B`; clears UI work state and enters startup display path. |
+| `C688:3879` | `0x4A0F9` | Inline display-script dispatcher body. Pops the caller return address as a script pointer and dispatches through the table at `C688:38A4`. |
+| `C688:39C7` | `0x4A247` | Editor block allocator. Takes one block from `[7A50]`, links it into the active editor streams, and decrements `[7A54]`. |
+| `C688:3A38` | `0x4A2B8` | Editor block release/rotate helper. Returns a block to the free list and increments `[7A54]`. |
 | `C688:6B8C` | `0x4D40C` | Hands the copied `0x7F28` resource block to the `C000:170E` renderer service. |
 | `C688:71A4` | `0x4DA24` | Selection/list wrapper using buffer `0x7555`; calls `C688:721D` for draw/setup and `C688:722F` for key handling. |
 | `C688:721D` | `0x4DA9D` | Chooses `C688:9461` for `CL != 0` selectable menu/list drawing, otherwise calls `C688:9541` directly. |

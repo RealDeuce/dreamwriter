@@ -164,6 +164,7 @@ C000:08A2  retf
 | `0xC0` | RS-232 USART data register. Firmware writes transmit bytes here and reads receive bytes here. |
 | `0xC1` | RS-232 USART status/control register. Firmware reads status here and writes reset/mode/command bytes here. |
 | `0xD0..0xDF` | RTC register block. MAME maps this range to a Ricoh `RP5C01`; firmware reads/writes `0xD0..0xDC` as 4-bit BCD time/date registers and uses `0xDD..0xDF` as control/mode registers. |
+| `0xE0..0xE1`, `0xEC..0xEF` | Fixed I/O touched only by small C688 wrappers found so far. `C688:01D0` writes `0x0A` to `0xE0` and `0x05` to `0xE1`; `C688:01DB` reads `0xEF`, `0xEE`, `0xED`, and `0xEC` in sequence and returns. These are adjacent to diagnostic/card wrapper code, so they are PCMCIA/card-control or external-connector candidates, but no caller or bit meaning is confirmed yet. |
 
 Broad opcode sweeps for `in`/`out` produce many false positives because large
 parts of the ROM are tables, text, fonts, and display resources. In the
