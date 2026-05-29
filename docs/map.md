@@ -86,7 +86,7 @@ uses it for code-only I/O sweeps.
 
 | File range | Physical range | First-pass notes |
 | --- | --- | --- |
-| `0x00000..0x3FFFF` | `0x80000..0xBFFFF` | Dictionaries, spelling/grammar data, character tables, and typing lesson text. Visible strings include Merriam-Webster/Proximity copyrights at file `0x1C000`, word lists around file `0x25987`, and character tables around file `0x3C096`. |
+| `0x00000..0x3FFFF` | `0x80000..0xBFFFF` | Dictionaries, spelling/grammar data, character tables, and typing lesson text. The unresolved low mapped linguistic payload runs through file `0x1B420`, followed by erased padding to `0x1C000`. Visible strings include Merriam-Webster/Proximity copyrights at file `0x1C000`, the dictionary stream header at `0x1C100`, word lists around file `0x25987`, and character tables around file `0x3C096`. |
 | `0x40000..0x467FF` | `0xC0000..0xC67FF` | Reset/startup code, interrupt stubs, low-level keyboard/LCD/power routines, diagnostic command code, terminal-mode strings, the three 48x40 battery/error icons at `0x44D30..0x44FFF`, and the dispatcher table at `0x45000`. |
 | `0x46800..0x46A1C` | `0xC6800..0xC6A1C` | `C688:` far-call entry area plus diagnostic display script and embedded help strings. |
 | `0x46A1D..0x46D12` | `0xC6A1D..0xC6D12` | C688 diagnostic/card wrappers, ROM-card execution helpers, inline display-script entry, and small state tables. |
@@ -96,7 +96,7 @@ uses it for code-only I/O sweeps.
 | `0x53885..0x57FFF` | `0xD3885..0xD7FFF` | Startup banner, main application menu, and word-processor UI strings/resources; the banner display-script stream begins at `0x53888` / `C688:D008`. |
 | `0x58000..0x6F6FF` | `0xD8000..0xEF6FF` | Font tail, DC98 application code, and menu resources. The main font runs continue through `0x5C8B6`, a confirmed 27-slot glyph tail runs at `0x5C8B6..0x5C98E`, DC98 code begins at file `0x5C98E`, known WP/Organizer/menu/file/WORLD CLOCK/terminal/file-wrapper code spans through `0x6DFA0`, and late display/resource tables occupy `0x6DFA0..0x6EFC2` before the confirmed icon/menu resource cluster. |
 | `0x6F700..0x704FF` | `0xEF700..0xF04FF` | ROM card, communication, printer/image, and DreamLink UI strings. |
-| `0x70500..0x7FFFF` | `0xF0500..0xFFFFF` | Organizer resources, Typin' Time resources, high-ROM monitor data/code, and reset vectors. Split resources include organizer/WORLD CLOCK UI data at `0x70500..0x71CA6`, the 222-record WORLD CLOCK city table at `0x71CA6..0x74D36`, typing-practice text and pointer tables at `0x750E0..0x787E0`, Typin' Time UI resources at `0x787E0..0x78DC0`, the reset trampoline code island at `0x78DC0..0x78DD0`, a high-ROM alternate typing-practice copy at `0x78DD0..0x7C000`, CSiMON extension records at `0x7C000..0x7C0A0`, the CSiMON monitor body and entry stub at `0x7C0A0..0x7FF0A`, and the final reset vector at `0x7FFF0`. |
+| `0x70500..0x7FFFF` | `0xF0500..0xFFFFF` | Organizer resources, Typin' Time resources, high-ROM monitor data/code, and reset vectors. Split resources include organizer/WORLD CLOCK UI data at `0x70500..0x71CA6`, the 222-record WORLD CLOCK city table at `0x71CA6..0x74D36`, typing-practice text and pointer tables at `0x750E0..0x787E0`, Typin' Time UI resources at `0x787E0..0x78DC0`, the reset trampoline code island at `0x78DC0..0x78DD0`, a high-ROM alternate typing-practice copy at `0x78DD0..0x7C000`, CSiMON extension records at `0x7C000..0x7C0A0`, the CSiMON monitor body and entry stub at `0x7C0A0..0x7FF0A`, zero padding at `0x7FF0A..0x7FFF0`, and the final reset vector at `0x7FFF0`. |
 
 ## Reset Chain
 
