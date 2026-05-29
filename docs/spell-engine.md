@@ -448,9 +448,9 @@ near callbacks invoked by the parser driver:
 
 | Table offset | Slot 0 value | Slot 1 value | Observed use |
 | ---: | ---: | ---: | --- |
-| `+00` | `0x0CDC` | `0x161A` | Initial stream-cursor table read by `3000:1D5A`. |
-| `+02` | `0x0CE0` | `0x161E` | Four-byte records indexed after `3000:20F8` in one `3000:1E6C` branch. |
-| `+04` | `0x10E0` | `0x1A1E` | Four-byte records used by `3000:1D7E`/`3000:1E6C` for low-nibble-zero classes. |
+| `+00` | `0x0CDC` | `0x161A` | Base of a 257-record cursor table. `3000:1D5A` reads the first four-byte record as the initial stream cursor. |
+| `+02` | `0x0CE0` | `0x161E` | Same cursor table, advanced by one four-byte record. One `3000:1E6C` branch indexes this as a 256-entry table after reading a byte with `3000:20F8`. |
+| `+04` | `0x10E0` | `0x1A1E` | Sixteen four-byte records used by `3000:1D7E`/`3000:1E6C` for low-nibble-zero classes. |
 | `+06` | `0x1120` | `0x1A5E` | Byte table indexed by an extended nibble count in `3000:1E6C`. |
 | `+0A` | `0x1600` | `0x6156` | Parser callback called by `3000:1A16`. |
 | `+0C` | `0x1694` | `0x6184` | Parser callback called by `3000:1A16`. |
@@ -463,6 +463,9 @@ cursor record `33 AE 16`, i.e. offset `0x33AE` and state byte `0x16`. Since
 `0x16 & 7 == 6`, that points into descriptor 6, file `0x18000 + 0x33AE =
 0x1B3AE`, close to the end of the short final low block. Slot `1` starts with
 cursor record `D8 28 11`, selecting descriptor 1 with offset `0x28D8`.
+The pointer spacing confirms the cursor-table interpretation: in both slots,
+the `+02` pointer is exactly four bytes after `+00`, and the `+04` table begins
+`0x404` bytes after `+00`.
 
 The direct references to stream cursor words `[9682]` and `[9684]` are still
 limited to the stream reset/read/seek helpers at `3000:65FE`, `3000:660F`, and
