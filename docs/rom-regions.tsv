@@ -9,7 +9,13 @@ start	end	type	confidence	segment	label	notes
 0x30000	0x33EFC	code	probable	3000	banked-linguistic-service	Banked spell/grammar/linguistic service reached via C000:18A1 and 3000:0000 / 3000:4AA6.
 0x33EFC	0x33F0A	table	confirmed	3000	banked-linguistic-inline-table	Small inline table skipped by nearby control flow; decodes as false I/O if swept as code.
 0x33F0A	0x34C00	code	probable	3000	banked-linguistic-service-tail	Continuation of banked spell/grammar/linguistic service after inline data island.
-0x34C00	0x3660F	mixed	rough	3000	banked-linguistic-dispatch-tail	Dispatcher tail, service routines, and embedded tables after 3000:4AA6.
+0x34C00	0x34C0A	code	confirmed	3000	dispatcher-error-epilogue	Common dispatcher error return/epilogue before the service jump table.
+0x34C0A	0x34CBE	table	confirmed	3000	service-dispatch-jump-table	Service ID jump table for 0x00..0x59 used by 3000:4AA6.
+0x34CBE	0x35016	code	confirmed	3000	dispatcher-service-cases	Small dispatcher service cases, clear/reset helpers, and parser setup/teardown wrappers.
+0x35016	0x35216	code	confirmed	3000	candidate-list-service-frontend	Service-facing candidate-list initialization, count, and formatted suggestion output helpers.
+0x35216	0x3527C	code	confirmed	3000	local-string-helpers	Local copy/compare/length helpers used before the later 3000:960A string helper set.
+0x3527C	0x35C74	code	probable	3000	parser-search-front-end	Parser/search setup and word-form front-end helpers that feed later candidate and formatter paths.
+0x35C74	0x3660F	code	probable	3000	parser-tokenizer-tail	Parser tokenization and character-class handling before the dictionary stream reader.
 0x3660F	0x366D3	code	confirmed	3000	dictionary-stream-reader	Logical seek/read helpers for the dictionary stream mapped at CPU 0x7C000 and above.
 0x366D3	0x36E9C	code	confirmed	3000	candidate-list-manager	Initializes dictionary candidate buffers, walks candidate text, and formats parser/search records.
 0x36E9C	0x36EB0	table	confirmed	3000	candidate-formatter-jump-table	Jump table for record formatter cases around 3000:6E04.
@@ -21,11 +27,48 @@ start	end	type	confidence	segment	label	notes
 0x37424	0x37636	code	confirmed	3000	inflection-suffix-handler-tail	Continuation of suffix/word-form generation helpers.
 0x37636	0x37666	table	confirmed	3000	inflection-b-y-jump-table	Letter dispatch table for 3000:748E; not executable code.
 0x37666	0x37724	code	confirmed	3000	inflection-combine-helper	Combines candidate strings in scratch buffers, inserts separator 0x0E when both sides are present, then dictionary-checks the result.
-0x37724	0x388A0	mixed	rough	3000	banked-linguistic-mixed	Additional spell/grammar/linguistic code and data; function boundaries still need a focused pass.
+0x37724	0x378CE	code	confirmed	3000	inflection-suffix-handler-extended	Additional suffix/word-form generation helper using record type 0x0B and suffix strings in the 3C00 data segment.
+0x378CE	0x37972	code	confirmed	3000	compound-candidate-normalizer	Scans candidate text for separator byte 0x0E or slash, expands fragments with 3000:B116, and rebuilds the candidate string.
+0x37972	0x379E8	code	confirmed	3000	compressed-word-subheader-loader	Loads compressed-word stream tables at 3C00:9650, 9660, 9662, and 9664.
+0x379E8	0x37D0E	code	confirmed	3000	candidate-expansion-dispatcher	Chooses simple versus multiword candidate expansion, builds candidate pointer/type arrays, and dispatches by record kind.
+0x37D0E	0x37D24	table	confirmed	3000	candidate-record-kind-jump-table	Jump table for record kinds 0x00..0x0A used by 3000:7A1E.
+0x37D24	0x37F66	code	confirmed	3000	candidate-record-kind-handlers	Record-kind handlers and suffix-pattern lookup against the 3C00:2A1E pattern table.
+0x37F66	0x37F96	table	confirmed	3000	inflection-c-z-jump-table	Letter dispatch table for final-letter cases c..z around 3000:7E12; not executable code.
+0x37F96	0x38232	code	confirmed	3000	inflection-suffix-handlers-extended	More suffix/word-form generation helpers using dictionary probes and record flags.
+0x38232	0x38264	table	confirmed	3000	inflection-a-y-jump-table-extended	Letter dispatch table for 3000:8056; not executable code.
+0x38264	0x384A8	code	confirmed	3000	inflection-helper-tail	Tail helpers for doubled-letter, final-vowel, and pattern-constrained candidate forms.
+0x384A8	0x38528	code	confirmed	3000	compound-candidate-rewriter	Builds compound candidates, preserving separator byte 0x0E when both sides validate.
+0x38528	0x387D6	code	confirmed	3000	multiword-candidate-builder	Splits space-separated candidate text, recursively expands each part, and maintains parallel candidate pointer/type arrays.
+0x387D6	0x38808	code	confirmed	3000	candidate-array-delete-helper	Deletes entries from parallel candidate pointer/type arrays.
+0x38808	0x38854	code	confirmed	3000	separator-expansion-helper	Rebuilds a candidate string by replacing separator byte 0x0E with a caller-provided string.
+0x38854	0x388A0	code	confirmed	3000	bitstream-word-reader	Reads little-endian 16-bit words as two 8-bit reads from the compressed dictionary bitstream.
 0x388A0	0x38A0E	code	confirmed	3000	dictionary-header-loader	Loads the dictionary stream header at logical offset 0x100 and builds local lookup tables.
-0x38A0E	0x3BFFF	mixed	rough	3000	dictionary-search-and-decode	Dictionary search, compressed-page loading, bit reading, and nibble-coded word expansion routines.
-0x3C000	0x3D000	table	probable		character-tables	Character and lookup tables noted near 0x3C096.
-0x3D000	0x3FFFF	data	rough		late-low-bank-data	Unmapped data/resource area in the lower ROM banks.
+0x38A0E	0x395B6	code	probable	3000	dictionary-search-helpers	Dictionary string normalization, table search, and candidate/search helper routines.
+0x395B6	0x396D6	code	confirmed	3000	dictionary-read-string-helpers	Exact-length stream read, byte-pair word conversion, and local C-string helpers.
+0x396D6	0x39848	code	confirmed	3000	compressed-stream-opener	Opens the compressed word stream and loads runtime tables used by entry expansion/search.
+0x39848	0x3AD84	code	probable	3000	dictionary-candidate-search	Dictionary lookup, candidate generation, and parser/search routines that feed the formatter.
+0x3AD84	0x3ADBE	code	confirmed	3000	candidate-normalization-wrapper	Normalizes candidate text through helpers at 3000:9532 and 3000:947C.
+0x3ADBE	0x3AFB4	code	confirmed	3000	bitstream-readers	Compressed bitstream readers including arbitrary-width reads and 8-bit reads.
+0x3AFB4	0x3B076	code	confirmed	3000	bitstream-skip-helper	Skips forward in the compressed bitstream, loading pages when needed.
+0x3B076	0x3B0E6	code	confirmed	3000	compressed-page-loader	Loads a 1 KiB compressed dictionary page into 3C00:864E and initializes bitstream pointers.
+0x3B0E6	0x3B116	code	confirmed	3000	dictionary-membership-check	Checks whether a candidate resolves as an accepted dictionary/search record.
+0x3B116	0x3B4D4	code	confirmed	3000	compressed-entry-expander	Expands nibble-coded dictionary entries through the symbol table at 3C00:9662.
+0x3B4D4	0x3B5AA	code	confirmed	3000	compressed-word-binary-search	Binary search over compressed word pages for a query word.
+0x3B5AA	0x3B65F	code	confirmed	3000	arithmetic-shift-helpers	32-bit division and shift helpers used by dictionary bitstream code.
+0x3B65F	0x3C000	data	confirmed		dictionary-bank-padding	All 0xFF padding before the character table region.
+0x3C000	0x3D000	data	confirmed	3C00	english-linguistic-constant-tables	Low-offset 3C00 ROM constants: character maps/classes, letter-pair tables, and Merriam-Webster/Proximity copyright text near file 0x3CC5B.
+0x3D000	0x3D424	data	probable	3C00	linguistic-exception-tables	Grammar/spelling exception tables and abbreviation strings before the second character-map block.
+0x3D424	0x3E147	data	confirmed	3C00	collins-french-linguistic-tables	Character maps plus French/Collins contraction and exception strings.
+0x3E147	0x3E1A7	text	confirmed	3C00	collins-copyright	Copyright string for William Collins Sons & Co. Ltd. and Proximity Technology.
+0x3E1A7	0x3E435	data	probable	3C00	linguistic-rule-tables	Packed linguistic rule tables before the part-of-speech labels.
+0x3E435	0x3E5D0	data	confirmed	3C00	part-of-speech-and-suffix-strings	Part-of-speech labels, inflection labels, and suffix strings referenced by candidate/formatter code.
+0x3E5D0	0x3EA1E	data	probable	3C00	inflection-class-tables	Letter-class and inflection-class tables used by suffix/grammar helpers.
+0x3EA1E	0x3EAD6	table	confirmed	3C00	suffix-pattern-records	Eight-byte suffix pattern records searched by 3000:7DCA; terminates with a zero word.
+0x3EAD6	0x3EB23	text	confirmed	3C00	suffix-pattern-strings	String pool referenced by the suffix pattern records.
+0x3EB23	0x3EB26	data	confirmed	3C00	suffix-pattern-padding	Zero padding before bit masks.
+0x3EB26	0x3EB2F	table	confirmed	3C00	bitstream-mask-table	Mask table 00,01,03,07,0F,1F,3F,7F,FF used by compressed bitstream readers.
+0x3EB2F	0x3F676	data	probable	3C00	packed-linguistic-rule-data	Dense packed linguistic data referenced by grammar/spelling routines; format not yet decoded.
+0x3F676	0x40000	data	confirmed		low-bank-padding	All 0xFF padding before the C000 startup bank.
 0x40000	0x40B1A	code	confirmed	C000	startup-irq-lowio	Reset/startup, IRQ stubs, power, keyboard, serial, printer, RTC, battery/card helpers.
 0x40B1A	0x40B56	table	confirmed	C000	buzzer-sequence-table	Table used by C000:0B16 sound sequence player.
 0x40B56	0x4103A	code	confirmed	C000	timer-serial-vector-setup	RTC snapshot, timer, USART setup, IVT/far-call table setup.
@@ -37,7 +80,14 @@ start	end	type	confidence	segment	label	notes
 0x41F17	0x43D00	code	probable	C000	dos-like-storage-services	INT 21h private services, format/probe, storage and filesystem support.
 0x43D00	0x44D30	code	probable	C000	event-storage-display-helpers	Event queue, file/storage helpers, battery screen save/restore vicinity.
 0x44D30	0x45000	bitmap	confirmed	C000	battery-warning-icons	Three documented 48x40 battery/error icons plus adjacent bitmap/resource bytes.
-0x45000	0x46880	mixed	rough	C000	dispatch-and-helper-tail	Dispatcher tables and helper code; needs function-boundary split before code-only scanning.
+0x45000	0x45060	table	confirmed	C000	private-service-id-map	Maps AH service IDs to compact dispatch indexes; 0xFF means unsupported.
+0x45060	0x45098	table	confirmed	C000	private-service-vector-table	Word vector table used by the C000:5098 private service/interrupt dispatcher.
+0x45098	0x45213	code	confirmed	C000	private-service-dispatcher	Saves registers, dispatches private services by AH, preserves carry for IRET, and includes date/time pack/unpack helpers.
+0x45213	0x4533E	code	confirmed	C000	private-service-helper-fanout	Service helper wrappers and broad hardware/storage initialization fanout.
+0x4533E	0x45A82	mixed	probable	C000	keyboard-display-tables-and-helpers	Keyboard/display mapping tables copied to RAM plus helper code around key/display state.
+0x45A82	0x461BF	code	probable	C000	display-command-interpreter	Display command/bitplane interpreter helpers using state around 0x70xx/0x72xx and framebuffer-like offsets.
+0x461BF	0x461CA	table	probable	C000	display-interpreter-inline-table	Small inline table used by the display interpreter; decodes as false instructions if swept as code.
+0x461CA	0x46880	code	probable	C000	display-command-interpreter-tail	Continuation of display command/bitplane interpreter and helper routines.
 0x46880	0x46906	code	probable	C688	far-entry-area	C688 far-call entry area.
 0x46906	0x46A10	text	confirmed	C688	diagnostic-help-strings	Diagnostic startup/help command strings.
 0x46A10	0x47FFF	mixed	rough	C688	c688-early-mixed	Mixed application code/tables; not yet safe for code-only sweeps.

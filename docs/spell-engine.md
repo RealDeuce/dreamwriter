@@ -73,6 +73,12 @@ Confirmed dispatch entries:
 | `0x58` | `3000:4BF2` | Diagnostic `Q` command. |
 | `0x59` | `3000:4BFA` | Diagnostic `R` command. |
 
+The full table covers service IDs `0x00..0x59` and now has its own ROM-map
+entry at `0x34C0A..0x34CBE`. Many entries intentionally point at the common
+`3000:4C02` error return, while the dense early range points at small service
+case stubs in `3000:4AC6..4BFA`. Those stubs then call the larger parser,
+candidate-list, and dictionary helpers.
+
 `0x58` and `0x59` are the diagnostic help text's `Q/R=Clear/Reset spell`
 commands:
 
@@ -104,6 +110,12 @@ common dispatcher epilogue:
 
 The engine uses `3C00` as its data/stack segment during calls. Some state
 addresses visible in the dispatcher and nearby routines:
+
+The low offsets of that segment are ROM constants from file `0x3C000..0x3FFFF`
+while the mutable state lives at higher offsets. For example, string/table
+pointers such as `0x24F4`, `0x25A2`, and `0x2A1E` refer to ROM constants at
+file `0x3E4F4`, `0x3E5A2`, and `0x3EA1E`. State such as `0x6000`, `0x6E48`,
+and `0x9662` is in the writable part of the same `3C00` segment.
 
 | Address | Observed use |
 | ---: | --- |
@@ -267,6 +279,26 @@ This explains the readable letter-order data around file `0x24C00`, including
 the subheader tables, while keeping the lower mapped payload at
 `0x00000..0x1BFFF` unresolved for now.
 
+Low-level helpers in the late part of the `3000` bank are now separated in the
+ROM map:
+
+| Routine | Observed role |
+| --- | --- |
+| `3000:95B6` | Exact-length dictionary stream read wrapper around `3000:660F`; returns `0` only when the requested byte count was read. |
+| `3000:95D4` | Converts byte pairs into little-endian words. |
+| `3000:960A` | Copies a NUL-terminated string and returns the destination end pointer. |
+| `3000:9626` | Returns the end pointer of a NUL-terminated string. |
+| `3000:963A` | Finds a byte in a NUL-terminated string. |
+| `3000:9666` | Finds the last occurrence of a byte in a NUL-terminated string. |
+| `3000:969E` | Lexicographic string compare helper. |
+| `3000:ADBE` | Reads an arbitrary-width value from the compressed bitstream. |
+| `3000:AEB6` | Reads the next byte/nibble-aligned unit from the compressed bitstream. |
+| `3000:AFB4` | Skips forward in the compressed bitstream. |
+| `3000:B076` | Loads a 1 KiB compressed page and initializes `0x814A..0x8152`. |
+| `3000:B0E6` | Dictionary membership/check wrapper used by the inflection handlers. |
+| `3000:B116` | Expands a compressed dictionary entry into caller-provided buffers. |
+| `3000:B4D4` | Binary-searches compressed word pages for the query word. |
+
 ## Candidate List Manager
 
 The rough block after the stream reader begins with real code. `3000:66D4`
@@ -296,6 +328,11 @@ Observed state in `3C00`:
 | `0x7130` | Pointer to an auxiliary related-word list built by `3000:A45C`. |
 | `0x7132` | Dictionary structure pointer returned by `3000:88A0`. |
 | `0x7134` | Current parser/search record pointer used by formatter helpers. |
+
+Service-facing helpers around `3000:5016..5216` wrap this candidate manager.
+`3000:5016` initializes the candidate state through `3000:66D4`. The following
+helpers expose candidate counts and formatted output by calling `3000:673A`,
+`3000:677A`, `3000:67E8`, `3000:685E`, `3000:687C`, and `3000:6892`.
 
 Small helpers around `3000:677A..688F` copy the active candidate, move to the
 next/previous candidate, and return the current candidate's first or later
@@ -356,6 +393,9 @@ Other handlers in the same island use similar final-letter dispatch:
 | `0x37424..0x37636` | Continuation of suffix handling, including another large final-letter dispatcher at `3000:748E`. |
 | `0x37636..0x37666` | Inline `b..y` jump table for `3000:748E`. |
 | `0x37666..0x37724` | Candidate-combination helper used by the suffix handlers. |
+| `0x37724..0x378CE` | Additional suffix handler using record type `0x0B` and strings in the `3C00` data segment. |
+| `0x37F66..0x37F96` | Inline `c..z` jump table used by `3000:7E12`. |
+| `0x38232..0x38264` | Inline `a..y` jump table used by `3000:8056`. |
 
 The combination helper at `3000:7686` copies two candidate fragments into
 scratch buffers, inserts byte `0x0E` as a separator when both fragments are
@@ -363,9 +403,61 @@ non-empty, and checks the combined result through `3000:B0E6`. This matches the
 formatter's earlier use of separator-like bytes in compound or alternate
 candidate output.
 
+The constants used by these handlers are in the low `3C00` ROM window:
+
+| Data offset | File offset | Contents |
+| ---: | ---: | --- |
+| `3C00:2435..25CF` | `0x3E435..0x3E5CF` | Part-of-speech labels, inflection labels, and suffix strings such as `able`, `ses`, `xes`, `zes`, `ally`, `dge`, `est`, `more `, `er`, and `most `. |
+| `3C00:2A1E..2AD5` | `0x3EA1E..0x3EAD5` | Eight-byte suffix pattern records searched by `3000:7DCA`. |
+| `3C00:2AD6..2B22` | `0x3EAD6..0x3EB22` | Suffix-pattern string pool including `man`, `um`, `us`, `be`, `al`, `le`, `est`, `er`, `ie`, `ing`, `ate`, and ` or `. |
+| `3C00:2B26..2B2E` | `0x3EB26..0x3EB2E` | Bit masks used by the compressed bitstream readers. |
+
 These routines probably support both spelling suggestions and grammar-related
 word-form checks, but the confirmed behavior at this point is narrower:
 candidate inflection, suffix transformation, and dictionary validation.
+
+## Candidate Expansion and Record Dispatch
+
+`3000:7A1E` is a larger candidate expansion dispatcher. It starts by expanding
+the caller's candidate with `3000:B116`, translates the returned record class
+through `3000:83E4`, and stores the active record pointer at `3C00:7180`.
+
+For ordinary single-word forms it calls `3000:8438` to append output pointers
+and record pointers to parallel arrays supplied by the caller. When direct
+expansion fails, it uses `3000:7DCA` to look up a suffix pattern in the
+`3C00:2A1E` data table. The matched pattern's record-kind byte selects one of
+11 handlers through the inline jump table at file `0x37D0E`:
+
+| Record kind | Handler |
+| ---: | --- |
+| `0x00` | `3000:7B7E` |
+| `0x01` | `3000:7BB6` |
+| `0x02` | `3000:7BC8` |
+| `0x03` | `3000:7BD0` |
+| `0x04` | `3000:7BD8` |
+| `0x05` | `3000:7CC2` |
+| `0x06` | `3000:7CCA` |
+| `0x07` | `3000:7CE0` |
+| `0x08` | `3000:7CE6` |
+| `0x09` | `3000:7CEC` |
+| `0x0A` | `3000:7CF8` |
+
+The handlers call the same suffix helpers described above, use `3000:B0E6` for
+dictionary validation, and maintain the candidate pointer/type arrays. The
+array helper at `3000:87D6` removes entries by shifting both arrays together.
+
+The separator byte `0x0E` is treated as an internal compound/alternate marker.
+`3000:78CE` scans candidate text for `0x0E` or `/`, expands each fragment with
+`3000:B116`, and rebuilds the candidate. `3000:8808` performs the inverse-style
+string rewrite: it copies a candidate into a scratch buffer and replaces every
+`0x0E` marker with a caller-provided string.
+
+`3000:79E8` chooses between the normal expansion path at `3000:7A1E` and the
+multiword path at `3000:8528` by checking whether the candidate contains a
+space. `3000:8528` splits a space-separated candidate, recursively expands each
+part through `3000:7A1E`, and then stitches the resulting pointer/type arrays
+back together. This makes the candidate machinery explicitly handle both
+compound markers and visible space-separated multiword forms.
 
 ## Working Interpretation
 
