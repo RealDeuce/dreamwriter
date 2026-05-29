@@ -45,18 +45,26 @@ and `E0000..FFFFF` sees file `0x60000..0x7FFFF`.
 
 ## Startup Mapping
 
-Early startup at `C000:0029` writes the bank registers explicitly:
+### T400 v2.1
+
+Early T400 v2.1 startup at `C000:0029` writes the bank registers explicitly:
 
 | Port | Value | Effect in MAME |
 | ---: | ---: | --- |
 | `0x10` | `0x17` | CPU `00000..1FFFF` -> RAM offset `00000..1FFFF` |
-| `0x11` | `0x0E` | CPU `20000..3FFFF` -> ROM file `20000..3FFFF` |
+| `0x11` | `0x0E` | CPU `20000..3FFFF` -> RAM offset `20000..3FFFF` |
 | `0x12` | `0x1F` | CPU `40000..5FFFF` -> RAM offset `00000..1FFFF` |
 | `0x13` | `0x1E` | CPU `60000..7FFFF` -> RAM offset `20000..3FFFF` |
 | `0x14` | `0x1D` | CPU `80000..9FFFF` -> RAM offset `00000..1FFFF` |
 | `0x15` | `0x1C` | CPU `A0000..BFFFF` -> RAM offset `20000..3FFFF` |
 | `0x16` | `0x01` | CPU `C0000..DFFFF` -> ROM file `40000..5FFFF` |
 | `0x17` | `0x00` | CPU `E0000..FFFFF` -> ROM file `60000..7FFFF` |
+
+The `0x11 = 0x0E` case was validated against the built-in store formatter:
+`C000:2C93` formats five 32 KiB units starting at segment `0x1800`, so after
+the first 32 KiB the loop writes through CPU `0x20000..0x3FFFF`. Treating
+`0x0E` as a ROM mirror makes FILE -> INITIALIZE fail with a store-memory read
+error partway through the 160 KiB format pass.
 
 Routine `C000:0225` stores the default values for ports `0x11..0x15` in low
 RAM:
@@ -69,6 +77,61 @@ RAM:
 
 Routine `C000:01E0` restores those saved bank values before returning to a warm
 saved context.
+
+### DreamWriter 450 ROM `t4_ir_35ba308.ic303`
+
+The T450 image is a 1 MiB ROM. Its reset vector at file `0xFFFF0` jumps to
+`F7A1:0000`, which maps to file `0xF7A10`:
+
+```asm
+F7A1:0000  cli
+F7A1:0001  mov al,01
+F7A1:0003  out 16,al
+F7A1:0005  mov al,00
+F7A1:0007  out 17,al
+F7A1:0009  jmp far C000:0000
+```
+
+With a 1 MiB ROM region, port `0x16 = 0x01` maps CPU
+`0xC0000..0xDFFFF` to ROM file `0xC0000..0xDFFFF`, so T450 startup executes
+from file `0xC0000`.
+
+T450 `C000:0000` starts similarly, but it only writes ports `0x10`, `0x16`,
+and `0x17` directly, then restores ports `0x11..0x15` from low-RAM defaults.
+Routine `C000:0305` seeds those defaults as:
+
+```asm
+[147F] = 0F1F  ; restore port 12 from AL=1F, then port 11 from AH=0F
+[1481] = 1E1D  ; restore port 14 from AL=1D, then port 13 from AH=1E
+[1483] = 1C    ; restore port 15
+```
+
+This is why the current MAME driver treats bit-3-only RAM selects differently
+from bit-4 RAM selects: for `0x08..0x0F`, the RAM page follows the CPU window,
+so both T400 v2.1 `port 0x11 = 0x0E` and the 1 MiB ROMs'
+`port 0x11 = 0x0F` expose the upper 128 KiB RAM page instead of aliasing low
+RAM over the framebuffer. With the old `((v ^ 0x0F) << 17)` calculation,
+`0x0F` selected RAM page 0 and the 1 MiB DreamWriter ROMs corrupted the LCD
+while counting at startup.
+
+Interactive MAME testing confirmed that this mapping lets the working
+512 KiB-family machines and the 1 MiB DreamWriter ROMs boot and initialize
+their built-in RAM stores correctly:
+
+| Driver / BIOS | Result |
+| --- | --- |
+| `wales210` all BIOS versions | Boot and format built-in memory. |
+| `drwrt100` | Boots and formats built-in memory. |
+| `dator3k` | Boots and formats built-in memory. |
+| `es210_es` | Boots and formats built-in memory. |
+| `drwrt200` | Boots and initializes built-in RAM after the bit-3 window fix. |
+| `drwrt400` v3.1 | Boots and initializes built-in RAM after the bit-3 window fix. |
+| `drwrt400` v2.1 | Boots and initializes built-in RAM. |
+| `drwrt450` | Boots and initializes built-in RAM after the bit-3 window fix. |
+
+The T450 config is currently set to 256 KiB because this mapping needs an upper
+RAM page for the `0x0F` startup window. The exact physical RAM population still
+needs board-level confirmation.
 
 ## Banked Spell/Linguistic Call At C000:18A1
 

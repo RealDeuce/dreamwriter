@@ -2,6 +2,8 @@
 
 ## Confirmed Entries
 
+The table below is for the T400 v2.1 ROM unless noted otherwise.
+
 | Address | File offset | Meaning |
 | --- | ---: | --- |
 | `FFFF:0000` | `0x7FFF0` | CPU reset vector. Jumps to `F8DC:0000`. |
@@ -10,15 +12,17 @@
 | `C000:0006` | `0x40006` | `INT 21h` vector target installed by `C000:0ED6`; jumps to `C000:5098`. |
 | `C000:0009` | `0x40009` | IRQ `F8` stub, jumps to `C000:03AE` for save/suspend context. |
 | `C000:000C` | `0x4000C` | IRQ `F9` stub, jumps to `C000:049A`; very short acknowledge/flag-clear handler. |
-| `C000:000F` | `0x4000F` | IRQ `FA` stub, jumps to `C000:04AE`. |
+| `C000:000F` | `0x4000F` | IRQ `FA` stub, jumps to `C000:04AE`; keyboard scan-cycle/reset helper. |
 | `C000:0012` | `0x40012` | IRQ `FB` stub, jumps to `C000:04D1`; keyboard row scan path. |
-| `C000:0015` | `0x40015` | IRQ `FC` stub, jumps to `C000:0550`. |
+| `C000:0015` | `0x40015` | IRQ `FC` stub, jumps to `C000:0550`; RS-232 receive path. |
 | `C000:0018` | `0x40018` | IRQ `FD` stub, jumps to `C000:0724`; very short acknowledge/flag-clear handler. |
-| `C000:001B` | `0x4001B` | IRQ `FE` stub, jumps to `C000:0738`. |
+| `C000:001B` | `0x4001B` | IRQ `FE` stub, jumps to `C000:0738`; Centronics ACK-driven output path. |
 | `C000:001E` | `0x4001E` | IRQ `FF` stub, jumps to `C000:02EE` wake/reset-ish handler. |
 | `C000:02EE` | `0x402EE` | Warm IRQ path; checks diagnostic chord and sets resume state. |
 | `C000:03AE` | `0x403AE` | Save/suspend context path. Stores general registers and far return state under `6D65..6D87`. |
 | `C000:049A` | `0x4049A` | IRQ `F9` acknowledge handler. Clears port `0x90` bit `0x40`, clears `[6DA9]` bit `0x01`, then `iret`. Candidate simple periodic wake source. |
+| `C000:04AE` | `0x404AE` | IRQ `FA` keyboard scan-cycle/reset helper. Updates the IRQ mask and calls `C000:106F` to reset keyboard row scan state. |
+| `C000:04D1` | `0x404D1` | IRQ `FB` keyboard row scan ISR. Reads port `0xB0`, stores rows at `6D06..6D0F`, and calls `C000:5645` after the tenth row. |
 | `C000:04DD` | `0x404DD` | Keyboard scan ISR stores raw rows at RAM `6D06..6D0F`. |
 | `C000:0550` | `0x40550` | IRQ `FC` serial receive ISR. Reads status/control port `0xC1`, reads received data from `0xC0`, and queues bytes via `C000:4BED`. |
 | `C000:0724` | `0x40724` | IRQ `FD` acknowledge handler. Clears port `0x90` bit `0x04`, clears `[70A5]` bit `0x08`, then `iret`. |
@@ -106,6 +110,7 @@
 | `C000:0CBC` | `0x40CBC` | Serial initialization wrapper. Validates `6D2A..6D2E`, then calls `C000:0C58`. |
 | `C000:0D4F` | `0x40D4F` | Serial transmit-ready/status check using port `0xC1`. |
 | `C000:0D96` | `0x40D96` | Serial transmit data helper; writes byte to port `0xC0`. |
+| `C000:1089` | `0x41089` | Terminal-mode loop. Initializes serial, polls translated keys, remaps arrows to one-byte C0 controls, and sends through `INT 21h AH=04`. |
 | `C000:4B8D` | `0x44B8D` | Serial receive queue drain / software flow-control helper. Sends XON when space recovers. |
 | `C000:4BED` | `0x44BED` | Serial receive queue insert helper. Sends XOFF/XON flow-control bytes when enabled. |
 | `C000:41A8` | `0x441A8` | DreamLink serial peer probe. Temporarily forces `9600 8N1`, XON/XOFF disabled. |
@@ -132,12 +137,14 @@
 | `DC98:583E` | `0x621BE` | Calculator input display redraw helper. Uses the same `F16C` 8x12 digit/punctuation resource family. |
 | `DC98:640F` | `0x62D8F` | Calculator main event loop. Reads key events, applies the private calculator translation table at `C000:5619..5644`, and dispatches digit/operator handlers. |
 | `DC98:6A38` | `0x633B8` | Organizer CALCULATOR handler. Initializes display areas, BCD buffers at `85EE`/`8600`, display glyph selectors `[8648]`/`[8649]`, then calls `DC98:640F`. |
+| `DC98:990D` | `0x6628D` | Organizer SCHEDULER handler. Displays `*** WAIT ***`, builds `<drive>:SCHEDULE.ODB`, opens or creates an `ORGAN[SCHEDULE]` database, and returns to the Organizer menu if no entries are available. |
 | `DC98:9AC8` | `0x66448` | WORLD CLOCK large time renderer. Builds an inline script with `FF 42` 7x12 digit bitmaps from `F16C:000A` and 4x12 separators from `F16C:008C`. |
 | `DC98:A06C` | `0x669EC` | WORLD CLOCK current-time redraw wrapper. Updates the base time, applies the second-city offset, and calls `DC98:9AC8` for both displayed clocks. |
 | `DC98:A0CC` | `0x66A4C` | Organizer WORLD CLOCK map redraw helper. Emits the static map resource and overlays the two city markers from city-table coordinates. |
 | `DC98:AAD5` | `0x67455` | WORLD CLOCK -> SET TIME/DATE handler. Draws the edit screen, reads date/time through `DC98:0D2A`/`0D4E`, edits fields, then writes accepted values through `DC98:0D72`/`0D8F`. |
 | `DC98:AD1B` | `0x6769B` | WORLD CLOCK -> DISPLAY FORM handler. Edits `[6808]` between 24-hour and 12-hour display modes. |
 | `DC98:B67C` | `0x67FFC` | Organizer WORLD CLOCK main screen. Draws the city labels, map/header/menu resources, blinks the selected city marker, and dispatches the `H`/`2`/`S`/`F`/`A` subcommands. |
+| `DC98:CF12` | `0x69892` | Organizer ADDRESS BOOK handler. Confirmed to enter normally in MAME after the built-in store banking fix. |
 | `DC98:E946` | `0x6B2C6` | File open wrapper used by the ROM-card loader before reading `EROMCARD.X`. |
 | `DC98:EE08` | `0x6B788` | File read wrapper around DOS-like `int 21h AH=3F`; ROM-card loader reads into `0xA4F0` through this path. |
 | `DC98:EE1B` | `0x6B79B` | File write wrapper around DOS-like `int 21h AH=40`. |
@@ -147,6 +154,18 @@
 | `DC98:EE72` | `0x6B7F2` | File seek wrapper around DOS-like `int 21h AH=42`. |
 | `DC98:EF7B` | `0x6B8FB` | Find-first wrapper. Sets caller DTA with `AH=1A`, then calls `AH=4E`; used to probe `EROMCARD.X`. |
 | `DC98:EF9A` | `0x6B91A` | Find-next wrapper. Sets caller DTA with `AH=1A`, then calls `AH=4F`. |
+
+## DreamWriter 450 Reset Entries
+
+The T450 ROM `t4_ir_35ba308.ic303` is 1 MiB and starts from a different top
+bank than the 512 KiB T400 v2.1 image:
+
+| Address | File offset | Meaning |
+| --- | ---: | --- |
+| `FFFF:0000` | `0xFFFF0` | CPU reset vector. Jumps to `F7A1:0000`. |
+| `F7A1:0000` | `0xF7A10` | Reset trampoline. Initializes ports `0x16`/`0x17`, then jumps to `C000:0000`. |
+| `C000:0000` | `0xC0000` | Main startup entry. Begins with `jmp C000:0029`. |
+| `C000:0305` | `0xC0305` | Seeds default bank values for ports `0x11..0x15`: `0x0F`, `0x1F`, `0x1E`, `0x1D`, `0x1C`. |
 
 ## Boot Path
 

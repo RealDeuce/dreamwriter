@@ -113,7 +113,7 @@ C000:08A2  retf
 | Port | Evidence |
 | ---: | --- |
 | `0x00` | LCD scanout base select. Boot writes `0x08`. |
-| `0x10..0x17` | Bank select registers for eight 128 KiB CPU windows. Bit `0x10` selects RAM; otherwise the low nibble selects a ROM bank through `((v & 0x0F) ^ 0x0F)`. |
+| `0x10..0x17` | Bank select registers for eight 128 KiB CPU windows. Values `0x00..0x07` select ROM banks, and values with bit `0x10` set select RAM. The current MAME patch also enables bit `0x08` as RAM for specific DreamWriter configs that need it for their startup/internal-store windows; for that bit-3-only case the RAM page follows the CPU window. |
 | `0x20` | Startup writes `0x00`. |
 | `0x30` | Control latch mirrored at `[6D94]`. Diagnostic `T`/`N` toggles bit `0x80`; RS-232 setup writes bit `0x10` plus inverted baud index in bits `0..2`; Centronics output pulses bit `0x20` for `-STB`. |
 | `0x40` | Centronics parallel data output latch. Startup/idle writes `0xFF`. |
@@ -121,7 +121,7 @@ C000:08A2  retf
 | `0x60` | IRQ enable register in MAME; firmware mirrors the written value at `[6D4F]`. The idle wait at `C000:4A94` writes `[6D4F]` here immediately before `sti; hlt`; Centronics output clears bit `0x40` while ACK-driven output is active and sets it when the buffer empties. |
 | `0x61` | Keyboard idle path writes `0xFE`. |
 | `0x70` | Warm diagnostic IRQ path writes `0x01` before halting in a loop. |
-| `0x90` | IRQ active/source clear register in MAME. Bit `n` clears vector `FF-n`; confirmed uses include bit 7 for vector `F8`, bit 3 for serial receive vector `FC`, bit 1 for Centronics ACK vector `FE`, and bit 0 for vector `FF`. |
+| `0x90` | IRQ active/source clear register in MAME. Bit `n` clears vector `FF-n`; confirmed uses include bit 7 for vector `F8`, bit 5 for keyboard scan-cycle/reset vector `FA`, bit 4 for keyboard row-scan vector `FB`, bit 3 for serial receive vector `FC`, bit 1 for Centronics ACK vector `FE`, and bit 0 for vector `FF`. |
 | `0xA0` | Shared status input. Printer output tests bit `0x02` as Centronics `BUSY`; battery/card helpers test bits `0x04`, `0x08`, `0x10`, `0x40`, and `0x80`. Current battery-warning mapping is bit `0x08` main battery low, bit `0x04` CR2032 retention battery low, and PCMCIA SRAM-card battery low when bit `0x80` is clear and bit `0x10` is clear. Bit `0x40` is likely SRAM-card write-protect. |
 | `0xB0` | Keyboard row input port; returns the row selected by the keyboard timer state. |
 | `0xC0` | RS-232 USART data register. Firmware writes transmit bytes here and reads receive bytes here. |
@@ -290,6 +290,83 @@ uses `0x13`/`0x11` when `6D2E` is enabled.
 XON/XOFF disabled (`6D2A=6`, `6D2B=1`, `6D2C=0`, `6D2D=0`, `6D2E=0`) while
 probing the peer, then restores the user's settings.
 
+The WP -> COMMUNICATE -> TERMINAL entry point is `C688:EC5A`, which calls the
+low-ROM terminal service through `C000:1712` with `AH=7`. The terminal loop at
+`C000:1089` initializes the serial path, polls translated keys through
+`int 21h AH=08`, and sends bytes through `int 21h AH=04`.
+
+The terminal key translation at `C000:10E4` is a small one-byte remap, not an
+ECMA-48 or VT52 escape-sequence generator:
+
+| Physical key | Translated key code | Sent byte | Meaning |
+| --- | ---: | ---: | --- |
+| `LEFT` | `0x11` | `0x08` | BS |
+| `RIGHT` | `0x10` | `0x0C` | FF |
+| `DOWN` | `0x12` | `0x0A` | LF |
+| `UP` | `0x13` | `0x0B` | VT |
+| `TAB` | `0x09` | `0x09` | HT |
+| `ENTER` | `0xDA` | `0x0D` | CR |
+
+The keyboard tables backing this are at `C000:53E9` and related shifted/control
+variants. In the normal table, the physical arrow positions translate to
+`LEFT=0x11`, `DOWN=0x12`, `RIGHT=0x10`, and `UP=0x13`. The terminal loop sends
+ordinary printable bytes unchanged for `0x20..0xBF`; other control-like key
+codes are mostly ignored unless present in the `C000:10E4` remap table.
+
+The receive side does not expose a raw path into the display-resource opcode
+stream. `C000:1118` passes the received byte to `DC98:0038`, whose inner
+renderer at `DC98:DCAC` accepts printable `0x20..0xDF`, handles a small set of
+C0 controls (`0x07..0x0D`, `0x1A`, `0x1B`, `0x1E`), and maps received
+`0xE0..0xFF` to a literal space before drawing. The `0x1B` path enters a
+CSI-like parser at `DC98:E053`, but that parser dispatches named terminal
+operations rather than copying arbitrary bytes into the display stream.
+`DC98:DD4A` then builds a local
+display stream containing `FF 02` cursor positioning, optional style bytes from
+terminal state, and the sanitized character before calling `C000:67AD`. So
+serial input can exercise the terminal's character/control handling, but not the
+raw `FF 40`/`FF 42`/`FF 44` bitmap and drawing opcodes.
+
+The terminal control parser is small and mostly ANSI/VT100-like. It enters the
+parser on `ESC` (`0x1B`), requires `[`, accumulates decimal parameters and
+semicolons in the buffer at `8C83`, and dispatches on the final byte:
+
+| Sequence | Handler | Operation |
+| --- | --- | --- |
+| `ESC [ row ; col H` | `DC98:E17B` | Move cursor to `row,col`; parameters are 1-based, clamped to the 8x80 terminal area, and missing/zero values become 0. |
+| `ESC [ row ; col f` | `DC98:E17B` | Same as `H`. |
+| `ESC [ n A` | `DC98:E2D3` | Move cursor up `n` rows; default `n=1`, clamped at row 0. |
+| `ESC [ n B` | `DC98:E31A` | Move cursor down `n` rows; default `n=1`, clamped at row 7. |
+| `ESC [ n C` | `DC98:E249` | Move cursor right `n` columns; default `n=1`, clamped at column 79. |
+| `ESC [ n D` | `DC98:E28C` | Move cursor left `n` columns; default `n=1`, clamped at column 0. |
+| `ESC [ n J` | `DC98:E35D` | Erase display: `0` clears from cursor to end, `1` clears from start through cursor and leaves the cursor at home, `2` clears all and homes the cursor. |
+| `ESC [ n K` | `DC98:E38E` | Erase line: `0` clears from cursor to end, `1` clears from start through cursor and leaves column 0 selected, `2` clears the whole line and leaves column 0 selected. |
+| `ESC [ n L` | `DC98:E47D` | Insert `n` blank lines at the cursor row; default `n=1`, clamped to the remaining rows, and column becomes 0. |
+| `ESC [ n M` | `DC98:E5AD` | Delete `n` lines at the cursor row; default `n=1`, clamped to the remaining rows, and column becomes 0. |
+| `ESC [ s` | `DC98:E74C` | Save cursor column and row to `8C79`/`8C7B`. |
+| `ESC [ u` | `DC98:E759` | Restore cursor column and row from `8C79`/`8C7B`. |
+| `ESC [ ... m` | `DC98:E1CF` | SGR-style attributes. Recognized parameters are `0` reset, `1` bold (`F8` style byte), `4` underline-like (`F0` style byte), `7` reverse-like (`F2` style byte), and `8` conceal printable bytes as spaces. Multiple parameters are accepted. |
+| `ESC [ > 5 h` | `DC98:E236` | Private cursor-state toggle; this path passes `0` to `DC98:DC69`, clearing the cursor-visible flag. |
+| `ESC [ > 5 l` | `DC98:E236` | Private cursor-state toggle; this path passes `1` to `DC98:DC69`, setting the cursor-visible flag. |
+
+No terminal query/report sequences are recognized in this parser. Final bytes
+such as `n` for DSR/status report, `c` for device attributes, or cursor-position
+report requests are not dispatched, and this receive-side parser does not call
+the serial transmit helper.
+
+MAME now maps ports `0xC0..0xC1` to the generic `I8251` device with the device
+tag `upd71051`, matching the likely NEC uPD71051-compatible part. Port `0x30`
+bits `0..2` scale a `19200 * 16` USART clock downward using the firmware's
+inverted baud index, RX ready asserts IRQ vector `FC`, and transmit-ready now
+asserts IRQ vector `FD`. The `FD` mapping is still an emulator hypothesis, but
+the firmware's `FD` handler is a short acknowledge/flag-clear path and matches
+the observed terminal behavior better than a receive-only USART model. The
+driver wires the USART's `RTS`, `DTR`, and `TXD` outputs to the RS-232 port and
+wires RS-232 `RXD` and `CTS` back into the USART. The driver also defaults the
+`rs232:pty` option to RTS-style flow control, but the generic PTY backend
+currently does not consume the guest's RTS/DTR modem-control outputs, so
+host-to-DreamWriter PTY throttling still needs either upstream PTY support or a
+different test backend.
+
 ## Centronics Parallel Port
 
 The WP -> PRINTER menu at `DC98:265D` has `PRINT OUT`, `SET UP 1`, and
@@ -351,6 +428,11 @@ empty, select, or error, but the confirmed non-printer consumers are the
 battery/card warning helpers. The exact bit ownership needs board-level
 confirmation.
 
+MAME now attaches a `centronics` slot using the standard Centronics bus. Port
+`0x40` feeds an `output_latch_device`, port `0x30` bit `0x20` drives the
+Centronics strobe input, `BUSY` updates port `0xA0` bit `0x02`, and `ACK`
+asserts IRQ vector `FE`.
+
 ## Battery And Card Status Inputs
 
 The three documented 48x40 battery warning icons at `C000:4D30`, `C000:4E20`,
@@ -398,10 +480,26 @@ reports a card-access failure. Current best read is therefore:
 | `0x40` | Likely SRAM-card write-protect; `C000:0ACE` sets carry when this bit is set and card write paths report error `0x0B`. |
 | `0x80` | PCMCIA card absent/not-ready gate; `C000:0AC4` sets carry when this bit is set. |
 
-The local MAME snapshot currently returns fixed `0xF7` for port `0xA0` while
-only documenting bit 3 as main battery low. That does not fully match this
-firmware path: bit `0x04` set would be interpreted as the CR2032 retention
-battery warning, while bit `0x08` clear keeps the main battery warning off.
+MAME now combines configurable battery inputs with live peripheral status:
+Centronics `BUSY` supplies bit `0x02`, PC Card `BVD2` supplies bit `0x10`,
+PC Card write-protect supplies bit `0x40`, and PC Card detect supplies bit
+`0x80`. The main and CR2032 battery-low bits remain configurable inputs.
+
+## PCMCIA Slot
+
+MAME now attaches a `pcmcia` slot with existing SRAM-card device options:
+`melcard_1m`, `sram_1m`, `sram_2m`, and `sram_4m`. Selecting an SRAM device
+exposes an `sramcard` image slot accepting `.bin` files.
+
+The current MAME patch also adds a tentative PC Card memory map for card-present
+systems: bank values `0x18..0x1F` route the selected 128 KiB CPU window to SRAM
+card pages `7..0`, so `0x1F` is card page 0, `0x1E` is card page 1, and so on.
+This matches the card formatter's probe at `C000:3C08`, which writes through
+16 consecutive 32 KiB pages beginning at segment `0x4000` while `C000:0239`
+slides bank registers `0x14/0x15` downward through `0x1D..0x18`. This is still
+a first-pass decode: the attribute/CIS space is not mapped, and the exact glue
+logic that decides when those bank values mean card SRAM rather than internal
+RAM needs hardware confirmation.
 
 ## Buzzer / Tone Counter
 
@@ -441,14 +539,16 @@ C000:09AB  out 52,al       ; disable
 ```
 
 That is a hardware tone/counter interface, not a simple CPU-toggled one-bit
-speaker loop. The exact input clock and output waveform still need hardware or
-MAME confirmation.
+speaker loop. Current MAME maps ports `0x50..0x52` to a `BEEP` device:
+`0x50/0x51` latch the 16-bit divisor, `0x52 = 0x7F` gates the tone on, and
+other `0x52` writes turn it off. The first-pass tone clock is `X301 / 64`,
+which is the 9.83 MHz CPU clock divided by 32, and the output route is `0.05`
+gain, matching quieter portable/terminal beeper precedent in MAME.
 
-Current MAME status: `mame/nakajies.cpp` creates a `SPEAKER_SOUND` device and
-has comments listing the same `0x50..0x52` writes, but `nakajies_io_map` does
-not currently map those ports. Sound support should therefore be implementable
-once the board identifies whether these ports feed a simple divider, a gate
-around a fixed oscillator, or a small tone-generator IC.
+Interactive testing confirms audible output in both the copyright/startup
+buzzer path and the `INITIALIZING` path. The deep tone during `INITIALIZING`
+matches the known boot write using divisor `0x0698`, which is about `182 Hz`
+with the current `X301 / 64` tone clock.
 
 Confirmed preview sequences:
 
@@ -530,7 +630,7 @@ C000:049A  ; IRQ F9
   sti
   iret
 
-C000:0724  ; IRQ FD
+C000:0724  ; IRQ FD, likely USART transmit-ready
   out 90,04
   and byte [70A5],F7
   sti

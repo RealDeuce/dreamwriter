@@ -100,9 +100,13 @@ def describe_bank(port: int, value: int, cpu: int | None) -> str:
     window = port - 0x10
     window_start = window * BANK_WINDOW_SIZE
     window_end = window_start + BANK_WINDOW_SIZE - 1
-    is_ram = bool(value & 0x10)
+    is_ram = bool(value & 0x18)
     size = RAM_SIZE if is_ram else ROM_SIZE
-    base = bank_base(value, size)
+    bit3_ram = bool(value & 0x08) and not bool(value & 0x10)
+    if bit3_ram:
+        base = (window % (RAM_SIZE // BANK_WINDOW_SIZE)) * BANK_WINDOW_SIZE
+    else:
+        base = bank_base(value, size)
     source = "RAM" if is_ram else "ROM file"
     lines = [
         f"port 0x{port:02X} value 0x{value:02X}: CPU 0x{window_start:05X}..0x{window_end:05X}",

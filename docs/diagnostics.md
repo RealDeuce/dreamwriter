@@ -64,21 +64,61 @@ C000:0374  jmp C000:0374
 
 In MAME, pressing F1 triggers IRQ `FF` and reaches this path. With
 `F+J+SPACE` held, breakpoints at `C000:02EE`, `C000:0316`, `C000:0329`, and
-`C000:0370` all hit.
+`C000:0370` all hit. Interactive testing also confirmed that holding
+`F+J+SPACE` enters the diagnostic UI from the copyright/warm startup path, but
+not during the `INITIALIZING` cold path.
 
 ## Command Loop
 
 The diagnostic UI starts at `C000:1272`; the command parser/loop starts at
-`C000:128F`. The parser recognizes command letters including:
+`C000:128F`. The initial visible diagnostic banner only shows the title and
+`K: Keyboard check`: `C000:1277..1280` renders `0x42` bytes from
+`C688:0086` / file `0x46906`, which stops before the longer command-help
+strings that follow in ROM. Interactive testing confirmed that typing an
+address still dumps a memory block, so the parser is more capable than the
+visible help implies.
+
+Pressing `?` in the diagnostic UI redraws a longer help page. The parser tests
+for `0x3F` at `C000:12B9..12D0` and calls `C000:16EB`, which renders `0xF9`
+bytes from the same `C688:0086` / file `0x46906` string block instead of the
+short `0x42`-byte startup banner.
+
+No port `0xA0` card-status check appears in this banner/parser path. The
+PCMCIA status helpers that read `0xA0` are in the storage/card routines, while
+the diagnostic `T`/`N` commands here update port `0x30` bit 7 through the
+`[6D94]` control-latch mirror.
+
+The parser recognizes command letters including:
 
 | Command | Evidence |
 | --- | --- |
+| `?` | Full help redraw; `C000:12B9..12D0` dispatches to `C000:16EB`. |
 | `M` | Memory dump command text, parser branches through command handling near `C000:134A`. |
 | `S` | Set memory command text, parser recognizes `S` near `C000:1356`. |
 | `Y`, `Z` | Single-step command text, parser recognizes both near `C000:1366..136C`. |
 | `I`, `L` | I/O dump command text, parser recognizes both near `C000:134E..1354`. |
 | `T`, `N` | Card attribute / COM command text, parser recognizes both near `C000:136E..1374`. |
 | `Q`, `R` | Clear/reset spell command text. These call the banked spell service with IDs `0x58` and `0x59`; see `spell-engine.md`. |
+
+## Exit Behavior
+
+Diagnostic mode returns to its caller rather than resetting the machine. The
+top-level parser treats keycodes `0x0B`, `0x02`, and `0x03` as exit/cancel
+events:
+
+```asm
+C000:12AD  cmp al,0B
+C000:12AF  jz  C000:12CE
+C000:12B1  cmp al,02
+C000:12B3  jz  C000:12CE
+C000:12B5  cmp al,03
+C000:12B7  jz  C000:12CE
+C000:12CE  stc
+C000:12CF  ret
+```
+
+`C000:1240` propagates that carry return to the warm/startup caller. Interactive
+testing showed that leaving diagnostics continues the interrupted boot path.
 
 ## Strings
 

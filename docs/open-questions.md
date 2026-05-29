@@ -40,12 +40,11 @@
 13. Confirm the buzzer counter clock/waveform for ports `0x50..0x52`. Firmware
     clearly writes a 16-bit divisor and gates it with `0x52`, but the hardware
     clock and exact output shape are still unknown.
-14. Identify the physical RS-232 USART and baud-clock source. Firmware behavior
-    strongly matches an 8251/8251A-style USART at data port `0xC0` and
-    status/control port `0xC1`, with baud selected by port `0x30` bits `0..2`,
-    but the board markings should confirm the exact chip and clock. Hardware
-    evidence says RTS/CTS and DTR are present, DTR duplicates RTS, and there is
-    no CD/carrier-detect signal.
+14. Confirm the RS-232 baud-clock source. Firmware behavior matches an
+    8251/8251A-compatible USART at data port `0xC0` and status/control port
+    `0xC1`, likely a NEC uPD71051, with baud selected by port `0x30` bits
+    `0..2`. Hardware evidence says RTS/CTS and DTR are present, DTR duplicates
+    RTS, and there is no CD/carrier-detect signal.
 15. Confirm the physical Centronics and PCMCIA status wiring on port `0xA0`.
     Firmware clearly maps bit `0x02` to Centronics `BUSY`, bit `0x08` to main
     battery low, bit `0x04` to CR2032 retention battery low, bit `0x80` to a
@@ -55,8 +54,10 @@
     strobe, and uses IRQ `FE` as ACK-driven output. Board pins are still needed
     to confirm whether any Centronics `PE`/`SEL`/`ERROR` lines are present on
     the same register or simply unused by the firmware.
-16. Confirm the ROM-card executable format and card-drive mapping. Current
-    trace of `DC98:2B75` finds `EROMCARD.X` through the same DOS-like file API
+16. Confirm the external PCMCIA memory decode, ROM-card executable format, and
+    card-drive mapping. MAME now has the slot/status lines wired, but no card
+    memory window is exposed yet. Current trace of `DC98:2B75` finds
+    `EROMCARD.X` through the same DOS-like file API
     used by the FAT12-style storage layer, loads it at `0xA4F0`, validates
     header words `0xA4F0/0x1997`, and calls far `[0xA4F4]`; remaining questions
     are the full header layout, how `[0x6805]` maps to the physical PCMCIA slot,

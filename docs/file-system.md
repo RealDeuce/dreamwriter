@@ -21,6 +21,20 @@ card is in the slot`, `Card memory read error`, `Directory is full of files`,
 `Card is write-protected`, and related copy/status prompts around
 `0x6FF03..0x70469`.
 
+The copy list uses a mark-and-commit UI: pressing Enter while the cursor is on
+a file does not copy that file. Space toggles a file's selected mark, and Enter
+then copies all selected files in the current direction. This makes it easy to
+misread a test as a failed copy when no files have been marked yet.
+
+Current ROM evidence does not make `COPY` look like a source-unlinking move.
+The normal delete wrapper, `DC98:EE40`, has no direct call sites in the
+`0x5F000..0x62000` FILE/COPY transfer area. The nearest transfer-helper delete
+call at file `0x6B2BA` closes and deletes the destination path after a failed
+copy/open/write path, which reads as cleanup of a partial destination rather
+than removal of the source. The copy direction selector at file
+`0x60F3F..0x60FC9` updates `[6806]`, the active storage target byte, after
+deriving it from `[6805]` and the selected Built-in/Card/DreamLink direction.
+
 ## DOS-Like API Surface
 
 The storage layer uses a DOS-like `int 21h` API. The wrappers around
@@ -213,6 +227,14 @@ C000:2CF3  call C000:2DBE     ; clear root directory sectors
 C000:2CFC  call C000:3B2B     ; rewrite final header
 ```
 
+The built-in path forces geometry count `5`, i.e. five 32 KiB units or 160 KiB.
+The clear/verify loop at `C000:2D02` computes segment/offset pairs through
+`C000:2D44`, starting at `1800:0000` and stepping through `2000:0000`,
+`2800:0000`, `3000:0000`, and `3800:0000`. In MAME, this requires the startup
+`0x11 = 0x0E` mapping to expose RAM at CPU `0x20000..0x3FFFF`; treating `0x0E`
+as a ROM bank mirror produces the observed FILE -> INITIALIZE store-memory read
+error during the early format progress count.
+
 ## ROM CARD Loader
 
 The WP OTHERS -> ROM CARD path at `DC98:2B75` uses the same DOS-like file API
@@ -271,6 +293,27 @@ The picker stores each listed item as a 19-byte record, sorts entries by name,
 and caps the listing at `0x80` entries. The displayed fields are the 8.3 name,
 attribute flags, size, and packed date. Files at 64 KiB or larger are displayed
 in KiB by dividing size by `0x400` and appending `K`.
+
+## Scheduler Database
+
+The Organizer SCHEDULER entry point is `DC98:990D` / file `0x6628D`. It first
+draws the resource at file `0x70E0A`, which contains `*** WAIT ***`, then builds
+a path from the active drive byte `[6805]` and `SCHEDULE.ODB` at file `0x71010`.
+The expected database header is `ORGAN[SCHEDULE]` at file `0x71021`.
+
+If `SCHEDULE.ODB` is missing, the handler creates it with a 16-byte header and a
+200-entry 4-byte index table. Existing files are validated by comparing the
+header and scanning the 200 index entries; nonzero offsets below the file size
+increment the entry count at `[82AE]`. After setup, if `[82AE]` is still zero,
+the handler closes and deletes the empty database, then returns to the Organizer
+menu. That matches the brief asterisk display observed in MAME when the backing
+store is not initialized or cannot retain the database.
+
+After correcting the `0x11 = 0x0E` bank mapping to RAM, FILE -> INITIALIZE
+formats the full 160 KiB built-in store, and both SCHEDULER and ADDRESS BOOK
+enter normally in MAME. This confirms the earlier Scheduler return-to-menu
+symptom was caused by the common storage backing, not by the Scheduler UI path
+itself.
 
 ## Native Format Evidence
 

@@ -493,6 +493,13 @@ file 0x53935 / C688:D0B5: (C) 1992 mikrolab Ver. 5.00         (C) 1983 Merriam-W
 file 0x5397C / C688:D0FC: All Rights Reserved                 All Rights Reserved
 ```
 
+The `INITIALIZING` screen also displays the built-in store capacity and a
+progress count. On the T400 v2.1 path observed in MAME, the upper value is
+`160 KBytes` and the lower value counts up to `160`. That matches the
+filesystem formatter's built-in geometry: five 32 KiB units starting at segment
+`0x1800`. A progress failure in the high 20s pointed back to the bank mapping
+for CPU `0x20000..0x3FFFF`; see `file-system.md` and `banking.md`.
+
 This makes the current emulated startup behavior suspicious: if it shows only
 `INITIALIZING` before reaching the two-button menu, MAME may be taking the wrong
 reset/retained-RAM path, skipping a timing/input wait, or missing a hardware

@@ -53,10 +53,17 @@ MAME maps the 1 MiB V20 address space as eight 128 KiB banks:
 | `0xC0000..0xDFFFF` | 6 | `0x16` |
 | `0xE0000..0xFFFFF` | 7 | `0x17` |
 
-For a bank register value `v`, MAME uses bit `0x10` to select RAM. If that bit
-is clear, it selects ROM bank `((v & 0x0F) ^ 0x0F)`. For the 512 KiB T400 ROM,
-that effectively chooses one of four 128 KiB ROM banks. Initial bank registers
-are zero, which maps the last ROM bank into every CPU window.
+For a bank register value `v`, values `0x00..0x07` select ROM bank
+`((v & 0x0F) ^ 0x0F)`, and values with bit `0x10` set select RAM. The current
+MAME patch also lets selected DreamWriter configs treat bit `0x08` as RAM.
+For those bit-3-only RAM selects, the RAM page follows the CPU window rather
+than the low-nibble ROM-bank formula. That preserves the v3.x/T200-era use of
+values through `0x07` for 1 MiB ROMs while still allowing T400 `0x0E` and the
+1 MiB DreamWriter `0x0F` startup/default mappings to expose RAM in the
+`0x20000..0x3FFFF` window.
+
+Initial bank registers are zero, which maps the last ROM bank into every CPU
+window.
 
 The DreamWriter T400 has 256 KiB RAM in MAME.
 
