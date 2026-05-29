@@ -102,6 +102,12 @@ Confirmed public service map:
 | `57` | `C000:5300` -> `C000:30DA` | Get/set file date/time. |
 | `5B` | `C000:5304` -> `C000:2A1B` | Create new file. |
 
+The date/time services are backed by the RTC port block, not the storage layer:
+`C000:516F`/`5209` decode BCD shadow bytes read from ports `0xD0..0xDC`, while
+`C000:51C7`/`523D` convert binary date/time values back to BCD and write the
+RTC. These services still follow the DOS register convention closely enough for
+application code to use normal-looking `AH=2A`/`2B`/`2C`/`2D` calls.
+
 ## IOCTL And Endpoint Status
 
 The `AH=44` dispatcher at `C000:5298` is not a broad DOS IOCTL

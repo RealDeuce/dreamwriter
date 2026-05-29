@@ -30,11 +30,13 @@
    only `INITIALIZING` before the menu. No direct `mov si,D008/D012/D02A`
    reference has been found yet.
 11. Determine whether the missing startup banner is tied to hard V20 reset
-   versus the retained-RAM power/wake path through IRQ `F8`/`FF` and port
-   `0x70`.
-12. Confirm the physical power-button wiring. Current firmware evidence suggests
-    IRQ `F8` is the suspend/save side and IRQ `FF` is the wake/reset side, but
-    MAME exposes only synthetic IRQ keys and no named power input.
+   versus retained-RAM wake paths. The auto power-off timeout now confirms one
+   retained transition route through `C000:035D` and `out 0x70,0x01`, while IRQ
+   `F8` uses a separate suspend/save route ending in `out 0xDD,0xF8`.
+12. Confirm the physical power-button and power-management wiring. Current
+    firmware evidence suggests IRQ `F8`, IRQ `FF`, the auto-off timeout path,
+    and external reset/wake hardware are related, but MAME exposes only
+    synthetic IRQ keys and no named power-management device.
 13. Confirm the buzzer counter clock/waveform for ports `0x50..0x52`. Firmware
     clearly writes a 16-bit divisor and gates it with `0x52`, but the hardware
     clock and exact output shape are still unknown.
@@ -71,9 +73,10 @@
 20. Split confirmed code from inline strings/data around `C000:1200..16FF`.
 21. Split confirmed code from data in the `C688:0000..01FF` far-call area.
 22. Name the low RAM variables in `6D00..70FF` as their roles become stable.
-23. Decode the `FF 44` resource records handled at `C000:675D`; current evidence
-    suggests positioned region/line/fill drawing rather than source-backed
-    bitmap blits.
+23. Finish decoding the non-rectangle `FF 44` forms handled at `C000:675D`.
+    The simple rectangle form is now known: `+1 y`, `+3 x`, `+5 height`,
+    `+7 width`, `+D mode` with `+9/+B` zero; nonzero `+9` or `+B` dispatches
+    to framebuffer copy/shift-looking helpers at `C000:644D` or `C000:63C6`.
 24. Decode the low-number `FF` display sub-opcodes, especially `FF 04` at
     `C000:60AF` and `FF 06` at `C000:605F`, which are distinct from the
     positioned `FF 40`/`42`/`44` drawing group.
@@ -81,3 +84,15 @@
     handlers. The compact 40x40 icon/label table consumer is now identified;
     remaining work is to name each wrapper, its return-key dispatch, and the
     submenu-specific handler targets.
+26. Confirm the physical RTC chip and control-register semantics. MAME maps
+    ports `0xD0..0xDF` to a Ricoh `RP5C01`, and firmware now clearly treats
+    `0xD0..0xDC` as BCD time/date nibbles, but the exact meaning of the
+    `0xDD..0xDF` control writes and the `0xD6` weekday/status register should
+    be checked against the board or datasheet.
+27. Ask the MAME team how `rp5c01_device` should be initialized for this driver.
+    The generic MAME startup path calls `set_rtc_datetime()` for battery-backed
+    RTC devices after `nvram_load()`, and `RP5C01` implements both the RTC and
+    NVRAM interfaces. In practice the DreamWriter still appears to require
+    manually setting the time/date. Before adding a driver-specific
+    `set_current_time()` call, confirm whether this is expected `RP5C01`
+    behavior, a driver configuration issue, or a core/device bug.

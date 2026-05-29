@@ -214,6 +214,120 @@ with:
 tools/rom2.py bitmap --base 0x704d4 --row-bytes 5 --height 40 --columns 40 --count 5 --stride 0xc8
 ```
 
+## Calculator Display Resources
+
+The Organizer -> CALCULATOR screen starts at `DC98:6A38` / file `0x633B8`.
+Its numeric display redraw helpers (`DC98:54C2` and `DC98:583E`) build inline
+`FF 42` bitmap records from the large 8x12 digit resource at
+`F16C:000A` / file `0x716CA`. This is the same resource family used by WORLD
+CLOCK for its large time readouts, but the calculator also uses the later
+punctuation/blank entries selected through `[8648]` and `[8649]`.
+
+Render the resource family with:
+
+```sh
+tools/rom2.py bitmap --base 0x716ca --row-bytes 1 --height 12 --columns 8 --count 14 --stride 0xd
+tools/rom2.py bitmap --base 0x71766 --row-bytes 1 --height 12 --columns 8 --count 3 --stride 0xd
+```
+
+The calculator-specific resource cluster begins earlier:
+
+| Source | Segment | Size | Notes |
+| ---: | --- | --- | --- |
+| `0x70948` | `F094:0008` | Four fixed 24-byte strings | `OVERFLOW`, `DIVISION BY ZERO`, `OUT OF RANGE`, and `UNKNOWN ERROR`. |
+| `0x709B0` | `F09B:0000` | Four 8x8 glyphs | Small operator/status-looking glyphs adjacent to the calculator scripts. |
+| `0x709D8` | `F09D:0008` | Display script | Right-side panel rules/areas, including six `FF 44` rectangle records and low-number `FF 02`/`FF 06` records. |
+
+Render the adjacent 8x8 glyphs with:
+
+```sh
+tools/rom2.py bitmap --base 0x709b0 --row-bytes 1 --height 8 --columns 8 --count 4 --stride 0x8
+```
+
+The 4x7 digit run at `F0A6:000C` / file `0x70A6C` follows the calculator
+panel script, but the current direct code reference is from later organizer
+date/calendar-style rendering code around `DC98:6CDD`, not from the calculator
+main loop. Keep it separate from the calculator display font until a calculator
+caller is found.
+
+```sh
+tools/rom2.py bitmap --base 0x70a6c --row-bytes 1 --height 7 --columns 4 --count 10 --stride 0x7
+```
+
+## WORLD CLOCK Map And Header Resources
+
+The Organizer -> WORLD CLOCK screen uses both source-backed bitmaps and stored
+display scripts.
+
+`DC98:A0CC` builds an `FF 42` record for the large map bitmap:
+
+| Source | Segment | Size | Render command |
+| ---: | --- | --- | --- |
+| `0x713CA` | `F13C:000A` | `96x64`, 12 bytes per row | `tools/rom2.py bitmap --base 0x713ca --row-bytes 12 --height 64 --columns 96` |
+
+The small city-marker glyphs live at `F138:0000` / file `0x71380`. WORLD CLOCK
+uses the variants at offsets `0x000E` and `0x0014` for the map markers, and the
+main loop toggles between those two sources for the selected city's blink.
+
+The two current-time readouts are also bitmap-rendered, not normal text.
+`DC98:A06C` updates/redraws the two displayed clocks and calls `DC98:9AC8` for
+each one. `DC98:9AC8` builds an inline script that emits `FF 42` records from a
+large digit resource:
+
+| Source | Segment | Size | Notes |
+| ---: | --- | --- | --- |
+| `0x716CA` | `F16C:000A` | `7x12`, 1 byte per row, stride `0x0D` | Digits `0..9`. |
+| `0x7174C` | `F16C:008C` | `4x12`, 1 byte per row | Time separator/colon. |
+| `0x71759` | `F16C:0099` | `7x12`, 1 byte per row | Blank leading-hour glyph. |
+
+Render the large digits with:
+
+```sh
+tools/rom2.py bitmap --base 0x716ca --row-bytes 1 --height 12 --columns 8 --count 10 --stride 0xd
+tools/rom2.py bitmap --base 0x7174c --row-bytes 1 --height 12 --columns 8
+tools/rom2.py bitmap --base 0x71759 --row-bytes 1 --height 12 --columns 8
+```
+
+This matches the screen behavior: the time digits look heavier than the normal
+6x8 text font, and the separator is proportional because it is a narrower
+bitmap resource. The script inserts `E1` style/control bytes between the digit
+bitmap records; the exact visual role of that control byte in this mixed
+bitmap/text stream still needs confirmation.
+
+The right-side `WORLD CLOCK` header is not a bitmap. `DC98:B67C` sends a
+`0x5A`-byte script from `F104:000C` / file `0x7104C` before drawing the title
+text. That script is six 15-byte `FF 44` records:
+
+```text
+file 0x7104C  FF44 y=0 x=366 h=64 w=114 mode=0x00
+file 0x7105B  FF44 y=0 x=366 h=1  w=114 mode=0x0F
+file 0x7106A  FF44 y=2 x=366 h=1  w=114 mode=0x0F
+file 0x71079  FF44 y=4 x=366 h=1  w=114 mode=0x0F
+file 0x71088  FF44 y=6 x=366 h=1  w=114 mode=0x0F
+file 0x71097  FF44 y=8 x=366 h=1  w=114 mode=0x0F
+```
+
+The rectangle form is now confirmed from the `C000:675D` handler. For records
+where the words at `+9` and `+0B` are zero, the layout is:
+
+```text
+FF 44
++1  word  y
++3  word  x
++5  word  height
++7  word  width
++9  word  0
++B  word  0
++D  byte  mode: 0 clears, 0x0A XORs, other nonzero values set pixels
+```
+
+The values fit the visible layout: a 114-pixel-wide right-side strip on a
+480-pixel-wide display, followed by five horizontal rules separated by one blank
+scanline. The next script at
+`F10D:000E` / file `0x710DE` draws the `WORLD CLOCK` title and menu text on top
+of those rules, which explains why the top rules appear broken around the title
+even though the stored `FF44` records are continuous.
+
 The word-processor `FILE` submenu is reached at effective base `0x6FAEC`:
 
 ```text
@@ -318,7 +432,7 @@ positioned drawing entries are the even opcodes:
 | --- | --- | --- |
 | `FF 40` | `C000:6627` | Set pixel/bitmap cursor position. |
 | `FF 42` | `C000:6648` | Source-backed bitmap blit. |
-| `FF 44` | `C000:675D` | Region/line/fill-style draw operation; exact fields still need decoding. |
+| `FF 44` | `C000:675D` | Positioned rectangle/fill operation; the simple form is decoded, while copy/shift forms still need naming. |
 
 The byte-indexed `0x4x` table would send `FF 41` and `FF 43` to overlapping
 words in the table bytes; no confirmed resource uses those odd sub-opcodes yet.
@@ -334,7 +448,14 @@ tools/rom2.py position-ops --start 0x6f000 --end 0x79000 --min-opcode 0x41 --max
 Examples include calendar/address-book/tutorial screens, where `FF 44` appears
 after strings such as `DELETE`, `Deletes this entry.`, `SALUTATION`, `SEARCH`,
 and tutorial prompts. That pattern looks like framed-region or line drawing
-rather than bitmap source blitting.
+rather than bitmap source blitting. The WORLD CLOCK header resource at
+`0x7104C` is now a concrete `FF44` rectangle example: it clears a right-side
+strip and sets five horizontal rules before the title text is overlaid.
+
+The non-rectangle `FF44` forms still need naming. In `C000:675D`, nonzero
+fields at `+9` or `+0B` dispatch to helpers at `C000:644D` or `C000:63C6`,
+which look like in-framebuffer copy/shift operations rather than immediate
+source-backed blits.
 
 ## Candidate Status/Icon Resource Cluster
 

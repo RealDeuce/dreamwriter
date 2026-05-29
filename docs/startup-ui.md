@@ -323,7 +323,7 @@ Confirmed forms so far:
 | `FF 06 ...` | `C000:605F` | Low-number line/region helper; exact semantics still need naming. |
 | `FF 40 xx xx yy yy` | `C000:6627` | Position bitmap/pixel cursor. |
 | `FF 42 hh hh ww ww off off seg seg` | `C000:6648` | Bitmap blit. `hh` is the row count, `ww` is the bit width rounded up to source bytes per row, and `off:seg` is the source pointer. |
-| `FF 44 ...` | `C000:675D` | Positioned region/line/fill-style draw operation; exact fields still need decoding. |
+| `FF 44 ...` | `C000:675D` | Positioned rectangle/fill operation; the simple form uses `+1 y`, `+3 x`, `+5 height`, `+7 width`, `+D mode`. Non-rectangle copy/shift forms still need naming. |
 
 The button image record in the first menu resource is:
 

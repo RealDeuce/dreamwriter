@@ -9,17 +9,19 @@
 | `C000:0000` | `0x40000` | Main startup entry. Begins with `jmp C000:0029`. |
 | `C000:0006` | `0x40006` | `INT 21h` vector target installed by `C000:0ED6`; jumps to `C000:5098`. |
 | `C000:0009` | `0x40009` | IRQ `F8` stub, jumps to `C000:03AE` for save/suspend context. |
-| `C000:000C` | `0x4000C` | IRQ `F9` stub, jumps to `C000:049A`. |
+| `C000:000C` | `0x4000C` | IRQ `F9` stub, jumps to `C000:049A`; very short acknowledge/flag-clear handler. |
 | `C000:000F` | `0x4000F` | IRQ `FA` stub, jumps to `C000:04AE`. |
 | `C000:0012` | `0x40012` | IRQ `FB` stub, jumps to `C000:04D1`; keyboard row scan path. |
 | `C000:0015` | `0x40015` | IRQ `FC` stub, jumps to `C000:0550`. |
-| `C000:0018` | `0x40018` | IRQ `FD` stub, jumps to `C000:0724`. |
+| `C000:0018` | `0x40018` | IRQ `FD` stub, jumps to `C000:0724`; very short acknowledge/flag-clear handler. |
 | `C000:001B` | `0x4001B` | IRQ `FE` stub, jumps to `C000:0738`. |
 | `C000:001E` | `0x4001E` | IRQ `FF` stub, jumps to `C000:02EE` wake/reset-ish handler. |
 | `C000:02EE` | `0x402EE` | Warm IRQ path; checks diagnostic chord and sets resume state. |
 | `C000:03AE` | `0x403AE` | Save/suspend context path. Stores general registers and far return state under `6D65..6D87`. |
+| `C000:049A` | `0x4049A` | IRQ `F9` acknowledge handler. Clears port `0x90` bit `0x40`, clears `[6DA9]` bit `0x01`, then `iret`. Candidate simple periodic wake source. |
 | `C000:04DD` | `0x404DD` | Keyboard scan ISR stores raw rows at RAM `6D06..6D0F`. |
 | `C000:0550` | `0x40550` | IRQ `FC` serial receive ISR. Reads status/control port `0xC1`, reads received data from `0xC0`, and queues bytes via `C000:4BED`. |
+| `C000:0724` | `0x40724` | IRQ `FD` acknowledge handler. Clears port `0x90` bit `0x04`, clears `[70A5]` bit `0x08`, then `iret`. |
 | `C000:0738` | `0x40738` | IRQ `FE` Centronics ACK handler. Clears IRQ source bit `0x02`, emits the next byte from `[6D92]` through port `0x40`, and pulses port `0x30` bit `0x20`. |
 | `C000:077C` | `0x4077C` | Far-call buzzer preview wrapper. Calls `C000:0B16` with `AL` selecting a sound sequence. |
 | `C000:07E9` | `0x407E9` | LCD/framebuffer copy candidate, `0x1000 -> 0x94F0`. |
@@ -29,6 +31,8 @@
 | `C000:08DA` | `0x408DA` | Diagnostic gate on warm path. Calls `C000:1240`. |
 | `C000:0920` | `0x40920` | Centronics direct byte output. Writes port `0x40`, waits for `0xA0` bit `0x02` to clear, then pulses port `0x30` bit `0x20` for strobe. |
 | `C000:096A` | `0x4096A` | Tone helper. Programs sound divisor through ports `0x50`/`0x51`, gates output through `0x52`, and busy-waits for duration. |
+| `C000:09AE` | `0x409AE` | RTC time write helper. Writes BCD shadow bytes `6D96..6D9B` to RTC ports `0xD0..0xD5`. |
+| `C000:09C9` | `0x409C9` | RTC date write helper. Writes BCD shadow bytes `6D9C..6DA2` to RTC ports `0xD6..0xDC`. |
 | `C000:0A6A` | `0x40A6A` | Combined battery-warning status query. Returns `AL=1..3` for main, CR2032 retention, or PCMCIA SRAM-card battery low, or zero when none are active. |
 | `C000:0A93` | `0x40A93` | Main battery low helper. Tests port `0xA0` bit `0x08` twice. |
 | `C000:0AA4` | `0x40AA4` | CR2032 memory-retention battery low helper. Tests port `0xA0` bit `0x04` twice. |
@@ -36,6 +40,7 @@
 | `C000:0AC4` | `0x40AC4` | PCMCIA card access/presence helper. Sets carry when port `0xA0` bit `0x80` is set. |
 | `C000:0ACE` | `0x40ACE` | PCMCIA card write-protect helper candidate. Sets carry when port `0xA0` bit `0x40` is set. |
 | `C000:0B16` | `0x40B16` | Table-driven buzzer sequence player used by the WP SYSTEM `POWER ON BUZZER` preview. |
+| `C000:0B60` | `0x40B60` | RTC snapshot helper. Reads ports `0xD0..0xDC` into BCD shadow buffer `6D96..6DA2`, low nibble only. |
 | `C000:0ED6` | `0x40ED6` | Interrupt/vector setup. Fills most IVT entries with `C000:118B`, installs IRQ stubs, installs `INT 21h` as `C000:0006`, installs `INT 1` as `C000:157D`, and copies a far-call table to RAM `0x0200`. |
 | `C000:1240` | `0x41240` | Diagnostic entry routine. Calls chord compare, then diagnostic UI/loop. |
 | `C000:1252` | `0x41252` | Compares RAM `6D06..6D0F` with expected `SPACE+F+J` matrix bytes. |
@@ -52,7 +57,10 @@
 | `C000:3064` | `0x43064` | Private `INT 21h AX=4428` endpoint probe. Returns availability bits for built-in RAM, PCMCIA SRAM card, and DreamLink. |
 | `C000:311E` | `0x4311E` | Private `INT 21h AX=4429` DreamLink finish/flush helper; returns success without action for non-DreamLink handles. |
 | `C000:3C08` | `0x43C08` | Card-storage capacity probe used during format. Write-tests the banked card window in 32 KiB steps and records the detected count. |
+| `C000:49C2` | `0x449C2` | Auto power-off countdown check in an idle path. Decrements `[680B]`; when it reaches zero and `[6D31] != 0`, saves resume target `4977` and jumps to the retained power-transition path at `C000:035D`. |
+| `C000:4A8D` | `0x44A8D` | Main keyboard/event idle loop. Uses `C000:4B2D` to check the keyboard ring buffer, reloads `[680B]` from `[6D31]` on keyboard activity, and enters the retained power-transition path on timeout. |
 | `C000:4A94` | `0x44A94` | Low-level keyboard/event idle routine. Restores IRQ mask to port `0x60`, executes `sti; hlt`, then returns. |
+| `C000:4B2D` | `0x44B2D` | Keyboard/event ring-buffer dequeue helper. Uses `[70E2]` and `[70E3]`; sets `[70A5]` bit `0x01` when no event is available. |
 | `C000:4C39` | `0x44C39` | Battery-warning icon restore/clear helper. Restores the saved 48x40 screen area if a warning icon is active, then clears `[6D52]`. |
 | `C000:4C4F` | `0x44C4F` | Battery-warning screen-area restore helper, `0x94F0 -> 0x131B`. |
 | `C000:4C6E` | `0x44C6E` | Battery-warning screen-area save helper, `0x131B -> 0x94F0`. |
@@ -60,9 +68,14 @@
 | `C000:4CDC` | `0x44CDC` | Force-display the main battery low warning icon. Sets `[6D52]=2`, saves the screen area, and draws icon index `0`. |
 | `C000:4D07` | `0x44D07` | Draws a 48x40 battery warning icon selected by `AL` from the table at `C000:4D30`. |
 | `C000:5098` | `0x45098` | `INT 21h` service dispatcher. Maps `AH` through byte table `C000:5000`, then calls handler from word table `C000:5060`. File services reach the FAT12-style handlers around `C000:29AD..3F1C`. |
+| `C000:516F` | `0x4516F` | `INT 21h AH=2A` get date. Snapshots the RTC shadow, decodes year/month/day, computes weekday with `C000:5308`, and returns DOS-style registers. |
+| `C000:51C7` | `0x451C7` | `INT 21h AH=2B` set date. Converts binary year/month/day to BCD shadow bytes and writes RTC date registers. |
+| `C000:5209` | `0x45209` | `INT 21h AH=2C` get time. Snapshots the RTC shadow and decodes hour/minute/second into DOS-style registers. |
+| `C000:523D` | `0x4523D` | `INT 21h AH=2D` set time. Converts binary hour/minute/second to BCD shadow bytes and writes RTC time registers. |
+| `C000:5308` | `0x45308` | Weekday calculator used by `INT 21h AH=2A`; computes `0..6` from year/month/day rather than returning the RTC `0xD6` shadow byte. |
 | `C000:5AD6` | `0x45AD6` | Low-level resource/text renderer. Consumes staged bytes, expands glyphs, and writes rows into the framebuffer at `0x1000`. |
 | `C000:6648` | `0x46648` | `FF 42` bitmap blit handler for startup resource records; uses row count, bit width, and source far pointer. |
-| `C000:675D` | `0x4675D` | `FF 44` positioned region/line/fill-style resource handler; exact field meanings still need decoding. |
+| `C000:675D` | `0x4675D` | `FF 44` positioned rectangle/fill handler. The simple form uses `+1 y`, `+3 x`, `+5 height`, `+7 width`, and `+D mode`; nonzero `+9/+B` dispatches to copy/shift-looking helpers. |
 | `C688:000B` | `0x4688B` | Main firmware far entry used after cold boot initialization. |
 | `C688:000F` | `0x4688F` | Warm-path application entry. Calls into `C688:7752`, bypassing full main startup and boot-update sequence. |
 | `C688:0053` | `0x468D3` | Retained/warm RAM signature check; returns carry on mismatch. |
@@ -96,6 +109,10 @@
 | `C000:4B8D` | `0x44B8D` | Serial receive queue drain / software flow-control helper. Sends XON when space recovers. |
 | `C000:4BED` | `0x44BED` | Serial receive queue insert helper. Sends XOFF/XON flow-control bytes when enabled. |
 | `C000:41A8` | `0x441A8` | DreamLink serial peer probe. Temporarily forces `9600 8N1`, XON/XOFF disabled. |
+| `DC98:0D2A` | `0x5D6AA` | Get-date wrapper around `INT 21h AH=2A`; stores weekday/year/month/day at `72DD`, `72D7`, `72D9`, and `72DB`. |
+| `DC98:0D4E` | `0x5D6CE` | Get-time wrapper around `INT 21h AH=2C`; stores hour/minute/second at `72DF`, `72E1`, and `72E3`. |
+| `DC98:0D72` | `0x5D6F2` | Set-date wrapper around `INT 21h AH=2B`; loads year/month/day from `72D7`, `72D9`, and `72DB`. |
+| `DC98:0D8F` | `0x5D70F` | Set-time wrapper around `INT 21h AH=2D`; loads hour/minute/second from `72DF`, `72E1`, and `72E3`. |
 | `DC98:0E81` | `0x5D801` | Text output helper used by the horizontal icon menu renderer for label text. |
 | `DC98:1198` | `0x5DB18` | Horizontal icon menu key loop. Handles selection redraw, arrows, numeric shortcuts, and select/cancel-style keys. |
 | `DC98:124C` | `0x5DBCC` | Horizontal icon menu renderer. Consumes compact icon/label tables and generates `FF 42` 40x40 bitmap blit records. |
@@ -111,6 +128,16 @@
 | `DC98:4D67` | `0x616E7` | Directory-list builder. Uses DOS find-first/find-next on `X:*.*`, reads standard DTA fields, sorts 19-byte records, and caps at 128 entries. |
 | `DC98:52E5` | `0x61C65` | Document picker/list UI. Calls `DC98:4D67` to enumerate files and `DC98:4EAF`/`5198` to draw and navigate the list. |
 | `DC98:53C3` | `0x61D43` | Organizer top icon menu wrapper around `DC98:124C`; stores selected index in `[82A6]`. |
+| `DC98:54C2` | `0x61E42` | Calculator numeric display renderer. Builds inline `FF 42` bitmap records from the 8x12 digit resource at `F16C:000A`. |
+| `DC98:583E` | `0x621BE` | Calculator input display redraw helper. Uses the same `F16C` 8x12 digit/punctuation resource family. |
+| `DC98:640F` | `0x62D8F` | Calculator main event loop. Reads key events, applies the private calculator translation table at `C000:5619..5644`, and dispatches digit/operator handlers. |
+| `DC98:6A38` | `0x633B8` | Organizer CALCULATOR handler. Initializes display areas, BCD buffers at `85EE`/`8600`, display glyph selectors `[8648]`/`[8649]`, then calls `DC98:640F`. |
+| `DC98:9AC8` | `0x66448` | WORLD CLOCK large time renderer. Builds an inline script with `FF 42` 7x12 digit bitmaps from `F16C:000A` and 4x12 separators from `F16C:008C`. |
+| `DC98:A06C` | `0x669EC` | WORLD CLOCK current-time redraw wrapper. Updates the base time, applies the second-city offset, and calls `DC98:9AC8` for both displayed clocks. |
+| `DC98:A0CC` | `0x66A4C` | Organizer WORLD CLOCK map redraw helper. Emits the static map resource and overlays the two city markers from city-table coordinates. |
+| `DC98:AAD5` | `0x67455` | WORLD CLOCK -> SET TIME/DATE handler. Draws the edit screen, reads date/time through `DC98:0D2A`/`0D4E`, edits fields, then writes accepted values through `DC98:0D72`/`0D8F`. |
+| `DC98:AD1B` | `0x6769B` | WORLD CLOCK -> DISPLAY FORM handler. Edits `[6808]` between 24-hour and 12-hour display modes. |
+| `DC98:B67C` | `0x67FFC` | Organizer WORLD CLOCK main screen. Draws the city labels, map/header/menu resources, blinks the selected city marker, and dispatches the `H`/`2`/`S`/`F`/`A` subcommands. |
 | `DC98:E946` | `0x6B2C6` | File open wrapper used by the ROM-card loader before reading `EROMCARD.X`. |
 | `DC98:EE08` | `0x6B788` | File read wrapper around DOS-like `int 21h AH=3F`; ROM-card loader reads into `0xA4F0` through this path. |
 | `DC98:EE1B` | `0x6B79B` | File write wrapper around DOS-like `int 21h AH=40`. |

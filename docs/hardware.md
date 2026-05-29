@@ -43,6 +43,17 @@ when `m_matrix` is zero.
 | 8 | `01` 8, `02` minus, `04` right bracket, `08` left bracket, `10` quote, `20` I, `40` J, `80` comma |
 | 9 | `01` 0, `02` 9, `04` Backspace, `08` P, `10` semicolon, `20` L, `40` O, `80` period |
 
+The calculator app has its own ROM translation table at `C000:5619..5644`.
+It maps the physical `M,J,K,L,U,I,O,7,8,9` cluster to digits `0..9`, which
+makes a MAME host numeric-keypad overlay plausible. The printed calculator
+legends remap the operator keys: physical `0` is divide, `P` is multiply,
+`;`/`:` is subtract, `/` is add, `,` is decimal point, `.` is plus/minus, and
+`RET` is equals. Candidate extra host keycodes should follow those legends:
+keypad `/` on physical `0`, keypad `*` on physical `P`, keypad `-` on physical
+`;`, keypad `+` on physical `/`, keypad `.` on physical `,`, and keypad Enter
+on physical `RET`. Because the real keyboard has the calculator overlay printed
+on these keys, unconditional MAME keypad aliases are acceptable.
+
 ## LCD / Framebuffer
 
 MAME models the display as a RAM scanout window selected by I/O port `0x00`.
@@ -115,7 +126,68 @@ C000:08A2  retf
 | `0xB0` | Keyboard row input port; returns the row selected by the keyboard timer state. |
 | `0xC0` | RS-232 USART data register. Firmware writes transmit bytes here and reads receive bytes here. |
 | `0xC1` | RS-232 USART status/control register. Firmware reads status here and writes reset/mode/command bytes here. |
-| `0xD0..0xDF` | Mapped to Ricoh `RP5C01` RTC in MAME. Existing notes around `0xDD..0xDE` are therefore RTC-register accesses, not generic control ports. |
+| `0xD0..0xDF` | RTC register block. MAME maps this range to a Ricoh `RP5C01`; firmware reads/writes `0xD0..0xDC` as 4-bit BCD time/date registers and uses `0xDD..0xDF` as control/mode registers. |
+
+## RTC
+
+The Organizer -> WORLD CLOCK -> SET TIME/DATE path does not access RTC ports
+directly. It calls DOS-like `INT 21h` services through `DC98` wrappers:
+
+| Service | App wrapper | C000 handler | Meaning |
+| ---: | --- | --- | --- |
+| `AH=2A` | `DC98:0D2A` | `C000:516F` | Get date. |
+| `AH=2B` | `DC98:0D72` | `C000:51C7` | Set date. |
+| `AH=2C` | `DC98:0D4E` | `C000:5209` | Get time. |
+| `AH=2D` | `DC98:0D8F` | `C000:523D` | Set time. |
+
+`C000:0B60` snapshots RTC ports `0xD0..0xDC` into the BCD shadow buffer
+`6D96..6DA2`, masking each read to the low nibble. The public get-date/time
+handlers convert those BCD nibbles into DOS-style binary registers:
+
+| RTC port | Shadow | Meaning |
+| ---: | ---: | --- |
+| `0xD0` | `6D96` | Seconds ones. |
+| `0xD1` | `6D97` | Seconds tens. |
+| `0xD2` | `6D98` | Minutes ones. |
+| `0xD3` | `6D99` | Minutes tens. |
+| `0xD4` | `6D9A` | Hours ones. |
+| `0xD5` | `6D9B` | Hours tens. |
+| `0xD6` | `6D9C` | RTC weekday/status register candidate. Left unchanged by the binary date conversion, then still written by the date write helper; not used for `AH=2A`'s weekday return. |
+| `0xD7` | `6D9D` | Day ones. |
+| `0xD8` | `6D9E` | Day tens. |
+| `0xD9` | `6D9F` | Month ones. |
+| `0xDA` | `6DA0` | Month tens. |
+| `0xDB` | `6DA1` | Year ones. |
+| `0xDC` | `6DA2` | Year tens. |
+
+The year conversion treats RTC years `80..99` as `1980..1999` and `00..79` as
+`2000..2079`:
+
+```asm
+C000:5182  mov dh,[6DA2]   ; year tens
+C000:5185  cmp dh,08
+C000:5188  mov cx,076C     ; 1900
+C000:518B  jae C000:5190
+C000:518D  mov cx,07D0     ; 2000 when tens < 8
+```
+
+`AH=2A` returns the weekday in `AL`, but that value is computed in firmware by
+`C000:5308` from the decoded year/month/day. The RTC's own `0xD6` shadow byte is
+not used for this return path.
+
+Set-time and set-date convert binary values back to BCD shadow bytes, then write
+the RTC:
+
+```asm
+C000:09AE  ; write time shadow 6D96..6D9B to ports D0..D5
+C000:09C9  ; write date shadow 6D9C..6DA2 to ports D6..DC
+```
+
+Before writes, `C000:09EC` emits a small control sequence through `0xDD`,
+`0xDF`, `0xDE`, and `0xDA`; afterwards the write helpers restore `0xDD` to
+`0xF8`. The exact RP5C01 mode/control interpretation should be checked against
+the physical board or a chip datasheet before naming those bits as more than
+firmware-observed control writes.
 
 ## RS-232C USART
 
@@ -391,6 +463,92 @@ Lower divisors should produce higher tones if the counter is a normal divider.
 That matches the UI comments in `mame/nakajies.cpp`: type 2 is the simple lower
 sound, while type 3 is the highest-frequency sound.
 
+## Auto Power-Off
+
+The WP -> OTHERS -> SYSTEM screen also has an `AUTO POWER OFF PERIOD` setting
+with choices `2`, `3`, `5`, `10`, `15`, `20`, and `UNLIMITED` minutes. The UI
+stores the selected index in `[6D2F]`, then maps it through a word table at
+`EF79:0002` / file `0x6F792` and stores the active reload value in `[6D31]`.
+
+| UI choice | `[6D2F]` | `[6D31]` reload |
+| --- | ---: | ---: |
+| `2` minutes | `0` | `0x04B0` / `1200` |
+| `3` minutes | `1` | `0x0708` / `1800` |
+| `5` minutes | `2` | `0x0BB8` / `3000` |
+| `10` minutes | `3` | `0x1770` / `6000` |
+| `15` minutes | `4` | `0x2328` / `9000` |
+| `20` minutes | `5` | `0x2EE0` / `12000` |
+| `UNLIMITED` | `6` | `0x0000` |
+
+The values match a 10 Hz idle countdown. The active countdown lives in
+`[680B]`; idle paths reload it from `[6D31]` and decrement it while checking
+for keyboard/activity and battery-warning work. The decrement is foreground
+idle-loop code after `sti; hlt` returns, not code inside an interrupt handler;
+the interrupt source that wakes `hlt` still needs hardware confirmation. When
+`[680B]` reaches zero and `[6D31] != 0`, the firmware enters a retained
+power-transition path:
+
+```asm
+C000:49C2  dec word [680B]
+C000:49C8  cmp word [6D31],00
+C000:49CD  jz  C000:49D6
+C000:49CF  cli
+C000:49D0  call C000:4A34   ; save resume target [6D79] = 4977
+C000:49D3  jmp  C000:035D   ; checksum retained state, power transition, loop
+```
+
+A similar idle loop at `C000:4A8D` saves resume target `4A8D` through
+`C000:4A43`, clears any battery-warning overlay through `C000:4C39`, and jumps
+to the same `C000:035D` transition. This timeout route terminates through the
+IRQ `FF`-style `out 0x70,0x01; jmp $` sequence, rather than the IRQ `F8`
+handler's `out 0xDD,0xF8; jmp $` sequence.
+
+Keyboard activity resets the timer in this idle path. `C000:4B2D` checks the
+keyboard/event ring buffer using read/write offsets at `[70E2]` and `[70E3]`;
+if a key/event is available, the caller branches through `C000:4AF2`, reloads
+`[680B]` from `[6D31]`, clears any active battery-warning overlay, and then
+translates the key through `C000:5915`:
+
+```asm
+C000:4AB3  call C000:4A84   ; sti; hlt
+C000:4AB6  call C000:4B2D   ; poll/dequeue keyboard event
+C000:4AB9  test byte [70A5],01
+C000:4ABE  jz   C000:4AF2  ; key/event present
+...
+C000:4AF6  mov  ax,[6D31]
+C000:4AF9  mov  [680B],ax
+C000:4AFC  call C000:4C39  ; clear warning overlay
+C000:4B0F  call C000:5915  ; translate key/event
+```
+
+Two short IRQ handlers are plausible simple `hlt` wake sources:
+
+```asm
+C000:049A  ; IRQ F9
+  out 90,40
+  and byte [6DA9],FE
+  sti
+  iret
+
+C000:0724  ; IRQ FD
+  out 90,04
+  and byte [70A5],F7
+  sti
+  iret
+```
+
+`F9` is especially interesting because the idle loops test `[6DA9]` bit `0x01`
+near the auto-off decrement sites. The actual periodic source and frequency
+still need hardware confirmation. As an emulator working hypothesis, driving
+IRQ `F9` at 10 Hz should wake `hlt` often enough for the auto-off countdown and
+time-display refresh paths without pretending that keypresses are occurring.
+
+This matches an observed MAME behavior change: before adding a 10 Hz IRQ `F9`
+source, the Organizer WORLD CLOCK seconds display advanced only when keypresses
+woke the CPU. With the 10 Hz source present, seconds advance normally, and the
+selected home-city field blinks at a sub-second UI rate, likely divided down
+from the same periodic wake source. The exact blink divisor has not been traced.
+
 ## Power / Wake Hypothesis
 
 MAME does not model a named power key or switch. It exposes a synthetic debug
@@ -429,10 +587,14 @@ loops. The exact electrical behavior is still unconfirmed.
 | ---: | --- |
 | `6807` | Cleared on diagnostic chord in warm IRQ path. |
 | `6809` | Startup/warm state marker. Values include `0001`, `1992`, `1995`, `1999`. |
+| `680B` | Active auto power-off countdown. Reloaded from `[6D31]` and decremented in idle paths. |
 | `6D06..6D0F` | Raw keyboard matrix rows. |
 | `6D28` | Keyboard scan state/idle counter. |
 | `6D29` | Keyboard scan row index. |
 | `6D2A..6D2E` | RS-232C setup bytes: baud index, bit length, stop bits, parity, XON/XOFF. |
+| `6D2F` | Auto power-off period index from WP -> OTHERS -> SYSTEM: `0..6` = `2`, `3`, `5`, `10`, `15`, `20`, `UNLIMITED`. |
+| `6D30` | Power-on buzzer setting: `0..2` = types 1..3, `3` = no buzzer. |
+| `6D31` | Auto power-off countdown reload value, selected from `[6D2F]`; `0` disables timeout. |
 | `6D4F` | Port `0x60` state mirror. |
 | `6D51` | Flags; diagnostic paths clear bit `0x08`. |
 | `6D52` | Battery-warning display state. Values `2..4` select main, CR2032, or PCMCIA SRAM-card battery warning checks; bit `0x80` marks that an icon is currently displayed. |
@@ -443,6 +605,8 @@ loops. The exact electrical behavior is still unconfirmed.
 | `6D7B` | Saved resume CS. |
 | `6D7D` | Saved resume SP. |
 | `6D81` | Diagnostic/warm marker; `1995` requests diagnostic/warm handling. |
+| `6D96..6DA2` | RTC BCD shadow read from ports `0xD0..0xDC`: seconds, minutes, hours, candidate weekday/status, day, month, and year nibbles. |
+| `72D7..72E3` | Date/time wrapper cache used by WORLD CLOCK and SET TIME/DATE: year, month, day, weekday, hour, minute, second. |
 | `6D83` | Checksum over saved context. |
 | `6D92` | Centronics output pointer used by `C000:0738` and `C000:08EC`. |
 | `6D94` | Port `0x30` value mirror. |

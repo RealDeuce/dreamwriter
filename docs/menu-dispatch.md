@@ -376,6 +376,150 @@ Current wrapper return-key map:
 Most handler names are still semantic candidates, but the dispatch structure is
 now direct code rather than inferred from strings.
 
+## Organizer Calculator
+
+The organizer CALCULATOR app is the first top-menu handler:
+`DC98:6A38` / file `0x633B8`. It clears/redraws two calculator display areas,
+initializes calculator BCD buffers at `85EE` and `8600`, seeds display glyph
+selectors `[8648]=0x0C` and `[8649]=0x0D`, and then enters the main event loop
+at `DC98:640F` / file `0x62D8F`.
+
+The calculator uses a private translation table at `C000:5619..5644`, not just
+the normal alphanumeric meanings of those keys. The digit ladder is direct ROM
+code in `DC98:640F`:
+
+| Table bytes | Key values | Calculator digit |
+| ---: | --- | ---: |
+| `C000:5619/561A` | `M` / `m` | `0` |
+| `C000:561B/561C` | `J` / `j` | `1` |
+| `C000:561D/561E` | `K` / `k` | `2` |
+| `C000:561F/5620` | `L` / `l` | `3` |
+| `C000:5621/5622` | `U` / `u` | `4` |
+| `C000:5623/5624` | `I` / `i` | `5` |
+| `C000:5625/5626` | `O` / `o` | `6` |
+| `C000:5627/5628` | `7` / `7` | `7` |
+| `C000:5629/562A` | `8` / `8` | `8` |
+| `C000:562B/562C` | `9` / `9` | `9` |
+
+That is a good match for a calculator overlay on the right side of the keyboard:
+`7 8 9`, `U I O`, `J K L`, and `M` form a numeric-pad-like cluster.
+
+The same table also drives the arithmetic/function keys:
+
+| Table bytes/event | Key values | Printed calculator legend | Observed handler |
+| ---: | --- | --- | --- |
+| `C000:562D/562E` | `,` / `,` | `.` | Decimal point entry; redraws the input display with `DC98:583E(1)`. |
+| `C000:562F/5630` | `.` / `.` | `+/-` | Calls `DC98:5CD6`. |
+| `C000:5631/5632` | `/` / `/` | `+` | Sets operation state `[85EA]=1`. |
+| `C000:5633/5634` | `;` / `;` | `-` on the printed `:` key | Sets operation state `[85EA]=2`. |
+| `C000:5635/5636` | `P` / `p` | multiply | Sets operation state `[85EA]=3`. |
+| `C000:5637/5638` | `0` / `0` | divide | Sets operation state `[85EA]=4`. |
+| `C000:5639/563A` | `'` / `'` | square root | Sends the short resource at `F093:0008`, then calls `DC98:6B86`. |
+| `C000:563B/563C` | `\` / `\` | `%` | Finalizes through `DC98:6340` and sets `[85EA]=0x32`. |
+| `C000:563D/563E` | `[` / `[` | `RM` | Calls `DC98:5D09` with the source/destination buffers reversed. |
+| `C000:563F/5640` | `]` / `]` | `SM` | Calls `DC98:5D09`, then redraws/clears input. |
+| `C000:5641/5642` | `-` / `-` | `M-` | Calls `DC98:60AB` after finalizing current input. |
+| `C000:5643/5644` | `=` / `=` | `M+` | Calls `DC98:5FE0` after finalizing current input. |
+| event `0xDA` | `RET`-style selection event | `=` | Calls `DC98:6340` and sets `[85EA]=0x32`. |
+
+The printed legends also identify calculator functions outside the
+`C000:5619..5644` table: physical `INS` is `CE`, and physical `BACK` is `CA`.
+That makes a practical MAME keypad overlay a physical-key remap to calculator
+legends rather than to the printed typewriter symbols: keypad `0..9` to
+`M,J,K,L,U,I,O,7,8,9`, keypad `/` to physical `0`, keypad `*` to physical `P`,
+keypad `-` to the physical `;`/`:` key, keypad `+` to physical `/`, keypad `.`
+to physical `,`, and keypad Enter to physical `RET`. Since the real keyboard
+has these calculator legends printed as an overlay, unconditional MAME keypad
+aliases are a reasonable fit even outside the calculator app.
+
+The calculator display renderer uses source-backed bitmap glyphs rather than
+normal text for numeric displays. The redraw helpers at `DC98:54C2` and
+`DC98:583E` build `FF 42` records from the 8x12 digit resource at
+`F16C:000A` / file `0x716CA`, with punctuation/blank entries at `F16C:008C`,
+`F16C:0099`, `F16C:00C0`, and nearby offsets. This is the same large digit
+resource family later used by WORLD CLOCK.
+
+## Organizer WORLD CLOCK
+
+The organizer WORLD CLOCK app is the fourth top-menu handler:
+`DC98:B67C` / file `0x67FFC`. It begins by drawing the two selected city labels
+from a city table at `F1CA:0006` / file `0x71CA6`. City records are `0x38`
+bytes each; the handler uses bytes at record offsets `0x1A` and `0x1B` as
+display coordinates for map markers, and uses record text fields for the city
+and country labels.
+
+`DC98:B67C` then calls `DC98:A0CC` / file `0x66A4C`, which redraws the map
+area. That helper builds an `FF 42` source-backed bitmap record for a `96x64`
+bitmap at `F13C:000A` / file `0x713CA`, then draws two `6x6` city markers from
+the small marker resource at `F138:000E` and `F138:0014`.
+
+The live time readouts are drawn separately by `DC98:A06C` / file `0x669EC`.
+That wrapper refreshes the base time, applies the selected second-city offset,
+and calls `DC98:9AC8` / file `0x66448` twice. `DC98:9AC8` does not use the
+normal text font; it emits `FF 42` bitmap records for 7x12 digit glyphs from
+`F16C:000A` / file `0x716CA`, a 4x12 separator from `F16C:008C` / file
+`0x7174C`, and a blank leading-hour glyph from `F16C:0099` / file `0x71759`.
+
+The right-side title/menu is not a raw bitmap. It is stored as display scripts:
+
+| Resource | Segment | Length | Contents |
+| ---: | --- | ---: | --- |
+| `0x7104C` | `F104:000C` | `0x5A` | Six `FF 44` rectangle records. The first clears the 114x64 right-side strip; the next five set 1-pixel-high horizontal rules at y offsets `0`, `2`, `4`, `6`, and `8`. |
+| `0x710DE` | `F10D:000E` | `0x82` | `FF 40` positioned text for `WORLD CLOCK` and the menu labels `[H] SET HOME CITY`, `[2] SET 2ND CITY`, `[S] SET TIME/DATE`, `[F] DISPLAY FORM`, and `[A] DAILY ALARM`. |
+
+The line script is sent before the title/menu text script, so the visible
+header can look like broken horizontal rules: the later `WORLD CLOCK` text pass
+overwrites or masks the top rules where the title sits, while the lower rule
+remains continuous.
+
+The main loop keeps `SI` as a blink state and `DI` as a small divider. Every
+third loop pass it toggles `SI` between `0` and `1` and redraws the selected
+city marker from `F138:(0x000E + SI * 6)`. The loop then calls `DC98:A06C` and
+`DC98:0D19` while waiting for input. With MAME driving IRQ `F9` at 10 Hz, the
+seconds display updates without keypresses and this marker blink becomes
+visible; the exact wait/divider relationship still needs a tighter trace.
+
+Subcommand dispatch from `DC98:B67C`:
+
+| Key | Handler |
+| --- | --- |
+| `H` / `h` | `DC98:A2CF` with `AX=0`; set home city. |
+| `2` | `DC98:A2CF` with `AX=1`; set second city. |
+| `S` / `s` | `DC98:AAD5`; set time/date. |
+| `F` / `f` | `DC98:AD1B`; display format. |
+| `A` / `a` | `DC98:B457`; daily alarm. |
+
+`DC98:AAD5` / file `0x67455`, the SET TIME/DATE handler, redraws the right
+panel line script at `F104:000C` and the SET TIME/DATE text resource at
+`F116:0000` / file `0x71160`. It reads the current RTC-backed date/time through
+the DOS-like wrappers `DC98:0D2A` (`INT 21h AH=2A`) and `DC98:0D4E`
+(`INT 21h AH=2C`), then copies the values into local edit fields.
+
+The wrapper cache layout is:
+
+| Address | Value |
+| ---: | --- |
+| `72D7` | Year. |
+| `72D9` | Month. |
+| `72DB` | Day. |
+| `72DD` | Weekday returned by `AH=2A`. |
+| `72DF` | Hour. |
+| `72E1` | Minute. |
+| `72E3` | Second. |
+
+The edit UI obeys `[6808]`, the display-form flag edited by `DC98:AD1B`: `0`
+is 24-hour display, nonzero is 12-hour display. In 12-hour mode, `DC98:AAD5`
+edits an hour in `1..12` plus an `a`/`p` flag, then converts back to 24-hour
+time before committing. In 24-hour mode it edits the hour directly as `0..23`.
+Minutes are limited to `0..59`; month is limited to `1..12`; the full date is
+validated before commit.
+
+On accept, `DC98:AAD5` writes year/month/day back to `72D7`/`72D9`/`72DB`,
+writes hour/minute to `72DF`/`72E1`, forces `72E3` to zero, calls
+`DC98:0D72` and `DC98:0D8F`, then calls `DC98:D3BB` to refresh the broader
+time state. The C000 handlers behind those wrappers update the RTC BCD shadow
+and write ports `0xD0..0xDC`; see `hardware.md`.
+
 The WP `FILE` submenu is the document storage workflow for Built-in, Card, and
 DreamLink targets. Its card path is exposed through a DOS-like file API with
 drive letters, `X:*.*`, 8.3 filenames, standard find-first DTA offsets, and
@@ -425,9 +569,10 @@ entry pointer at `0xA4F4`. Failure paths use `Inadequate work memory`, `Can not
 open EROMCARD.X`, `Not enough memory`, and `ROM Card ID error`.
 
 `DC98:288A` is now confirmed as the WP OTHERS -> SYSTEM settings screen. It
-draws the resource containing `POWER ON BUZZER : { TYPE 1 } { TYPE 2 }
-{ TYPE 3 } { NO }`, lets the user edit settings backed by `[6D2F]` and
-`[6D30]`, and previews the selected buzzer type on Space:
+draws the resource containing `AUTO POWER OFF PERIOD : { 2 } { 3 } { 5 }
+{ 10 } { 15 } { 20 } { UNLIMITED }` and `POWER ON BUZZER : { TYPE 1 }
+{ TYPE 2 } { TYPE 3 } { NO }`. The screen edits settings backed by `[6D2F]`
+and `[6D30]`, and previews the selected buzzer type on Space:
 
 ```asm
 DC98:2966  cmp di,0020          ; Space
@@ -437,8 +582,22 @@ DC98:2974  call C000:077C       ; play preview
 ```
 
 On selection/accept, it stores `[bp-6]` to `[6D2F]`, `[bp-4]` to `[6D30]`, and
-uses `[6D30]` to choose the `POWER ON BUZZER` startup sound. The buzzer hardware
-path is documented in `hardware.md`.
+uses `[6D30]` to choose the `POWER ON BUZZER` startup sound. It also maps
+`[6D2F]` through the word table at `EF79:0002` / file `0x6F792` and stores the
+active auto-off reload value in `[6D31]`:
+
+| UI choice | `[6D2F]` | `[6D31]` reload |
+| --- | ---: | ---: |
+| `2` minutes | `0` | `0x04B0` / `1200` |
+| `3` minutes | `1` | `0x0708` / `1800` |
+| `5` minutes | `2` | `0x0BB8` / `3000` |
+| `10` minutes | `3` | `0x1770` / `6000` |
+| `15` minutes | `4` | `0x2328` / `9000` |
+| `20` minutes | `5` | `0x2EE0` / `12000` |
+| `UNLIMITED` | `6` | `0x0000` |
+
+The values match a 10 Hz idle countdown. The buzzer hardware path and auto-off
+power path are documented in `hardware.md`.
 
 ## Resource Lookup Service
 

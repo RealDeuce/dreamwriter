@@ -37,7 +37,8 @@ tools/rom2.py strings --start 0x40000 --end 0x80000 -n 8
 | `0x57CEC` | `0xD7CEC` | DreamLink UI cluster. |
 | `0x6F7A0` | `0xEF7A0` | `EROMCARD.X`; nearby `OTHERS` submenu effective table base is `0x6F7AC`, with labels beginning at `0x6F7C8`: `SYSTEM`, `PREFERENCES`, `T I M E`, `ROM CARD`. `DC98:2B75` loads this file from the candidate card drive, validates header words `0xA4F0/0x1997`, then calls the loaded far entry pointer at `[0xA4F4]`. |
 | `0x6F7EF` | `0xEF7EF` | ROM software-card strings: `ROM CARD`, `No ROM card is in the slot`, `Inadequate work memory`, `Can not open EROMCARD.X`, `Not enough memory`, `ROM Card ID error`. |
-| `0x6F88A` | `0xEF88A` | WP OTHERS -> SYSTEM settings text: `POWER ON BUZZER : { TYPE 1 } { TYPE 2 } { TYPE 3 } { NO }`. Space previews the selected buzzer type through `C000:077C`. |
+| `0x6F823` | `0xEF823` | WP OTHERS -> SYSTEM setup resource begins with `AUTO POWER OFF PERIOD : { 2 } { 3 } { 5 } { 10 } { 15 } { 20 } { UNLIMITED }` and `(minutes)`. Handler `DC98:288A` stores the selected index in `[6D2F]`. |
+| `0x6F88A` | `0xEF88A` | WP OTHERS -> SYSTEM settings text: `POWER ON BUZZER : { TYPE 1 } { TYPE 2 } { TYPE 3 } { NO }`. Space previews the selected buzzer type through `C000:077C`; handler stores the setting in `[6D30]`. |
 | `0x6FA78` | `0xEFA78` | Word processor horizontal icon menu cluster; effective table base is `0x6FA7C`, labels begin at `0x6FA98`: `EDIT TEXT`, `FILE`, `CLEAR TEXT`, `PRINTER`, `COMMUNICATE`, `OTHERS`. |
 | `0x6FAE8` | `0xEFAE8` | Word processor `FILE` submenu cluster; effective table base is `0x6FAEC`, labels begin at `0x6FB08`: `RECALL`, `STORE`, `DELETE`, `RENAME`, `COPY`, `INITIALIZE`. This is the PCMCIA SRAM-card storage workflow. |
 | `0x6FB58` | `0xEFB58` | Word processor `PRINTER` submenu cluster; effective table base is `0x6FB5C`, labels begin at `0x6FB78`: `PRINT OUT`, `SET UP 1`, `SET UP 2`. `SET UP 1` reaches `DC98:24DB`; `SET UP 2` reaches the shared RS-232 setup screen. |
@@ -45,6 +46,21 @@ tools/rom2.py strings --start 0x40000 --end 0x80000 -n 8
 | `0x6FBC8` | `0xEFBC8` | Word processor `COMMUNICATE` submenu cluster; effective table base is `0x6FBCC`, labels begin at `0x6FBE8`: `SEND FILE`, `SEND FILE`, `RECEIVE FILE`, `RECEIVE FILE`, `TERMINAL`, `SET UP`. Nearby setup strings include `RS-232C SET UP`, `BAUD RATE`, `BIT LENGTH`, `STOP BITS`, `PARITY`, and `X ON/OFF`; handler `DC98:22A1` stores those settings at `6D2A..6D2E`. |
 | `0x6FF03` | `0xEFF03` | WP FILE -> COPY UI cluster. Includes `Built-in`, `Card`, `DreamLink`, direction prompts, `No card is in the slot`, `Directory is full of files`, and `Card is write-protected`. |
 | `0x708BC` | `0xF08BC` | Organizer horizontal icon menu table; labels begin at `0x708D8`: `CALCULATOR`, `CALENDAR`, `SCHEDULER`, `WORLD CLOCK`, `ADDRESS BOOK`. |
+| `0x70948` | `0xF0948` | Calculator error/status strings: `OVERFLOW`, `DIVISION BY ZERO`, `OUT OF RANGE`, and `UNKNOWN ERROR`, stored as four fixed 24-byte fields. |
+| `0x709B0` | `0xF09B0` | Four 8x8 calculator-adjacent operator/status glyphs. |
+| `0x709D8` | `0xF09D8` | Calculator right-side panel display script: `FF 44` rectangles plus low-number `FF 02`/`FF 06` drawing records. |
+| `0x70A6C` | `0xF0A6C` | 4x7 digit table at stride `0x07`. It follows the calculator panel resource, but the confirmed direct caller is later organizer date/calendar-style code around `DC98:6CDD`. |
+| `0x7104C` | `0xF104C` | WORLD CLOCK right-side header line script: six `FF 44` rectangle records. Clears a 114x64 strip, then sets five horizontal rules. |
+| `0x710DE` | `0xF10DE` | WORLD CLOCK title/menu text script: `WORLD CLOCK`, `[H] SET HOME CITY`, `[2] SET 2ND CITY`, `[S] SET TIME/DATE`, `[F] DISPLAY FORM`, `[A] DAILY ALARM`. |
+| `0x71160` | `0xF1160` | WORLD CLOCK SET TIME/DATE text script: `SET TIME/DATE`, `[0xDA] SET`, and `[CAN] CANCEL`. Handler `DC98:AAD5` pairs it with the right-side header line script; `0xDA` is the same selection key/event used by the menu dispatchers. |
+| `0x71295` | `0xF1295` | WORLD CLOCK DISPLAY FORM choices: `{ 24 HOUR }` and `{ 12 HOUR }`, edited by `DC98:AD1B` through flag `[6808]`. |
+| `0x712AC` | `0xF12AC` | WORLD CLOCK date string tables: three-letter months `JAN..DEC` and weekdays `Sun..Sat`. |
+| `0x71380` | `0xF1380` | WORLD CLOCK small marker glyph resource. The app uses offsets `0x000E` and `0x0014` for city markers and blink. |
+| `0x713CA` | `0xF13CA` | WORLD CLOCK 96x64 map bitmap, blitted by `DC98:A0CC` through `FF 42`. |
+| `0x716CA` | `0xF16CA` | WORLD CLOCK large time digit table. Ten 7x12 digit bitmaps at stride `0x0D`, consumed by `DC98:9AC8`. |
+| `0x7174C` | `0xF174C` | WORLD CLOCK 4x12 bitmap separator/colon for the large time renderer. |
+| `0x71759` | `0xF1759` | WORLD CLOCK blank 7x12 leading-hour glyph for the large time renderer. |
+| `0x71CA6` | `0xF1CA6` | WORLD CLOCK city table begins. Records are `0x38` bytes; marker coordinates are at record offsets `0x1A` and `0x1B`. |
 | `0x788D3` | `0xF88D3` | Typing tutor version banner. |
 
 ## Fonts / Bitmaps
