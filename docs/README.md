@@ -12,6 +12,7 @@ Start here:
 | `entry-points.md` | Confirmed code entry points and direct branch/call inventory. |
 | `startup-ui.md` | Cold-start UI path, inline display scripts, boot update sequence, and first menu graphic. |
 | `menu-dispatch.md` | Inline key dispatch tables and the shared application menu event loop. |
+| `file-system.md` | FILE menu storage flow, DOS-like file API wrappers, and directory/DTA evidence. |
 | `diagnostics.md` | Diagnostic chord, command loop, banner/help strings, and warm IRQ entry. |
 | `hardware.md` | Keyboard, LCD/framebuffer, I/O ports, and low RAM state seen so far. |
 | `fonts.md` | Main glyph table, candidate width table, and font variants. |

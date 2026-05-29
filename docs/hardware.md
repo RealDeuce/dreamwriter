@@ -104,17 +104,287 @@ C000:08A2  retf
 | `0x00` | LCD scanout base select. Boot writes `0x08`. |
 | `0x10..0x17` | Bank select registers for eight 128 KiB CPU windows. Bit `0x10` selects RAM; otherwise the low nibble selects a ROM bank through `((v & 0x0F) ^ 0x0F)`. |
 | `0x20` | Startup writes `0x00`. |
-| `0x30` | Diagnostic `T`/`N` handling toggles bit `0x80` via `[6D94]`. |
-| `0x40` | Startup writes `0xFF`. |
-| `0x50..0x52` | MAME comments suggest sound counter low/high and enable/disable, based on boot and beep-like writes. |
-| `0x60` | IRQ enable register in MAME; firmware mirrors the written value at `[6D4F]`. The idle wait at `C000:4A94` writes `[6D4F]` here immediately before `sti; hlt`. |
+| `0x30` | Control latch mirrored at `[6D94]`. Diagnostic `T`/`N` toggles bit `0x80`; RS-232 setup writes bit `0x10` plus inverted baud index in bits `0..2`; Centronics output pulses bit `0x20` for `-STB`. |
+| `0x40` | Centronics parallel data output latch. Startup/idle writes `0xFF`. |
+| `0x50..0x52` | Buzzer/tone counter. Firmware writes a 16-bit divisor to `0x50`/`0x51`, writes `0x7F` to `0x52` to enable, and writes `0xFF` to `0x52` to disable. |
+| `0x60` | IRQ enable register in MAME; firmware mirrors the written value at `[6D4F]`. The idle wait at `C000:4A94` writes `[6D4F]` here immediately before `sti; hlt`; Centronics output clears bit `0x40` while ACK-driven output is active and sets it when the buffer empties. |
 | `0x61` | Keyboard idle path writes `0xFE`. |
 | `0x70` | Warm diagnostic IRQ path writes `0x01` before halting in a loop. |
-| `0x90` | IRQ active/source clear register in MAME. Bit 7 clears vector `F8`; bit 0 clears vector `FF`. |
-| `0xA0` | MAME returns `0xF7`; comment says bit 3 is battery-low when set, so this reports battery OK. |
+| `0x90` | IRQ active/source clear register in MAME. Bit `n` clears vector `FF-n`; confirmed uses include bit 7 for vector `F8`, bit 3 for serial receive vector `FC`, bit 1 for Centronics ACK vector `FE`, and bit 0 for vector `FF`. |
+| `0xA0` | Shared status input. Printer output tests bit `0x02` as Centronics `BUSY`; battery/card helpers test bits `0x04`, `0x08`, `0x10`, `0x40`, and `0x80`. Current battery-warning mapping is bit `0x08` main battery low, bit `0x04` CR2032 retention battery low, and bit `0x10` PCMCIA SRAM-card battery OK/low gated by bit `0x80` card presence. Bit `0x40` is likely SRAM-card write-protect. |
 | `0xB0` | Keyboard row input port; returns the row selected by the keyboard timer state. |
-| `0xC0..0xC1` | Communication or peripheral status/data in IRQ path around `C000:0550`. |
+| `0xC0` | RS-232 USART data register. Firmware writes transmit bytes here and reads receive bytes here. |
+| `0xC1` | RS-232 USART status/control register. Firmware reads status here and writes reset/mode/command bytes here. |
 | `0xD0..0xDF` | Mapped to Ricoh `RP5C01` RTC in MAME. Existing notes around `0xDD..0xDE` are therefore RTC-register accesses, not generic control ports. |
+
+## RS-232C USART
+
+The WP -> COMMUNICATE -> SET UP screen at `DC98:22A1` is the `RS-232C SET UP`
+menu. It edits five bytes:
+
+| Address | Menu field | Values |
+| ---: | --- | --- |
+| `6D2A` | Baud rate | `3..7` for `1200`, `2400`, `4800`, `9600`, `19200`. |
+| `6D2B` | Bit length | `0` = 7 bits, `1` = 8 bits. |
+| `6D2C` | Stop bits | `0` = 1 stop bit, `1` = 2 stop bits. |
+| `6D2D` | Parity | `0` = none, `1` = odd, `2` = even. |
+| `6D2E` | XON/XOFF | `0` = disabled, `1` = enabled. |
+
+`C000:0CBC` is the serial initialization wrapper. It validates those settings
+through `C000:48D5`, builds a mode byte at `C000:0BFC`, then programs the
+hardware through `C000:0C58`.
+
+The programming sequence strongly resembles an Intel 8251/8251A-style USART, not
+an 8250-compatible UART. `C000:0C43` writes the classic 8251 sync-reset/mode/
+command sequence to control port `0xC1`:
+
+```asm
+C000:0C43  mov dx,00C1
+C000:0C46  xor al,al
+C000:0C49  out dx,al       ; 00
+C000:0C4A  out dx,al       ; 00
+C000:0C4B  out dx,al       ; 00
+C000:0C4C  mov al,40
+C000:0C4E  out dx,al       ; internal reset
+C000:0C4F  mov ax,[6EAC]
+C000:0C52  out dx,al       ; async mode byte
+C000:0C53  mov al,37
+C000:0C55  out dx,al       ; command: TxEN, DTR, RxEN, error reset, RTS
+```
+
+The mode-byte construction also matches an 8251 async mode word:
+
+```asm
+C000:0BFC  mov al,4A       ; 7 data bits, no parity, 1 stop bit, 16x clock
+C000:0C0E  or  al,0C       ; 8 data bits
+C000:0C17  or  al,C0       ; 2 stop bits
+C000:0C20  or  al,10       ; parity enable
+C000:0C29  or  al,20       ; even parity
+```
+
+Baud selection is not done with 8250 divisor latches. `C000:0C58` writes the
+inverted baud index into bits `0..2` of port `0x30`, while preserving the rest of
+the `[6D94]` latch:
+
+```asm
+C000:0C64  mov al,[6D94]
+C000:0C67  or  al,10
+C000:0C69  and al,F8
+C000:0C6B  mov ah,[6D2A]
+C000:0C6F  not ah
+C000:0C71  and ah,07
+C000:0C74  or  al,ah
+C000:0C76  out 30,al
+```
+
+The highest menu setting, `19200`, is still plausible with this model. The mode
+word uses the 8251-style 16x async clock factor, so `19200` requires a
+`307.2 kHz` TxC/RxC clock. The firmware does not synthesize that inside the
+USART; it selects an external baud-clock divider through port `0x30`.
+
+Transmit waits on `0xC1` status bit `0` and requires bit `7`, then writes the
+byte to `0xC0`:
+
+```asm
+C000:0D4F  mov dx,00C1
+C000:0D53  in  al,dx
+C000:0D55  test al,01      ; transmit ready
+...
+C000:0D46  in  al,dx
+C000:0D4A  test al,80      ; modem/status gate
+...
+C000:0D9C  mov dx,00C0
+C000:0D9F  out dx,al       ; transmit data
+```
+
+On an 8251-style USART, command byte `0x37` asserts both RTS and DTR while
+enabling transmit/receive and resetting errors. The hardware/manual evidence
+indicates DTR duplicates RTS and there is no CD/carrier-detect signal. The
+firmware's transmit-ready check should still be treated as CTS-influenced until
+the exact chip and glue logic are confirmed.
+
+Receive is interrupt-driven through IRQ vector `FC` at `C000:0550`, which clears
+IRQ bit `0x08`, reads `0xC1`, records framing/parity/overrun-like bits
+`0x08/0x10/0x20` in `[6D57]`, acknowledges with command `0x37`, then reads the
+received byte from `0xC0` and queues it through `C000:4BED`. XON/XOFF handling
+uses `0x13`/`0x11` when `6D2E` is enabled.
+
+`C000:41A8`, the DreamLink endpoint probe, temporarily forces `9600 8N1` with
+XON/XOFF disabled (`6D2A=6`, `6D2B=1`, `6D2C=0`, `6D2D=0`, `6D2E=0`) while
+probing the peer, then restores the user's settings.
+
+## Centronics Parallel Port
+
+The WP -> PRINTER menu at `DC98:265D` has `PRINT OUT`, `SET UP 1`, and
+`SET UP 2`. `SET UP 2` reuses the RS-232 setup screen above. `SET UP 1` at
+`DC98:24DB` edits three printer fields:
+
+| Address | Menu field | Values |
+| ---: | --- | --- |
+| `6D59` | Printer model | Seven models from the setup string table. |
+| `6D5A` | Interface | `0` = parallel, `1` = serial. |
+| `6D5B` | Paper feed | `0` = automatic, `1` = manual. |
+
+The setup strings start around `0x6FC3D` and include `PRINTER SET UP`,
+`PRINTER`, `INTERFACE : {PARALLEL} {SERIAL}`, and
+`PAPER FEED: {AUTOMATIC} {MANUAL}`.
+
+The low-level parallel path matches a simple output-only Centronics interface.
+The manual only names `-STB`, `BUSY`, and `-ACK`, and the firmware has not shown
+any readback path from the printer data latch.
+
+`C000:0920` writes one byte to the data latch, polls status bit `0x02`, then
+pulses bit `0x20` of the `0x30` control latch:
+
+```asm
+C000:0920  mov al,dl
+C000:0922  out 40,al       ; data byte
+C000:092A  in  al,A0
+C000:092C  test al,02      ; BUSY
+C000:092E  jnz C000:0942
+C000:0930  mov al,[6D94]
+C000:0933  or  al,20
+C000:0935  out 30,al       ; assert -STB through glue/inversion
+...
+C000:093B  and al,DF
+C000:093D  out 30,al       ; release -STB
+```
+
+`C000:0738`, IRQ vector `FE`, is the ACK-driven output feeder. It clears IRQ
+source bit `0x02` through port `0x90`, reads the next byte through pointer
+`[6D92]`, outputs it on `0x40`, and pulses the same strobe bit. A `0x00`
+terminator disables the ACK path by setting bit `0x40` in the port `0x60` mirror
+`[6D4F]`.
+
+The direct starter at `C000:08EC` also reads through `[6D92]`; it clears
+`[6D4F]` bit `0x40`, writes port `0x60`, marks `[6DA4]=1`, and sends the first
+byte through `C000:0920`.
+
+Likely signal map so far:
+
+| Signal | Firmware evidence |
+| --- | --- |
+| Data `D0..D7` | Output byte on port `0x40`. |
+| `-STB` | Port `0x30` bit `0x20`, pulsed high then low by firmware. External glue may invert the physical line. |
+| `BUSY` | Port `0xA0` bit `0x02`; when set, `C000:0920` waits/retries via `C000:49F8`. |
+| `-ACK` | IRQ vector `FE`; handler clears port `0x90` bit `0x02` and feeds the next byte. |
+
+Port `0xA0` may also carry additional Centronics status lines such as paper
+empty, select, or error, but the confirmed non-printer consumers are the
+battery/card warning helpers. The exact bit ownership needs board-level
+confirmation.
+
+## Battery And Card Status Inputs
+
+The three documented 48x40 battery warning icons at `C000:4D30`, `C000:4E20`,
+and `C000:4F10` are selected by the low-level warning path around `C000:4C91`.
+Each icon is `0xF0` bytes: 40 rows by 6 bytes per row.
+
+`C000:4D07` draws icon index `AL` into the top-left warning area at `0x131B`.
+`C000:4C6E` first saves that screen area to scratch buffer `0x94F0`, then
+`C000:4C39`/`C000:4C4F` restore it after the warning clears or the event loop
+resumes normal drawing.
+
+```asm
+C000:4CE6  call C000:4C6E  ; save 48x40 screen area
+C000:4CEB  mov  al,[6D52]
+C000:4CEE  sub  al,02      ; warning slot 2..4 -> icon index 0..2
+C000:4CF0  call C000:4D07  ; draw selected battery icon
+C000:4CF3  or   byte [6D52],80
+```
+
+`C000:4C91` is called from the low-level wait/event path at `C000:4AD1`. It
+rotates through warning states in `[6D52]` so all active warnings can be shown
+without permanently replacing the underlying screen content:
+
+| Warning slot | Helper | Icon index | Meaning | Port `0xA0` test |
+| ---: | --- | ---: | --- | --- |
+| `2` | `C000:0A93` | `0` | Main battery low. | Bit `0x08` set on two reads. |
+| `3` | `C000:0AA4` | `1` | CR2032 memory-retention battery low. | Bit `0x04` set on two reads. |
+| `4` | `C000:0AB2` | `2` | PCMCIA SRAM-card battery low. | Bit `0x80` clear and bit `0x10` clear on two reads. |
+
+`C000:0A6A` is the combined battery-status service. It returns `AL=1`, `2`, or
+`3` for the same priority order, or zero when no warning is active. The dispatch
+stub at `C000:192E` exposes the combined query and the three individual helpers
+through `DL=0..3`.
+
+The SRAM-card warning is gated by bit `0x80`: when bit `0x80` is set, the
+combined query suppresses the bit `0x10` card-battery test, and `C000:0AC4`
+reports a card-access failure. Current best read is therefore:
+
+| Port `0xA0` bit | Current interpretation |
+| ---: | --- |
+| `0x02` | Centronics `BUSY`, active high. |
+| `0x04` | CR2032 memory-retention battery low, active high. |
+| `0x08` | Main battery low, active high. |
+| `0x10` | PCMCIA SRAM-card battery status, active-low low-battery indication when a card is present. |
+| `0x40` | Likely SRAM-card write-protect; `C000:0ACE` sets carry when this bit is set and card write paths report error `0x0B`. |
+| `0x80` | PCMCIA card absent/not-ready gate; `C000:0AC4` sets carry when this bit is set. |
+
+The local MAME snapshot currently returns fixed `0xF7` for port `0xA0` while
+only documenting bit 3 as main battery low. That does not fully match this
+firmware path: bit `0x04` set would be interpreted as the CR2032 retention
+battery warning, while bit `0x08` clear keeps the main battery warning off.
+
+## Buzzer / Tone Counter
+
+The WP -> OTHERS -> SYSTEM screen has a `POWER ON BUZZER` setting with
+`TYPE 1`, `TYPE 2`, `TYPE 3`, and `NO`. In that menu, pressing Space previews
+the selected type:
+
+```asm
+DC98:2966  cmp di,0020          ; Space
+DC98:296B  cmp word [bp-4],0003 ; 3 == NO
+DC98:2971  mov ax,[bp-4]        ; 0..2 == TYPE 1..3
+DC98:2974  call C000:077C       ; preview sound
+```
+
+`C000:077C` is a far wrapper around `C000:0B16`, the table-driven sound player.
+The sound tables start at `C000:0ADA` / file `0x40ADA`. Each entry is a sequence
+of:
+
+```text
+duration-byte, divisor-word-le
+...
+00 terminator
+```
+
+For each note, `C000:096A` either programs the tone or turns it off for a rest:
+
+```asm
+C000:099C  mov al,bl
+C000:099E  out 50,al       ; divisor low
+C000:09A0  mov al,bh
+C000:09A2  out 51,al       ; divisor high
+C000:09A4  mov al,7F
+C000:09A6  out 52,al       ; enable
+
+C000:09A9  mov al,FF
+C000:09AB  out 52,al       ; disable
+```
+
+That is a hardware tone/counter interface, not a simple CPU-toggled one-bit
+speaker loop. The exact input clock and output waveform still need hardware or
+MAME confirmation.
+
+Current MAME status: `mame/nakajies.cpp` creates a `SPEAKER_SOUND` device and
+has comments listing the same `0x50..0x52` writes, but `nakajies_io_map` does
+not currently map those ports. Sound support should therefore be implementable
+once the board identifies whether these ports feed a simple divider, a gate
+around a fixed oscillator, or a small tone-generator IC.
+
+Confirmed preview sequences:
+
+| UI option | Value | Sequence |
+| --- | ---: | --- |
+| `TYPE 1` | `0` | `(duration 8, divisor 0x015D)`, `(duration 2, rest)`, `(duration 4, divisor 0x0100)`. |
+| `TYPE 2` | `1` | `(duration 4, divisor 0x02BA)`. |
+| `TYPE 3` | `2` | `(duration 5, divisor 0x0126)`, `0x0106`, `0x00E9`, `0x00DC`, `0x00C4`. |
+| `NO` | `3` | No preview; the menu skips `C000:077C`. |
+
+Lower divisors should produce higher tones if the counter is a normal divider.
+That matches the UI comments in `mame/nakajies.cpp`: type 2 is the simple lower
+sound, while type 3 is the highest-frequency sound.
 
 ## Power / Wake Hypothesis
 
@@ -157,12 +427,18 @@ loops. The exact electrical behavior is still unconfirmed.
 | `6D06..6D0F` | Raw keyboard matrix rows. |
 | `6D28` | Keyboard scan state/idle counter. |
 | `6D29` | Keyboard scan row index. |
+| `6D2A..6D2E` | RS-232C setup bytes: baud index, bit length, stop bits, parity, XON/XOFF. |
 | `6D4F` | Port `0x60` state mirror. |
 | `6D51` | Flags; diagnostic paths clear bit `0x08`. |
+| `6D52` | Battery-warning display state. Values `2..4` select main, CR2032, or PCMCIA SRAM-card battery warning checks; bit `0x80` marks that an icon is currently displayed. |
+| `6D57` | RS-232 receive/error flags; IRQ `FC` ORs in bits `0x08`, `0x10`, and `0x20` from status port `0xC1`. |
+| `6D59..6D5B` | Printer setup bytes: printer model, interface, paper feed. |
 | `6D65..6D87` | Saved resume context/checksum area used by suspend/warm paths. |
 | `6D79` | Saved resume IP. Diagnostic warm entry stores `4A8D`. |
 | `6D7B` | Saved resume CS. |
 | `6D7D` | Saved resume SP. |
 | `6D81` | Diagnostic/warm marker; `1995` requests diagnostic/warm handling. |
 | `6D83` | Checksum over saved context. |
+| `6D92` | Centronics output pointer used by `C000:0738` and `C000:08EC`. |
 | `6D94` | Port `0x30` value mirror. |
+| `6DA4` | Centronics ACK-feed active flag; IRQ `FE` only emits bytes when this is `1`. |

@@ -39,6 +39,17 @@ Confirmed documented 48x40 error icons:
 | `1` | `0x44E20` | `C000:4E20` | CR2032 memory-retention battery low. |
 | `2` | `0x44F10` | `C000:4F10` | PCMCIA SRAM card battery low. |
 
+The display path is now identified. `C000:4C91` polls warning slots in `[6D52]`,
+`C000:4C6E` saves the 48x40 screen area, and `C000:4D07` draws
+`C000:4D30 + index * 0xF0` into framebuffer address `0x131B`. The slot-to-icon
+mapping is:
+
+| Slot | Poll helper | Icon index | Input condition |
+| ---: | --- | ---: | --- |
+| `2` | `C000:0A93` | `0` | Port `0xA0` bit `0x08` set. |
+| `3` | `C000:0AA4` | `1` | Port `0xA0` bit `0x04` set. |
+| `4` | `C000:0AB2` | `2` | Port `0xA0` bit `0x80` clear and bit `0x10` clear. |
+
 ## Dispatcher Table After Error Icons
 
 The next `0xF0`-aligned location, file `0x45000` / `C000:5000`, is not a fourth
@@ -50,7 +61,7 @@ The first table maps `AH` values below `0x60` to compact handler indices:
 ```text
 file 0x45000 / C000:5000: 96-byte byte translation table
 file 0x45060 / C000:5060: word handler table
-file 0x45097 / C000:5097: dispatcher prologue
+file 0x45098 / C000:5098: dispatcher prologue
 ```
 
 The dispatcher indexes both tables through `CS`:
@@ -135,15 +146,27 @@ LCD.
 ## Horizontal Menu Icon Tables
 
 The word-processor and organizer menus use compact icon/label tables, not
-`FF 42` source-backed bitmap records. Each table starts with a six-byte header,
-then a word item count, then one far pointer per icon, followed by fixed-width
-label strings.
+literal `FF 42` source-backed bitmap records in ROM. `DC98:124C` builds those
+records at runtime from the table's far icon pointers, then sends the generated
+stream through `C000:67AD`.
+
+The renderer's effective table base is sometimes four bytes after the start of a
+nearby data cluster. From the effective base:
+
+```text
++0x00 word  clear/display mode
++0x02 word  item count
++0x04       six far icon pointer slots, 4 bytes each
++0x1C       fixed-width label text, 13 bytes per item
++0x6A       optional key bindings for the key loop
+```
 
 Word-processor top menu table:
 
 ```text
-file 0x6FA78 / EE59:14E8
-00 00 00 00 00 00      header
+file 0x6FA78            surrounding cluster start
+file 0x6FA7C / EE59:14EC effective table base used by DC98:124C
+00 00                  clear/display mode
 06 00                  item count
 0A 00 59 EE            icon 0 -> file 0x6E59A / EE59:000A
 9A 01 59 EE            icon 1 -> file 0x6E72A / EE59:019A
@@ -173,7 +196,7 @@ Organizer top menu table:
 
 ```text
 file 0x708BC / F04D:03EC
-00 00                  header tail; four preceding bytes at 0x708B8 are FF FF FF FC
+00 00                  clear/display mode; four preceding bytes at 0x708B8 are FF FF FF FC
 05 00                  item count
 04 00 4D F0            icon 0 -> file 0x704D4 / F04D:0004
 CC 00 4D F0            icon 1 -> file 0x7059C / F04D:00CC
@@ -191,11 +214,41 @@ with:
 tools/rom2.py bitmap --base 0x704d4 --row-bytes 5 --height 40 --columns 40 --count 5 --stride 0xc8
 ```
 
+The word-processor `FILE` submenu is reached at effective base `0x6FAEC`:
+
+```text
+file 0x6FAE8            surrounding cluster start
+file 0x6FAEC / EE59:155C effective table base used by DC98:124C
+01 00                  clear/display mode
+06 00                  item count
+BA 04 59 EE            icon 0 -> file 0x6EA4A / EE59:04BA (RECALL)
+F2 03 59 EE            icon 1 -> file 0x6E982 / EE59:03F2 (STORE)
+82 05 59 EE            icon 2 -> file 0x6EB12 / EE59:0582 (DELETE)
+4A 06 59 EE            icon 3 -> file 0x6EBDA / EE59:064A (RENAME)
+8A 0C 59 EE            icon 4 -> file 0x6F21A / EE59:0C8A (COPY)
+52 0D 59 EE            icon 5 -> file 0x6F2E2 / EE59:0D52 (INITIALIZE)
+file 0x6FB08           labels: RECALL, STORE, DELETE, RENAME, COPY, INITIALIZE
+```
+
+The word-processor `PRINTER` submenu is reached at effective base `0x6FB5C`:
+
+```text
+file 0x6FB58            surrounding cluster start
+file 0x6FB5C / EE59:15CC effective table base used by DC98:124C
+01 00                  clear/display mode
+03 00                  item count
+D2 00 59 EE            icon 0 -> file 0x6E662 / EE59:00D2 (PRINT OUT)
+DA 07 59 EE            icon 1 -> file 0x6ED6A / EE59:07DA (SET UP 1)
+A2 08 59 EE            icon 2 -> file 0x6EE32 / EE59:08A2 (SET UP 2)
+file 0x6FB78           labels: PRINT OUT, SET UP 1, SET UP 2
+```
+
 The word-processor `COMMUNICATE` submenu table at file `0x6FBC8` has six entries:
 
 ```text
-file 0x6FBC8 / EE59:1638
-00 00 01 00 01 00      header
+file 0x6FBC8            surrounding cluster start
+file 0x6FBCC / EE59:163C effective table base used by DC98:124C
+01 00                  clear/display mode
 06 00                  item count
 32 0A 59 EE            icon 0 -> file 0x6EFC2 / EE59:0A32 (SEND FILE)
 E2 0E 59 EE            icon 1 -> file 0x6F472 / EE59:0EE2 (SEND FILE, XMODEM)
@@ -217,23 +270,58 @@ tools/rom2.py bitmap --base 0x6f152 --row-bytes 5 --height 40 --columns 40
 tools/rom2.py bitmap --base 0x6ee32 --row-bytes 5 --height 40 --columns 40
 ```
 
-The table-to-drawing consumer is not fully named yet. Current evidence points to
-the menu/resource setup path through `C688:7689` and `C688:9541`, with the
-horizontal selection/list layer using helpers around `C688:721D`, `C688:722F`,
-and `C688:72E5`. The icon table far pointers themselves are not referenced as
-literal constants elsewhere in the ROM, so they are probably reached through a
-resource/table indirection.
+The word-processor `OTHERS` submenu is reached by the same renderer at effective
+base `0x6F7AC`:
+
+```text
+file 0x6F7A0            preceding string/data includes "EROMCARD.X"
+file 0x6F7AC / EE59:121C effective table base used by DC98:124C
+01 00                  clear/display mode
+04 00                  item count
+DA 07 59 EE            icon 0 -> file 0x6ED6A / EE59:07DA (SYSTEM)
+02 00 60 EF            icon 1 -> file 0x6F602 / EF60:0002 (PREFERENCES)
+0A 00 6C EF            icon 2 -> file 0x6F6CA / EF6C:000A (T I M E)
+12 07 59 EE            icon 3 -> file 0x6ECA2 / EE59:0712 (ROM CARD)
+file 0x6F7C8           labels: SYSTEM, PREFERENCES, T I M E, ROM CARD
+```
+
+`ROM CARD` is the executable/software-card path for the PCMCIA slot. Its handler
+at `DC98:2B75` searches candidate card drives for `EROMCARD.X`, loads it to
+`0xA4F0`, validates header words `0xA4F0/0x1997`, and calls the far entry
+pointer at `[0xA4F4]`. This is distinct from the WP `FILE` submenu, which is for
+working with PCMCIA SRAM storage cards.
+
+Render the four `OTHERS` icons with:
+
+```sh
+tools/rom2.py bitmap --base 0x6ed6a --row-bytes 5 --height 40 --columns 40
+tools/rom2.py bitmap --base 0x6f602 --row-bytes 5 --height 40 --columns 40
+tools/rom2.py bitmap --base 0x6f6ca --row-bytes 5 --height 40 --columns 40
+tools/rom2.py bitmap --base 0x6eca2 --row-bytes 5 --height 40 --columns 40
+```
+
+`DC98:124C` is now the named table-to-drawing consumer for these icon menus. The
+separate `C688:71A4`/`71B5` -> `C688:721D` -> `C688:9461` path is a
+resource/list drawing layer that uses the `C688:9541(AL=5)` static-resource
+cache and local text/list helpers, rather than this compact 40x40 icon table
+format.
 
 ## Other Positioned 0x4x Drawing Records
 
-The `0x4x` resource handler dispatch at `C000:6609` uses a byte-indexed table,
-so even opcodes select the real handlers:
+`FF` is an escape into a second display sub-opcode dispatch. Low-number
+sub-opcodes such as `FF 04` and `FF 06` are separate text/cursor/window helpers
+handled through the table at `C000:5F0B`. Sub-opcodes `FF 40..44` branch to
+`C000:6609`, which uses another byte-indexed table. The currently confirmed
+positioned drawing entries are the even opcodes:
 
 | Opcode | Handler | Current interpretation |
 | --- | --- | --- |
 | `FF 40` | `C000:6627` | Set pixel/bitmap cursor position. |
 | `FF 42` | `C000:6648` | Source-backed bitmap blit. |
 | `FF 44` | `C000:675D` | Region/line/fill-style draw operation; exact fields still need decoding. |
+
+The byte-indexed `0x4x` table would send `FF 41` and `FF 43` to overlapping
+words in the table bytes; no confirmed resource uses those odd sub-opcodes yet.
 
 The startup menu resource window only has `FF 40` followed immediately by
 `FF 42`. Wider UI resource windows have many positioned text records followed by

@@ -42,11 +42,19 @@ The manual's character set page helps anchor the high-code area:
 | `0xD2..0xDF` | Nonblank symbols/forms. |
 | `0xE0..0xFF` | Start of a bold duplicate run for `0x20..0x3F`. `0xE0` is bold space, so it is blank. |
 
-This means the ROM font does not literally end with 32 blank glyphs at
-`0xE0..0xFF` under the `0x580B6 + (code - 0x20) * 8` mapping. Instead, the
-manual's blank `224..255` range likely describes the standard character set,
-while the ROM uses those slots as the first 32 entries of a second, bold font
-run.
+This means there are two overlapping views of `0xE0..0xFF`:
+
+```text
+font memory view:      glyph slots 0xE0..0xFF overlap the first 32 bold glyphs
+display-stream view:   raw bytes 0xE0..0xFF are renderer control opcodes
+```
+
+The `C000:5AD6` display-resource renderer treats bytes `0x20..0xDF` as
+printable and sends bytes `0xE0..0xFF` to the control table at `C000:5DC8`.
+So the manual's blank `224..255` range likely describes the standard character
+set exposed to text, while the ROM storage at those glyph slots is reused as the
+start of a second, bold font run selected by renderer state rather than by
+emitting literal bytes `0xE0..0xFF`.
 
 Box drawing examples:
 
@@ -80,7 +88,8 @@ Examples:
 | `0x7E` | `~` | `0x589A6` | Bold tilde. |
 
 So `0xE0..0xFF` are best understood as overlapping the start of a bold glyph
-run, not as ordinary documented character codes.
+run in font memory, not as ordinary display-stream character bytes. In the main
+resource/text renderer, literal bytes in that range are control opcodes.
 
 Use:
 
@@ -88,6 +97,37 @@ Use:
 tools/rom2.py glyphs --bold --text 'A0!?az'
 tools/rom2.py glyphs --bold --count 95 > bold-20-7e.txt
 ```
+
+## Renderer Font Selection
+
+The display-resource renderer does not emit high bytes such as `0xE0` to select
+the bold glyphs directly. Instead, controls such as `F8/F9` update renderer
+state and call `C000:5FE3`, which looks up an active glyph base from the current
+font family byte `[70F4]` plus style bits in `[7117]`.
+
+The lookup table is rooted at `D7EF:0006` / file `0x57EF6`. For each family, the
+four entries are selected by the low two style bits:
+
+```text
+entry index = 4 * [70F4] + [7117] - 4
+```
+
+Confirmed entries include:
+
+| `[70F4]` | Style bits | Glyph base | Current read |
+| ---: | ---: | ---: | --- |
+| `2` | `0` | `0x580B6` | Main. |
+| `2` | `1` | `0x586B6` | Main bold. |
+| `2` | `2` | `0x58CB6` | Small. |
+| `2` | `3` | `0x592B6` | Small bold. |
+| `4` | `0` | `0x598B6` | Narrow. |
+| `4` | `1` | `0x59EB6` | Narrow bold. |
+| `4` | `2` | `0x5A4B6` | Narrow small. |
+| `4` | `3` | `0x5AAB6` | Narrow small bold. |
+
+The typing tutor title resource confirms this visually: the stream wraps only
+the initials in `F8`/`F9`, and MAME shows those initials bold while the rest of
+the word remains narrow.
 
 ## Bold Extended Glyphs
 

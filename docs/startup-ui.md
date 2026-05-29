@@ -254,14 +254,76 @@ C000:5D09  mov [es:di],al
 C000:5D0C  add di,40
 ```
 
-Bytes `0xE0..0xFF` enter the control path at `C000:5DC8`. The `0xFF` control
-byte reads a second sub-opcode. The startup menu uses at least these forms:
+Raw bytes `0x20..0xDF` are printable in this resource stream. Bytes
+`0xE0..0xFF` enter the primary control table at `C000:5DC8`, which explains why
+the manual's character set can document `0xE0..0xFF` as blank/reserved even
+though the ROM font storage at those glyph slots overlaps the start of a bold
+font run. `0xFF` is an escape byte: it reads a second sub-opcode through the
+byte-indexed dispatch at `C000:5EE6`.
+
+The primary `0xE0..0xFF` table is at `C000:5DDC`:
+
+| Bytes | Handler | Current read |
+| --- | --- | --- |
+| `E0..E4` | `C000:5E1E` | Compact render/advance helpers. The control value becomes `CH = 1..5`, sets `[7118] bit 0x20`, and re-enters glyph-row output. |
+| `E5..E6` | `C000:5E1C` | Same path with `CH = 1`; likely additional compact spacing/control aliases. |
+| `E7..EF` | `C000:5E36` | Shared reserved/unconfirmed path. No confirmed resource use yet. |
+| `F0` / `F1` | `C000:5E39` / `5E40` | Set/clear `[7118] bit 0x04`. |
+| `F2` / `F3` | `C000:5E47` / `5E4E` | Set/clear `[7118] bit 0x08`. |
+| `F4` / `F5` | `C000:5E55` / `5E61` | Set/clear `[7118] bit 0x02`; the clear path renders from the temporary row buffer at `0x70F7`. |
+| `F6` / `F7` | `C000:5E7B` / `5E82` | Set/clear `[7118] bit 0x10`. |
+| `F8` / `F9` | `C000:5E8A` / `5E91` | Set/clear `[7117] bit 0x01`, then call `C000:5FE3` to reselect the font/run pointer in `[70F2]`. |
+| `FA` / `FB` | `C000:5E9F` / `5EAB` | Set/clear `[7118] bit 0x01` and `[7117] bit 0x02`, then reselect font/run metadata. |
+| `FC` / `FD` | `C000:5EB7` / `5EAB` | Variant of the `[7117] bit 0x02` font/run selection path. |
+| `FE xx` | `C000:5EBE` | Consumes one byte into `[7123]`; exact layout role still needs naming. |
+| `FF xx` | `C000:5EE6` | Escape to the second display sub-opcode dispatch. |
+
+The `F8..FD` entries are the strongest evidence that high bytes select font or
+font-adjacent rendering properties rather than representing printable glyphs.
+`C000:5FE3` computes the active glyph base from the current font family in
+`[70F4]` plus the style bits in `[7117]`, then stores that pointer in `[70F2]`.
+
+The typing-tutor title resource gives a concrete example. Around file
+`0x7881B`, the text that the rough scanner prints as
+`.A.lmena .K.eyboard .T.raining .S.ystem` is actually:
+
+```text
+F8 41 F9 6C 6D 65 6E 61 20
+F8 4B F9 65 79 62 6F 61 72 64 20
+F8 54 F9 72 61 69 6E 69 6E 67 20
+F8 53 F9 79 73 74 65 6D
+```
+
+So `F8` enables a style for the initial capital, `F9` disables it, and the rest
+of each word is rendered with the previously selected family. In MAME, the
+surrounding letters are narrow while `A`/`K`/`T`/`S` are bold, so this is a
+confirmed inline bold marker for the active family, not a hard-coded switch to
+the main bold font. The related `FA..FD` controls change `[7117] bit 0x02`,
+which selects the small variant within the active family.
+
+That `FF` sub-opcode space has at least two groups:
+
+```text
+FF 00..12  low-number text/cursor/window/line helpers via table C000:5F0B
+FF 40..44  positioned drawing helpers via table C000:6621
+```
+
+The low-number and positioned-drawing groups are distinct. For example,
+`FF 04` and `FF 06` are real low-number sub-opcodes seen in organizer/address
+book resources, while `FF 40`, `FF 42`, and `FF 44` are the currently confirmed
+positioned drawing forms.
+
+Confirmed forms so far:
 
 | Resource bytes | Handler | Meaning |
 | --- | --- | --- |
+| `FF 00` | `C000:5F32` | Clear the `0x1000` framebuffer. |
 | `FF 02 xx xx yy yy` | `C000:5F42` | Position text cursor. The following bytes are rendered as text until the next control byte. |
+| `FF 04 nn nn` | `C000:60AF` | Low-number cursor/spacing helper; exact semantics still need naming. |
+| `FF 06 ...` | `C000:605F` | Low-number line/region helper; exact semantics still need naming. |
 | `FF 40 xx xx yy yy` | `C000:6627` | Position bitmap/pixel cursor. |
 | `FF 42 hh hh ww ww off off seg seg` | `C000:6648` | Bitmap blit. `hh` is the row count, `ww` is the bit width rounded up to source bytes per row, and `off:seg` is the source pointer. |
+| `FF 44 ...` | `C000:675D` | Positioned region/line/fill-style draw operation; exact fields still need decoding. |
 
 The button image record in the first menu resource is:
 

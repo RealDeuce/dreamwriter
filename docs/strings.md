@@ -35,12 +35,15 @@ tools/rom2.py strings --start 0x40000 --end 0x80000 -n 8
 | `0x56B91` | `0xD6B91` | Spell check run screen. |
 | `0x57546` | `0xD7546` | Grammar check UI cluster. |
 | `0x57CEC` | `0xD7CEC` | DreamLink UI cluster. |
-| `0x6F7A0` | `0xEF7A0` | `EROMCARD.X`. |
-| `0x6F7EF` | `0xEF7EF` | ROM card strings. |
-| `0x6FA78` | `0xEFA78` | Word processor horizontal icon menu table; labels begin at `0x6FA98`: `EDIT TEXT`, `FILE`, `CLEAR TEXT`, `PRINTER`, `COMMUNICATE`, `OTHERS`. |
-| `0x6FAE8` | `0xEFAE8` | Word processor `FILE` submenu table/labels: `RECALL`, `STORE`, `DELETE`, `RENAME`, `COPY`, `INITIALIZE`. |
-| `0x6FB58` | `0xEFB58` | Word processor `PRINTER` submenu table/labels: `PRINT OUT`, `SET UP 1`, `SET UP 2`. |
-| `0x6FBC8` | `0xEFBC8` | Word processor `COMMUNICATE` submenu table/labels: `SEND FILE`, `SEND FILE`, `RECEIVE FILE`, `RECEIVE FILE`, `TERMINAL`, `SET UP`. |
+| `0x6F7A0` | `0xEF7A0` | `EROMCARD.X`; nearby `OTHERS` submenu effective table base is `0x6F7AC`, with labels beginning at `0x6F7C8`: `SYSTEM`, `PREFERENCES`, `T I M E`, `ROM CARD`. `DC98:2B75` loads this file from the candidate card drive, validates header words `0xA4F0/0x1997`, then calls the loaded far entry pointer at `[0xA4F4]`. |
+| `0x6F7EF` | `0xEF7EF` | ROM software-card strings: `ROM CARD`, `No ROM card is in the slot`, `Inadequate work memory`, `Can not open EROMCARD.X`, `Not enough memory`, `ROM Card ID error`. |
+| `0x6F88A` | `0xEF88A` | WP OTHERS -> SYSTEM settings text: `POWER ON BUZZER : { TYPE 1 } { TYPE 2 } { TYPE 3 } { NO }`. Space previews the selected buzzer type through `C000:077C`. |
+| `0x6FA78` | `0xEFA78` | Word processor horizontal icon menu cluster; effective table base is `0x6FA7C`, labels begin at `0x6FA98`: `EDIT TEXT`, `FILE`, `CLEAR TEXT`, `PRINTER`, `COMMUNICATE`, `OTHERS`. |
+| `0x6FAE8` | `0xEFAE8` | Word processor `FILE` submenu cluster; effective table base is `0x6FAEC`, labels begin at `0x6FB08`: `RECALL`, `STORE`, `DELETE`, `RENAME`, `COPY`, `INITIALIZE`. This is the PCMCIA SRAM-card storage workflow. |
+| `0x6FB58` | `0xEFB58` | Word processor `PRINTER` submenu cluster; effective table base is `0x6FB5C`, labels begin at `0x6FB78`: `PRINT OUT`, `SET UP 1`, `SET UP 2`. `SET UP 1` reaches `DC98:24DB`; `SET UP 2` reaches the shared RS-232 setup screen. |
+| `0x6FC3D` | `0xEFC3D` | Printer setup strings: `PRINTER SET UP`, printer model names, `INTERFACE : {PARALLEL} {SERIAL}`, and `PAPER FEED: {AUTOMATIC} {MANUAL}`. |
+| `0x6FBC8` | `0xEFBC8` | Word processor `COMMUNICATE` submenu cluster; effective table base is `0x6FBCC`, labels begin at `0x6FBE8`: `SEND FILE`, `SEND FILE`, `RECEIVE FILE`, `RECEIVE FILE`, `TERMINAL`, `SET UP`. Nearby setup strings include `RS-232C SET UP`, `BAUD RATE`, `BIT LENGTH`, `STOP BITS`, `PARITY`, and `X ON/OFF`; handler `DC98:22A1` stores those settings at `6D2A..6D2E`. |
+| `0x6FF03` | `0xEFF03` | WP FILE -> COPY UI cluster. Includes `Built-in`, `Card`, `DreamLink`, direction prompts, `No card is in the slot`, `Directory is full of files`, and `Card is write-protected`. |
 | `0x708BC` | `0xF08BC` | Organizer horizontal icon menu table; labels begin at `0x708D8`: `CALCULATOR`, `CALENDAR`, `SCHEDULER`, `WORLD CLOCK`, `ADDRESS BOOK`. |
 | `0x788D3` | `0xF88D3` | Typing tutor version banner. |
 

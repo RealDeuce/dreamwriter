@@ -19,8 +19,9 @@
    graphics, or another packed resource.
 7. Classify the code or packed data beginning around `0x5C98E`, immediately
    after the MAME-declared glyph stream.
-8. Find the caller/trigger path for the `C000:5097` dispatcher table at
-   `0x45000` and name the `AH` service values it handles.
+8. Finish naming the remaining non-file/private services behind the `INT 21h`
+   dispatcher at `C000:5098`, especially early console/device helpers and the
+   `AX=4420..4427` control calls.
 9. Identify the encoding and consumer for the candidate status/icon resource
    cluster around `0x55110..0x552AC`.
 10. Confirm how the startup banner resource at `0x53888..0x539AA` is selected.
@@ -32,20 +33,51 @@
    versus the retained-RAM power/wake path through IRQ `F8`/`FF` and port
    `0x70`.
 12. Confirm the physical power-button wiring. Current firmware evidence suggests
-   IRQ `F8` is the suspend/save side and IRQ `FF` is the wake/reset side, but
-   MAME exposes only synthetic IRQ keys and no named power input.
-13. Decode the `C688:0240` inline display script opcode table at `C688:38A4`
-   enough to split script bytes from code automatically.
-14. Trace references to the main UI string cluster at `0x53800..0x58000` backward
-   to identify menu handlers.
-15. Split confirmed code from inline strings/data around `C000:1200..16FF`.
-16. Split confirmed code from data in the `C688:0000..01FF` far-call area.
-17. Name the low RAM variables in `6D00..70FF` as their roles become stable.
-18. Decode the `FF 44` resource records handled at `C000:675D`; current evidence
+    IRQ `F8` is the suspend/save side and IRQ `FF` is the wake/reset side, but
+    MAME exposes only synthetic IRQ keys and no named power input.
+13. Confirm the buzzer counter clock/waveform for ports `0x50..0x52`. Firmware
+    clearly writes a 16-bit divisor and gates it with `0x52`, but the hardware
+    clock and exact output shape are still unknown.
+14. Identify the physical RS-232 USART and baud-clock source. Firmware behavior
+    strongly matches an 8251/8251A-style USART at data port `0xC0` and
+    status/control port `0xC1`, with baud selected by port `0x30` bits `0..2`,
+    but the board markings should confirm the exact chip and clock. Hardware
+    evidence says RTS/CTS and DTR are present, DTR duplicates RTS, and there is
+    no CD/carrier-detect signal.
+15. Confirm the physical Centronics and PCMCIA status wiring on port `0xA0`.
+    Firmware clearly maps bit `0x02` to Centronics `BUSY`, bit `0x08` to main
+    battery low, bit `0x04` to CR2032 retention battery low, bit `0x80` to a
+    PCMCIA card access/presence gate, bit `0x10` to the PCMCIA SRAM-card battery
+    warning path, and bit `0x40` to a likely write-protect path. Firmware also
+    outputs Centronics data on port `0x40`, pulses port `0x30` bit `0x20` for
+    strobe, and uses IRQ `FE` as ACK-driven output. Board pins are still needed
+    to confirm whether any Centronics `PE`/`SEL`/`ERROR` lines are present on
+    the same register or simply unused by the firmware.
+16. Confirm the ROM-card executable format and card-drive mapping. Current
+    trace of `DC98:2B75` finds `EROMCARD.X` through the same DOS-like file API
+    used by the FAT12-style storage layer, loads it at `0xA4F0`, validates
+    header words `0xA4F0/0x1997`, and calls far `[0xA4F4]`; remaining questions
+    are the full header layout, how `[0x6805]` maps to the physical PCMCIA slot,
+    and whether a stub can intentionally execute more code from the mapped card
+    window.
+17. Decode the custom volume header and geometry used under the FAT12-style file
+    implementation. The lower handlers use standard 8.3 directory entries and
+    FAT12 allocation, but mount/format code checks header words `0x1997` and
+    `0x0126` rather than a stock DOS boot sector/BPB.
+18. Decode the `C688:0240` inline display script opcode table at `C688:38A4`
+    enough to split script bytes from code automatically.
+19. Trace references to the main UI string cluster at `0x53800..0x58000` backward
+    to identify menu handlers.
+20. Split confirmed code from inline strings/data around `C000:1200..16FF`.
+21. Split confirmed code from data in the `C688:0000..01FF` far-call area.
+22. Name the low RAM variables in `6D00..70FF` as their roles become stable.
+23. Decode the `FF 44` resource records handled at `C000:675D`; current evidence
     suggests positioned region/line/fill drawing rather than source-backed
     bitmap blits.
-19. Finish the horizontal menu drawing trace. The organizer icon table at
-    `0x708BC`, the word-processor top table at `0x6FA78`, and the `COMMUNICATE`
-    submenu table at `0x6FBC8` resolve to confirmed menu-matching 40x40 icon
-    sources plus fixed-width labels. The final utility that consumes these
-    icon/label tables still needs confirmation.
+24. Decode the low-number `FF` display sub-opcodes, especially `FF 04` at
+    `C000:60AF` and `FF 06` at `C000:605F`, which are distinct from the
+    positioned `FF 40`/`42`/`44` drawing group.
+25. Continue naming the `DC98:124C` horizontal icon menu call sites and their
+    handlers. The compact 40x40 icon/label table consumer is now identified;
+    remaining work is to name each wrapper, its return-key dispatch, and the
+    submenu-specific handler targets.

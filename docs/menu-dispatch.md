@@ -179,7 +179,32 @@ Inside `C688:7689`, `SI` survives as a screen/resource ID. The wrapper clears
 `C688:44C4`, and `C688:7795`.
 
 `C688:9541` / file `0x4FDC1` is now the best concrete name for the screen
-resource loader reached from menu code. It:
+resource loader reached from menu code. When called with `AL=5`, it first checks
+whether the requested `SI` matches the last cached `SI` in `[7574]`/`[7575]`:
+
+```asm
+C688:9541  cmp  al,05
+C688:9543  jnz  C688:9561
+C688:9545  push ax
+C688:9546  mov  al,[7574]
+C688:9549  mov  bx,si
+C688:954B  xor  al,bl
+C688:954F  jnz  C688:955C
+C688:9551  mov  al,[7575]
+C688:9554  xor  al,bh
+C688:9558  jnz  C688:955C
+C688:955A  pop  ax
+C688:955B  ret
+C688:955C  mov  [7574],si
+```
+
+So `AL=5` is the cacheable static-resource mode: unchanged `SI` returns without
+reloading or reinterpreting the screen resource. `C688:96E1` invalidates that
+cache by writing `FF` to both bytes; it is called by display-state transitions
+such as `C688:7795`/`779A`, but not between every redraw inside the small
+`C688:71A4`/`71B5` selection loops.
+
+After the cache check, `C688:9541`:
 
 ```text
 1. Applies the display/profile byte through C688:4473.
@@ -203,6 +228,217 @@ That means `SI=0x53` in the ORGN path is not an arbitrary state value; it is a
 resource ID loaded through the same screen-resource path as other menu screens.
 The next unresolved part is the resource ID to table/label binding for the
 horizontal icon menus.
+
+## Selectable Menu/List Drawing Layer
+
+`C688:71A4`, `C688:71B5`, and `C688:71C4` wrap the small interactive
+selection/list displays. They set a text/input buffer in `DX`, preserve the
+caller state, call `C688:721D` to draw/setup, then call `C688:722F` to wait for
+and process a key.
+
+`C688:721D` is the split between raw screen-resource loading and the menu/list
+drawing layer:
+
+```asm
+C688:721D  lahf
+C688:721E  or   cl,cl
+C688:7220  jz   C688:7227
+C688:7222  sahf
+C688:7223  call C688:9461     ; CL != 0: selectable menu/list draw
+C688:7226  ret
+C688:7227  sahf
+C688:7228  call C688:9541     ; CL == 0: raw screen resource
+C688:722B  mov  cx,0108
+C688:722E  ret
+```
+
+`C688:9461` / file `0x4FCE1` is therefore the current best name for the
+menu/list drawing layer. It starts by calling the cached `AL=5` path in
+`C688:9541`, then performs per-item work through inline `C688:0240` display
+scripts and the local emit helpers at `C688:969B` and `C688:968A`:
+
+```asm
+C688:9461  mov  al,05
+C688:9463  call C688:9541     ; cached static resource load/draw
+...
+C688:9479  mov  al,05
+C688:9483  mov  si,cx
+C688:9487  and  si,00FF
+...
+C688:9492  call C688:9541     ; nested raw/default resource pass
+...
+C688:94A7  call C688:0240     ; inline script
+...
+C688:94F7  call C688:969B
+C688:94FB  call C688:0240     ; inline script
+C688:9532  call C688:968A
+```
+
+This matches the expected redraw shape for the `C688` resource/list path:
+static screen/menu content is loaded on entry or when the `SI` resource changes,
+while the inner key loop can redraw selection/text state without re-resolving
+the same static resource every pass.
+
+## Horizontal Icon Menu Renderer
+
+`DC98:124C` / file `0x5DBCC` is the compact horizontal icon menu renderer used
+by the word-processor and organizer icon bars. It is separate from the
+`C688:9461` resource/list layer above.
+
+Inputs:
+
+```text
+AX:BX = far pointer to the menu table
+CX    = initially selected item index
+```
+
+The table consumed by `DC98:124C` starts at the effective table base, not always
+at the first nearby byte of the surrounding data cluster:
+
+```text
++0x00 word  clear/display mode; values 1 and 2 call DC98:0EE5 first
++0x02 word  item count
++0x04       six far icon pointer slots, 4 bytes each
++0x1C       fixed-width label text, 13 bytes per item
++0x6A word  optional key binding passed to the key loop
++0x6C word  optional key binding passed to the key loop
++0x6E word  optional key binding passed to the key loop
+```
+
+The renderer first calls `DC98:0E70`, emits a tiny fixed resource at
+`EE4F:000A` through `C000:67AD`, and optionally clears/fills a region through
+`DC98:0EE5` when the table's mode word is `1` or `2`.
+
+It then lays out the icon bar across a 480-pixel row. The horizontal start
+offset and spacing are derived from the item count:
+
+```text
+left    = 0x1B * (6 - count) + 7
+spacing = ((0x1E0 - 2 * left - 0x4C * count) / (count - 1)) + 0x4C
+```
+
+That calculation matches a 480-pixel display width (`0x1E0`) and a 76-pixel
+menu cell width (`0x4C`) around each 40x40 icon.
+
+The draw pass has three loops:
+
+```text
+1. Draw stylized numeric badges from EE4F:(0x000E + item * 0x1A).
+2. Draw each 40x40 icon by reading the far pointer from table+4+item*4 and
+   building an inline FF 42 28 00 28 00 source-backed bitmap record.
+3. Draw the 13-byte label at table+0x1C+item*0x0D through DC98:0E81 at y=0x34.
+```
+
+The generated icon blit records are sent to `C000:67AD`, which reaches the same
+low-level `FF 42` bitmap handler documented in `bitmaps.md`.
+
+After drawing the static icon bar, `DC98:124C` calls `DC98:1198` with:
+
+```text
+AX = item count
+BX = selected index
+CX = first item x position
+DX = item spacing
+```
+
+`DC98:1198` / file `0x5DB18` is the horizontal-menu key loop. It calls
+`DC98:110E` to redraw the current selection, accepts numeric shortcuts
+`'1'..`, handles arrow keys `0x10`/`0x11`, treats `0xDA` as selection, and also
+checks the three optional key bindings pushed from the table tail.
+
+Confirmed `DC98:124C` callers:
+
+| Call site | Table pointer | Effective file base | Current read |
+| --- | --- | ---: | --- |
+| `DC98:2660` / `0x5EFE0` | `EFB5:000C` | `0x6FB5C` | WP `PRINTER` submenu. |
+| `DC98:26BB` / `0x5F03B` | `EFBC:000C` | `0x6FBCC` | WP `COMMUNICATE` submenu. |
+| `DC98:275D` / `0x5F0DD` | `EFAE:000C` | `0x6FAEC` | WP `FILE` submenu. |
+| `DC98:2810` / `0x5F190` | `EFA7:000C` | `0x6FA7C` | WP top menu. |
+| `DC98:2D2E` / `0x5F6AE` | `EF7A:000C` | `0x6F7AC` | WP `OTHERS` submenu. |
+| `DC98:53E4` / `0x61D64` | `F08B:000C` | `0x708BC` | Organizer top menu. |
+
+The WP top-menu wrapper dispatches return keys `1..6` to the known top-level
+items. The `COMMUNICATE` wrapper similarly dispatches keys `1..6` to send,
+receive, terminal, and setup handlers after the icon menu returns. The organizer
+wrapper dispatches keys `1..5` after saving the selected index in `[82A6]`.
+
+Current wrapper return-key map:
+
+| Wrapper | Keys | Handler targets |
+| --- | --- | --- |
+| WP top menu `DC98:2807` | `1..6` | `1` returns `AX=0`; `2` calls FILE submenu `DC98:275A`; `3` far-calls `C688:EB46`; `4` calls PRINTER submenu `DC98:265D`; `5` calls COMMUNICATE submenu `DC98:26B8`; `6` calls OTHERS submenu `DC98:2D2B`. |
+| WP FILE submenu `DC98:275A` | `1..6` | `C688:EB2E`, `C688:EBD9`, `C688:EBA9`, `C688:EBC1`, `DC98:455F`, `C688:EB91`. |
+| WP PRINTER submenu `DC98:265D` | `1..3` | `C688:EB5E`, `DC98:24DB`, `DC98:22A1`. |
+| WP COMMUNICATE submenu `DC98:26B8` | `1..6` | `C688:EC24`, `C688:EC3F`, `C688:EBF1`, `C688:EC09`, `C688:EC5A`, `DC98:22A1`. |
+| WP OTHERS submenu `DC98:2D2B` | `1..4` | `SYSTEM` -> `DC98:288A`; `PREFERENCES` -> `DC98:2A83`; `T I M E` -> `EBBB:0000`; `ROM CARD` -> `DC98:2B75`. |
+| Organizer top menu `DC98:53C3` | `1..5` | Saves selected index to `[82A6]`, then calls `DC98:6A38`, `DC98:7284`, `DC98:990D`, `DC98:B67C`, or `DC98:CF12`. |
+
+Most handler names are still semantic candidates, but the dispatch structure is
+now direct code rather than inferred from strings.
+
+The WP `FILE` submenu is the document storage workflow for Built-in, Card, and
+DreamLink targets. Its card path is exposed through a DOS-like file API with
+drive letters, `X:*.*`, 8.3 filenames, standard find-first DTA offsets, and
+`int 21h`-style open/read/write/rename/delete/free-space calls. See
+`file-system.md`.
+
+The OTHERS `ROM CARD` item is the executable/software-card path for the same
+PCMCIA slot.
+
+`DC98:2B75` / file `0x5F4F5` is the ROM-card loader. It does not appear to
+query a hardware card type directly. Instead, it builds a drive-qualified path
+for `EROMCARD.X`, tries `([0x6805] + 1):EROMCARD.X` first, then falls back to
+`[0x6805]:EROMCARD.X`, and probes each path through `DC98:EF7B`, a DOS-like
+`set DTA` plus `find first` wrapper:
+
+```asm
+DC98:2B96  mov al,[es:6805]
+DC98:2B9A  inc al              ; first candidate drive
+...
+DC98:2BBE  call DC98:EF7B      ; find first EROMCARD.X
+...
+DC98:2BCC  mov al,[es:6805]    ; fallback drive
+DC98:2BDC  call DC98:EF7B
+```
+
+If neither lookup succeeds, it displays `No ROM card is in the slot`. On a
+successful lookup, it calls `C688:01E6`, compares the returned work-memory value
+with the find-first DTA file size at `[bp-0x29]/[bp-0x27]`, opens the file with
+`DC98:E946`, reads it to `0xA4F0` through `DC98:EE08`, and closes the handle
+through `DC98:EE2E`.
+
+The loaded file then gets a small executable-format check:
+
+```asm
+DC98:2CE2  mov bx,[0A4F0]
+DC98:2CE6  mov ax,[0A4F2]
+DC98:2CE9  cmp ax,1997
+DC98:2CEE  cmp bx,0A4F0
+DC98:2D15  call C688:022B      ; calls far [0xA4F4]
+```
+
+So the current read is: ROM CARD accepts a card if `EROMCARD.X` can be found and
+opened through the normal DOS-like file services on one of the candidate card
+drives, then requires header words
+`[0xA4F0] == 0xA4F0` and `[0xA4F2] == 0x1997` before jumping through the loaded
+entry pointer at `0xA4F4`. Failure paths use `Inadequate work memory`, `Can not
+open EROMCARD.X`, `Not enough memory`, and `ROM Card ID error`.
+
+`DC98:288A` is now confirmed as the WP OTHERS -> SYSTEM settings screen. It
+draws the resource containing `POWER ON BUZZER : { TYPE 1 } { TYPE 2 }
+{ TYPE 3 } { NO }`, lets the user edit settings backed by `[6D2F]` and
+`[6D30]`, and previews the selected buzzer type on Space:
+
+```asm
+DC98:2966  cmp di,0020          ; Space
+DC98:296B  cmp word [bp-4],0003 ; 3 == NO
+DC98:2971  mov ax,[bp-4]        ; 0..2 == TYPE 1..3
+DC98:2974  call C000:077C       ; play preview
+```
+
+On selection/accept, it stores `[bp-6]` to `[6D2F]`, `[bp-4]` to `[6D30]`, and
+uses `[6D30]` to choose the `POWER ON BUZZER` startup sound. The buzzer hardware
+path is documented in `hardware.md`.
 
 ## Resource Lookup Service
 
