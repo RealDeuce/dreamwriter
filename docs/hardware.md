@@ -165,6 +165,15 @@ C000:08A2  retf
 | `0xC1` | RS-232 USART status/control register. Firmware reads status here and writes reset/mode/command bytes here. |
 | `0xD0..0xDF` | RTC register block. MAME maps this range to a Ricoh `RP5C01`; firmware reads/writes `0xD0..0xDC` as 4-bit BCD time/date registers and uses `0xDD..0xDF` as control/mode registers. |
 
+Broad opcode sweeps for `in`/`out` produce many false positives because large
+parts of the ROM are tables, text, fonts, and display resources. In the
+reachable early `C000` service area and the high-ROM CSiMON entry stub, the
+fixed hardware ports above account for the confirmed direct I/O. The two
+important generic exceptions are deliberate monitor/diagnostic paths rather than
+new fixed devices: the built-in diagnostic `I`/`L` commands read arbitrary ports
+through `in al,dx`, and the embedded CSiMON monitor includes generic I/O command
+families.
+
 ## Port `0x60` IRQ/Source Mask
 
 Port `0x60` appears to be an active-low IRQ/source mask latch mirrored at

@@ -73,6 +73,7 @@ the command reference.
 | --- | --- |
 | [`docs/README.md`](docs/README.md) | Index for the topic-specific ROM notes. |
 | [`docs/map.md`](docs/map.md) | Address model, coarse ROM layout, and reset chain. |
+| [`docs/rom-regions.tsv`](docs/rom-regions.tsv) | Machine-readable first-pass code/data/resource region map. |
 | [`docs/banking.md`](docs/banking.md) | MAME bank formula and confirmed ROM bank-switching routines. |
 | [`docs/spell-engine.md`](docs/spell-engine.md) | Banked spell/linguistic service thunk and dispatcher notes. |
 | [`docs/entry-points.md`](docs/entry-points.md) | Confirmed code entry points and direct branch/call inventory. |

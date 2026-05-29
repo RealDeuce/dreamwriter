@@ -242,6 +242,50 @@ Recognized direct-control-flow mnemonics are `call`, `jmp`, conditional jumps,
 and `loop`/`loopz`/`loopnz`. Far `seg:off` targets are resolved directly; near
 targets are resolved through `--near-seg`.
 
+### `regions`
+
+Lists the machine-readable first-pass ROM region map. The default map is
+`docs/rom-regions.tsv`. File ranges are always standalone ROM offsets; CPU
+ranges are derived from the region `segment` column when present, so banked
+code can disassemble at the address it expects to run from.
+
+```sh
+tools/rom2.py regions
+tools/rom2.py regions --types code,monitor-code --format markdown
+```
+
+Options:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--regions` | `docs/rom-regions.tsv` | TSV region map path. |
+| `--types` | none | Comma-separated region types to include. |
+| `--format` | `text` | Output format: `text` or `markdown`. |
+
+### `io-scan`
+
+Disassembles mapped regions with `ndisasm` and lists x86 `in`/`out`/string I/O
+instructions. This is intended for code-only sweeps: by default it scans only
+`code` and `monitor-code` regions from `docs/rom-regions.tsv`, which avoids the
+worst false positives from text, fonts, bitmaps, and display-resource streams.
+The results are only as accurate as the current region map.
+
+```sh
+tools/rom2.py io-scan --summary
+tools/rom2.py io-scan --limit 80
+tools/rom2.py io-scan --types monitor-code --format markdown
+```
+
+Options:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--regions` | `docs/rom-regions.tsv` | TSV region map path. |
+| `--types` | `code,monitor-code` | Comma-separated region types to disassemble and scan. |
+| `--summary` | off | Print counts by direct port, with `DX/string` for variable-port/string I/O. |
+| `--limit` | `0` | Maximum rows to print; `0` means all. |
+| `--format` | `text` | Output format: `text` or `markdown`. |
+
 ## Typical Workflows
 
 Check that the expected ROM is present:
@@ -278,4 +322,10 @@ Generate bitmap render commands from inline display records:
 
 ```sh
 tools/rom2.py bitmap-records --start 0x53800 --end 0x58000 --commands
+```
+
+Run a code-only I/O sweep from the first-pass region map:
+
+```sh
+tools/rom2.py io-scan --summary
 ```

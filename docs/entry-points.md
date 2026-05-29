@@ -64,6 +64,7 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:1252` | `0x41252` | Compares RAM `6D06..6D0F` with expected `SPACE+F+J` matrix bytes. |
 | `C000:1272` | `0x41272` | Diagnostic draw/init routine. |
 | `C000:128F` | `0x4128F` | Diagnostic command loop/parser. |
+| `C000:1534` | `0x41534` | Diagnostic dump byte reader. For `I`/`L` commands, reads the current port through `in al,dx`; otherwise reads memory through the selected segment/address. |
 | `C000:170E` | `0x4170E` | Far-call service wrapper used by `C688:9364`; service `AH=06` reaches the resource/text renderer. |
 | `C000:1712` | `0x41712` | Far-call service wrapper used by `C688:936A`; service `AH=01` reaches the `D59C` resource table reader. |
 | `C000:18EE` | `0x418EE` | Resource table reader for `D59C` / file base `0x559C0`; indexes by `DL` resource ID. |

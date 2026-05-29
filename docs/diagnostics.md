@@ -96,9 +96,28 @@ The parser recognizes command letters including:
 | `M` | Memory dump command text, parser branches through command handling near `C000:134A`. |
 | `S` | Set memory command text, parser recognizes `S` near `C000:1356`. |
 | `Y`, `Z` | Single-step command text, parser recognizes both near `C000:1366..136C`. |
-| `I`, `L` | I/O dump command text, parser recognizes both near `C000:134E..1354`. |
+| `I`, `L` | I/O dump command text, parser recognizes both near `C000:13CA..13D4`. |
 | `T`, `N` | Card attribute / COM command text, parser recognizes both near `C000:136E..1374`. |
 | `Q`, `R` | Clear/reset spell command text. These call the banked spell service with IDs `0x58` and `0x59`; see [`spell-engine.md`](spell-engine.md). |
+
+The `I` and `L` commands are real arbitrary I/O read paths, not fixed hardware
+port consumers. The parser records the selected command in `[6EBB]`, parses the
+requested port into `[6EB9]`, and the dump loop calls `C000:1534`. When `[6EBB]`
+is `I` or `L`, that helper reads from the current port through `DX`:
+
+```asm
+C000:1534  mov  cx,ds
+C000:1536  mov  si,[6EB9]
+...
+C000:1554  mov  dx,si
+C000:1556  in   al,dx
+C000:1557  mov  bl,al
+```
+
+`L` is the "dump I/O(alarm)" shortcut documented in the help text; it seeds
+`[6EB9]` with `0x00D0`, matching the RTC register block. No corresponding
+arbitrary `out dx,...` path has been found in this diagnostic parser; the `S`
+command writes memory, while `T`/`N` are the fixed port `0x30` bit-7 controls.
 
 ## Exit Behavior
 

@@ -75,6 +75,13 @@ tools/rom2.py addr C688:0053
 tools/rom2.py strings --start 0x40000 -n 12
 ```
 
+The machine-readable first-pass region map is
+[`rom-regions.tsv`](rom-regions.tsv). It is deliberately conservative: confirmed
+code/resource ranges are split out where we have evidence, while broad mixed and
+unknown ranges remain coarse until a recursive pass can prove tighter
+boundaries. `tools/rom2.py regions` lists the map, and `tools/rom2.py io-scan`
+uses it for code-only I/O sweeps.
+
 ## Coarse Layout
 
 | File range | Physical range | First-pass notes |

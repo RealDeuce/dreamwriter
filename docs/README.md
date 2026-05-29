@@ -7,6 +7,7 @@ Start here:
 | File | Purpose |
 | --- | --- |
 | [`map.md`](map.md) | Address model, coarse ROM layout, and reset chain. |
+| [`rom-regions.tsv`](rom-regions.tsv) | Machine-readable first-pass code/data/resource region map. |
 | [`banking.md`](banking.md) | MAME bank formula and confirmed ROM bank-switching routines. |
 | [`spell-engine.md`](spell-engine.md) | Banked spell/linguistic service thunk and dispatcher notes. |
 | [`entry-points.md`](entry-points.md) | Confirmed code entry points and direct branch/call inventory. |

@@ -13,6 +13,7 @@ from pathlib import Path
 
 
 ROM_PATH = Path("t4_ir_2.1.ic303")
+REGION_MAP_PATH = Path("docs/rom-regions.tsv")
 ROM_SIZE = 0x80000
 ROM_LOAD_PHYS = 0x80000
 RAM_SIZE = 0x40000
@@ -513,6 +514,214 @@ XREF_RE = re.compile(
     r"(?:\s+(?:short\s+|near\s+|far\s+)?(?P<target>[^;\s]+))?"
 )
 
+IO_LINE_RE = re.compile(r"^(?P<addr>[0-9A-Fa-f]+)\s+\S+\s+(?P<instr>.*)$")
+DIRECT_IO_RE = re.compile(
+    r"\b(?:in\s+(?:al|ax),0x(?P<inport>[0-9a-f]+)|out\s+0x(?P<outport>[0-9a-f]+),(?:al|ax))\b",
+    re.IGNORECASE,
+)
+
+
+def parse_type_filter(value: str) -> set[str]:
+    return {item.strip() for item in value.split(",") if item.strip()}
+
+
+def read_regions(path: Path) -> list[dict[str, str | int]]:
+    regions: list[dict[str, str | int]] = []
+    previous_end = 0
+    for lineno, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        columns = raw_line.split("\t")
+        if columns[:7] == ["start", "end", "type", "confidence", "segment", "label", "notes"]:
+            continue
+        if len(columns) != 7:
+            raise ValueError(f"{path}:{lineno}: expected 7 tab-separated columns")
+        start_text, end_text, kind, confidence, segment, label, notes = columns
+        start = parse_int(start_text)
+        end = parse_int(end_text)
+        if not 0 <= start < end <= ROM_SIZE:
+            raise ValueError(f"{path}:{lineno}: invalid region range 0x{start:x}..0x{end:x}")
+        if start < previous_end:
+            raise ValueError(
+                f"{path}:{lineno}: region overlaps or is out of order after 0x{previous_end:x}"
+            )
+        previous_end = end
+        regions.append(
+            {
+                "start": start,
+                "end": end,
+                "type": kind,
+                "confidence": confidence,
+                "segment": segment,
+                "label": label,
+                "notes": notes,
+            }
+        )
+    return regions
+
+
+def format_region(region: dict[str, str | int]) -> str:
+    start = int(region["start"])
+    end = int(region["end"])
+    cpu_start = region_origin(region)
+    cpu_end = cpu_start + (end - start)
+    return (
+        f"0x{start:05X}..0x{end:05X} cpu=0x{cpu_start:05X}..0x{cpu_end:05X} "
+        f"type={region['type']} confidence={region['confidence']} "
+        f"segment={region['segment']} label={region['label']} {region['notes']}"
+    )
+
+
+def cmd_regions(args: argparse.Namespace) -> int:
+    try:
+        regions = read_regions(args.regions)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+    type_filter = parse_type_filter(args.types) if args.types else None
+    rows = [
+        region
+        for region in regions
+        if type_filter is None or str(region["type"]) in type_filter
+    ]
+
+    if args.format == "markdown":
+        print("| File range | CPU range | Type | Confidence | Segment | Label | Notes |")
+        print("| --- | --- | --- | --- | --- | --- | --- |")
+        for region in rows:
+            start = int(region["start"])
+            end = int(region["end"])
+            cpu_start = region_origin(region)
+            cpu_end = cpu_start + (end - start)
+            print(
+                f"| `0x{start:05X}..0x{end:05X}` | "
+                f"`0x{cpu_start:05X}..0x{cpu_end:05X}` | "
+                f"`{region['type']}` | `{region['confidence']}` | "
+                f"`{region['segment']}` | `{region['label']}` | {region['notes']} |"
+            )
+    else:
+        for region in rows:
+            print(format_region(region))
+    return 0
+
+
+def region_origin(region: dict[str, str | int]) -> int:
+    start = int(region["start"])
+    segment = str(region["segment"])
+    if not segment:
+        return file_to_phys(start)
+    seg_base = parse_addr_part(segment) << 4
+    try:
+        base_file = phys_to_file(seg_base)
+    except ValueError:
+        base_file = seg_base if 0 <= seg_base < ROM_SIZE else start
+    return seg_base + (start - base_file)
+
+
+def disassemble_region(data: bytes, region: dict[str, str | int]) -> tuple[int, str]:
+    start = int(region["start"])
+    end = int(region["end"])
+    origin = region_origin(region)
+    command = [
+        "ndisasm",
+        "-b",
+        "16",
+        "-o",
+        f"0x{origin:x}",
+        "-",
+    ]
+    result = subprocess.run(
+        command,
+        check=True,
+        input=data[start:end],
+        capture_output=True,
+    )
+    return origin, result.stdout.decode("utf-8", errors="replace")
+
+
+def cmd_io_scan(args: argparse.Namespace) -> int:
+    data = read_rom(args.rom)
+    try:
+        regions = read_regions(args.regions)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+    type_filter = parse_type_filter(args.types)
+    rows: list[dict[str, str | int | None]] = []
+    counts: dict[str, int] = {}
+    try:
+        for region in regions:
+            if str(region["type"]) not in type_filter:
+                continue
+            start = int(region["start"])
+            origin, disassembly = disassemble_region(data, region)
+            for line in disassembly.splitlines():
+                match = IO_LINE_RE.match(line)
+                if not match:
+                    continue
+                instr = match.group("instr").strip()
+                mnemonic = instr.split(None, 1)[0] if instr else ""
+                if mnemonic not in {"in", "out", "insb", "insw", "outsb", "outsw"}:
+                    continue
+                address = int(match.group("addr"), 16)
+                file_offset = start + (address - origin)
+                if not start <= file_offset < int(region["end"]):
+                    file_offset = None
+                port_match = DIRECT_IO_RE.search(instr)
+                port = None
+                if port_match:
+                    port_text = port_match.group("inport") or port_match.group("outport")
+                    port = int(port_text, 16)
+                port_key = f"0x{port:02X}" if port is not None else "DX/string"
+                counts[port_key] = counts.get(port_key, 0) + 1
+                rows.append(
+                    {
+                        "file": file_offset,
+                        "cpu": address,
+                        "region": region["label"],
+                        "type": region["type"],
+                        "port": port,
+                        "instr": instr,
+                    }
+                )
+    except FileNotFoundError:
+        print("ndisasm is required for io-scan", file=sys.stderr)
+        return 1
+    except subprocess.CalledProcessError as exc:
+        print(exc.stderr.decode("utf-8", errors="replace"), file=sys.stderr)
+        return exc.returncode
+
+    if args.summary:
+        for port_key, count in sorted(counts.items(), key=lambda item: (item[0] == "DX/string", item[0])):
+            print(f"{port_key}: {count}")
+        return 0
+
+    if args.limit:
+        rows = rows[: args.limit]
+
+    if args.format == "markdown":
+        print("| File | CPU | Region | Port | Instruction |")
+        print("| ---: | ---: | --- | ---: | --- |")
+        for row in rows:
+            file_text = "" if row["file"] is None else f"`0x{int(row['file']):05X}`"
+            port_text = "`DX/string`" if row["port"] is None else f"`0x{int(row['port']):02X}`"
+            print(
+                f"| {file_text} | `0x{int(row['cpu']):05X}` | "
+                f"`{row['region']}` | {port_text} | `{row['instr']}` |"
+            )
+    else:
+        for row in rows:
+            file_text = "unknown" if row["file"] is None else f"0x{int(row['file']):05X}"
+            port_text = "DX/string" if row["port"] is None else f"0x{int(row['port']):02X}"
+            print(
+                f"file={file_text} cpu=0x{int(row['cpu']):05X} "
+                f"region={row['region']} port={port_text} {row['instr']}"
+            )
+    return 0
+
 
 def resolve_target(target: str, near_seg: int) -> tuple[str, int | None]:
     target = target.lower()
@@ -727,6 +936,24 @@ def build_parser() -> argparse.ArgumentParser:
     xrefs.add_argument("--limit", type=int, default=40)
     xrefs.add_argument("--format", choices=("text", "markdown"), default="text")
     xrefs.set_defaults(func=cmd_xrefs)
+
+    regions = subparsers.add_parser("regions", help="list ROM map regions")
+    regions.add_argument("--regions", type=Path, default=REGION_MAP_PATH, help="TSV region map path")
+    regions.add_argument("--types", help="comma-separated region types to include")
+    regions.add_argument("--format", choices=("text", "markdown"), default="text")
+    regions.set_defaults(func=cmd_regions)
+
+    io_scan = subparsers.add_parser("io-scan", help="scan mapped ROM regions for x86 in/out instructions")
+    io_scan.add_argument("--regions", type=Path, default=REGION_MAP_PATH, help="TSV region map path")
+    io_scan.add_argument(
+        "--types",
+        default="code,monitor-code",
+        help="comma-separated region types to disassemble and scan",
+    )
+    io_scan.add_argument("--summary", action="store_true", help="summarize hits by direct port")
+    io_scan.add_argument("--limit", type=int, default=0, help="maximum rows to print; 0 means all")
+    io_scan.add_argument("--format", choices=("text", "markdown"), default="text")
+    io_scan.set_defaults(func=cmd_io_scan)
 
     return parser
 

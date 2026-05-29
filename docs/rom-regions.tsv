@@ -1,0 +1,41 @@
+# File ranges are half-open: start <= offset < end.
+# type values are intentionally simple so tools can filter them:
+# code, monitor-code, table, text, font, bitmap, resource, mixed, data, unknown.
+# confidence values: confirmed, probable, rough.
+start	end	type	confidence	segment	label	notes
+0x00000	0x1BFFF	data	rough		banked-dictionary-data	Dictionaries/spelling data; no confirmed executable entry points in this span yet.
+0x1BFFF	0x1C050	text	confirmed		proximity-copyright	Merriam-Webster/Proximity copyright string area.
+0x1C050	0x2FFFF	data	rough		dictionaries-and-wordlists	Word lists and linguistic tables.
+0x30000	0x33EFC	code	probable	3000	banked-spell-service	Banked spell/linguistic service reached via C000:18A1 and 3000:0000 / 3000:4AA6.
+0x33EFC	0x33F0A	table	confirmed	3000	banked-spell-inline-table	Small inline table skipped by nearby control flow; decodes as false I/O if swept as code.
+0x33F0A	0x34C00	code	probable	3000	banked-spell-service-tail	Continuation of banked spell/linguistic service after inline data island.
+0x34C00	0x3BFFF	data	rough		banked-linguistic-data	Spell/linguistic tables around the banked service.
+0x3C000	0x3D000	table	probable		character-tables	Character and lookup tables noted near 0x3C096.
+0x3D000	0x3FFFF	data	rough		late-low-bank-data	Unmapped data/resource area in the lower ROM banks.
+0x40000	0x40B1A	code	confirmed	C000	startup-irq-lowio	Reset/startup, IRQ stubs, power, keyboard, serial, printer, RTC, battery/card helpers.
+0x40B1A	0x40B56	table	confirmed	C000	buzzer-sequence-table	Table used by C000:0B16 sound sequence player.
+0x40B56	0x4103A	code	confirmed	C000	timer-serial-vector-setup	RTC snapshot, timer, USART setup, IVT/far-call table setup.
+0x4103A	0x41078	table	confirmed	C000	far-call-service-table	Copied to RAM at 0x0200 by C000:0ED6.
+0x41078	0x41883	code	confirmed	C000	keyboard-diagnostic-monitor	Built-in keyboard/input setup and F+J+SPACE diagnostic command loop.
+0x41883	0x418A1	table	confirmed	C000	diagnostic-dispatch-tables	Jump tables around diagnostic/resource dispatch.
+0x418A1	0x41927	code	confirmed	C000	banked-spell-wrapper	Temporary bank mapping for spell/linguistic service and restore.
+0x41927	0x41F17	code	probable	C000	resource-and-diagnostic-services	Resource/text helpers and diagnostic support routines.
+0x41F17	0x43D00	code	probable	C000	dos-like-storage-services	INT 21h private services, format/probe, storage and filesystem support.
+0x43D00	0x44D30	code	probable	C000	event-storage-display-helpers	Event queue, file/storage helpers, battery screen save/restore vicinity.
+0x44D30	0x45000	bitmap	confirmed	C000	battery-warning-icons	Three documented 48x40 battery/error icons plus adjacent bitmap/resource bytes.
+0x45000	0x46880	mixed	rough	C000	dispatch-and-helper-tail	Dispatcher tables and helper code; needs function-boundary split before code-only scanning.
+0x46880	0x46906	code	probable	C688	far-entry-area	C688 far-call entry area.
+0x46906	0x46A10	text	confirmed	C688	diagnostic-help-strings	Diagnostic startup/help command strings.
+0x46A10	0x47FFF	mixed	rough	C688	c688-early-mixed	Mixed application code/tables; not yet safe for code-only sweeps.
+0x48000	0x537FF	mixed	rough	C688	app-code-and-ui-tables	Main application code, tables, and UI resources; needs splitting.
+0x53800	0x57FFF	resource	confirmed	D380	wp-menu-and-ui-resources	Main application menu and word-processor UI strings/resources.
+0x58000	0x5C8B6	font	confirmed	D800	font-runs	Main thin/bold/small/narrow/sparse font runs and width metadata.
+0x5C8B6	0x6EFC2	mixed	rough	DC98	organizer-wp-app-mixed	Organizer/WP application code mixed with resources; needs function-boundary pass.
+0x6EFC2	0x70500	resource	confirmed	EF70	comm-printer-romcard-icons	Communication, printer, ROM-card, and DreamLink menu icons/strings.
+0x70500	0x78DC0	mixed	rough	F050	typing-tutor-and-late-resources	Typing tutor lessons/resources and mixed late-ROM code/data.
+0x78DC0	0x78DD0	code	confirmed	F8DC	reset-trampoline	Reset trampoline writes bank ports 0x16/0x17 then jumps to C000:0000.
+0x78DD0	0x7C0A0	mixed	rough	F8DD	late-high-rom-mixed	High ROM mixed resources/code before CSiMON image.
+0x7C0A0	0x7FDF5	monitor-code	probable	FC0A	csimon-monitor	Embedded CSiMON-88 monitor body; contains generic monitor I/O command paths.
+0x7FDF5	0x7FF0A	monitor-code	confirmed	FFDF	csimon-entry-stub	High-ROM CSiMON entry stub; initializes banking, buzzer, USART, and dispatches to FC0A:07FA.
+0x7FF0A	0x7FFF0	unknown	rough		reset-vector-padding	Mostly zero padding before reset vector.
+0x7FFF0	0x80000	code	confirmed	FFFF	reset-vector	CPU reset vector and trailing bytes.
