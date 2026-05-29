@@ -1,7 +1,7 @@
 # Banking Notes
 
 MAME models the V20 address space as eight 128 KiB windows selected by I/O
-ports `0x10..0x17`. See `map.md` for the general formula.
+ports `0x10..0x17`. See [`map.md`](map.md) for the general formula.
 
 Use `tools/rom2.py bank` to check a specific port/value:
 
@@ -173,7 +173,8 @@ Those bytes disassemble as code and begin:
 ```
 
 This target is now tracked as the banked spell/linguistic service thunk. See
-`spell-engine.md` for the dispatcher and diagnostic `Q/R` service IDs. It is
+[`spell-engine.md`](spell-engine.md) for the dispatcher and diagnostic `Q/R`
+service IDs. It is
 reached from routines including `C000:02A8`, `C000:02B0`, `C000:02B8`,
 `C000:12FB`, and `C000:15F1`.
 

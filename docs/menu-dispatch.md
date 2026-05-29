@@ -330,7 +330,7 @@ The draw pass has three loops:
 ```
 
 The generated icon blit records are sent to `C000:67AD`, which reaches the same
-low-level `FF 42` bitmap handler documented in `bitmaps.md`.
+low-level `FF 42` bitmap handler documented in [`bitmaps.md`](bitmaps.md).
 
 After drawing the static icon bar, `DC98:124C` calls `DC98:1198` with:
 
@@ -518,13 +518,13 @@ On accept, `DC98:AAD5` writes year/month/day back to `72D7`/`72D9`/`72DB`,
 writes hour/minute to `72DF`/`72E1`, forces `72E3` to zero, calls
 `DC98:0D72` and `DC98:0D8F`, then calls `DC98:D3BB` to refresh the broader
 time state. The C000 handlers behind those wrappers update the RTC BCD shadow
-and write ports `0xD0..0xDC`; see `hardware.md`.
+and write ports `0xD0..0xDC`; see [`hardware.md`](hardware.md).
 
 The WP `FILE` submenu is the document storage workflow for Built-in, Card, and
 DreamLink targets. Its card path is exposed through a DOS-like file API with
 drive letters, `X:*.*`, 8.3 filenames, standard find-first DTA offsets, and
 `int 21h`-style open/read/write/rename/delete/free-space calls. See
-`file-system.md`.
+[`file-system.md`](file-system.md).
 
 The OTHERS `ROM CARD` item is the executable/software-card path for the same
 PCMCIA slot.
@@ -597,7 +597,7 @@ active auto-off reload value in `[6D31]`:
 | `UNLIMITED` | `6` | `0x0000` |
 
 The values match a 10 Hz idle countdown. The buzzer hardware path and auto-off
-power path are documented in `hardware.md`.
+power path are documented in [`hardware.md`](hardware.md).
 
 ## Resource Lookup Service
 
@@ -633,4 +633,5 @@ Examples from the first menu branch:
 | `0x5B` | `0x1748` | `0x5710A` | Word-processor-side setup resource; printer/paper setup text follows in the same resource area. |
 
 This establishes the source of resources loaded by `C688:7689`/`C688:9541`.
-The 40x40 horizontal-menu icon sources are documented in `bitmaps.md`.
+The 40x40 horizontal-menu icon sources are documented in
+[`bitmaps.md`](bitmaps.md).

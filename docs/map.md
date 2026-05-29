@@ -38,7 +38,7 @@ different 128 KiB ROM/RAM banks.
 
 ## Banking Model
 
-Detailed banking notes are in `banking.md`.
+Detailed banking notes are in [`banking.md`](banking.md).
 
 MAME maps the 1 MiB V20 address space as eight 128 KiB banks:
 

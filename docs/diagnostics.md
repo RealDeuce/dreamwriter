@@ -98,7 +98,7 @@ The parser recognizes command letters including:
 | `Y`, `Z` | Single-step command text, parser recognizes both near `C000:1366..136C`. |
 | `I`, `L` | I/O dump command text, parser recognizes both near `C000:134E..1354`. |
 | `T`, `N` | Card attribute / COM command text, parser recognizes both near `C000:136E..1374`. |
-| `Q`, `R` | Clear/reset spell command text. These call the banked spell service with IDs `0x58` and `0x59`; see `spell-engine.md`. |
+| `Q`, `R` | Clear/reset spell command text. These call the banked spell service with IDs `0x58` and `0x59`; see [`spell-engine.md`](spell-engine.md). |
 
 ## Exit Behavior
 

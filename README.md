@@ -62,8 +62,30 @@ The reset vector is at the end of the 1 MiB CPU address space and jumps into
 ROM startup code. Real-mode segment aliases matter; always track `CS`, `DS`,
 `ES`, and `SS` when interpreting near references.
 
-Working notes are split by topic under `docs/`. Start with `docs/README.md`.
-Address, string, and direct branch/call inspection helpers are in `tools/rom2.py`.
+Working notes are split by topic under `docs`, with this README serving as the
+central index for the repo. Address, string, and direct branch/call inspection
+helpers are in `tools/rom2.py`; see [`tools/README.md`](tools/README.md) for
+the command reference.
+
+## Documentation Index
+
+| File | Description |
+| --- | --- |
+| [`docs/README.md`](docs/README.md) | Index for the topic-specific ROM notes. |
+| [`docs/map.md`](docs/map.md) | Address model, coarse ROM layout, and reset chain. |
+| [`docs/banking.md`](docs/banking.md) | MAME bank formula and confirmed ROM bank-switching routines. |
+| [`docs/spell-engine.md`](docs/spell-engine.md) | Banked spell/linguistic service thunk and dispatcher notes. |
+| [`docs/entry-points.md`](docs/entry-points.md) | Confirmed code entry points and direct branch/call inventory. |
+| [`docs/startup-ui.md`](docs/startup-ui.md) | Cold-start UI path, inline display scripts, boot update sequence, and first menu graphic. |
+| [`docs/menu-dispatch.md`](docs/menu-dispatch.md) | Inline key dispatch tables and the shared application menu event loop. |
+| [`docs/file-system.md`](docs/file-system.md) | FILE menu storage flow, DOS-like file API wrappers, and directory/DTA evidence. |
+| [`docs/diagnostics.md`](docs/diagnostics.md) | Diagnostic chord, command loop, banner/help strings, and warm IRQ entry. |
+| [`docs/hardware.md`](docs/hardware.md) | Keyboard, LCD/framebuffer, I/O ports, serial, printer, PCMCIA, sound, and low RAM state. |
+| [`docs/fonts.md`](docs/fonts.md) | Main glyph table, width table candidates, and font variants. |
+| [`docs/bitmaps.md`](docs/bitmaps.md) | Confirmed LCD bitmap icons and candidate UI/icon resources. |
+| [`docs/strings.md`](docs/strings.md) | String/resource landmarks for application-level mapping. |
+| [`docs/open-questions.md`](docs/open-questions.md) | Working hypotheses and traces still worth resolving. |
+| [`tools/README.md`](tools/README.md) | Command reference for `tools/rom2.py`. |
 
 ## Boot Path
 
@@ -273,7 +295,7 @@ at `[0xA4F4]`.
 
 The `FILE` menu storage paths distinguish built-in RAM, card storage, and
 DreamLink transfer. The local storage layer is FAT12-derived but uses a custom
-volume header/geometry block; see `docs/file-system.md`.
+volume header/geometry block; see [`docs/file-system.md`](docs/file-system.md).
 
 ## Open Questions
 

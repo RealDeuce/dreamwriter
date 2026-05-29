@@ -424,9 +424,10 @@ DA -> C688:92CC
 ```
 
 So the first-level key handling is real code, not speculation. The shared menu
-loop after `C688:8419` is now split out in `menu-dispatch.md`; the later
+loop after `C688:8419` is now split out in
+[`menu-dispatch.md`](menu-dispatch.md); the later
 horizontal icon/menu table consumer is `DC98:124C`, documented in
-`menu-dispatch.md` and `bitmaps.md`.
+[`menu-dispatch.md`](menu-dispatch.md) and [`bitmaps.md`](bitmaps.md).
 
 The next-level menus are not in the first-menu `C688:D133` resource block. They
 live in later menu/table clusters:
@@ -498,7 +499,8 @@ progress count. On the T400 v2.1 path observed in MAME, the upper value is
 `160 KBytes` and the lower value counts up to `160`. That matches the
 filesystem formatter's built-in geometry: five 32 KiB units starting at segment
 `0x1800`. A progress failure in the high 20s pointed back to the bank mapping
-for CPU `0x20000..0x3FFFF`; see `file-system.md` and `banking.md`.
+for CPU `0x20000..0x3FFFF`; see [`file-system.md`](file-system.md) and
+[`banking.md`](banking.md).
 
 This makes the current emulated startup behavior suspicious: if it shows only
 `INITIALIZING` before reaching the two-button menu, MAME may be taking the wrong

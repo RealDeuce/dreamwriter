@@ -96,8 +96,8 @@ Screen buffer routines:
 | `C000:4C4F` | `0x44C4F` | Battery-warning area restore, `0x94F0 -> 0x131B`, 40 rows of 6 bytes with `0x3A` stride. |
 | `C000:4C6E` | `0x44C6E` | Battery-warning area save, `0x131B -> 0x94F0`, same layout. |
 
-Font table notes are in `fonts.md`. Bitmap and UI resource notes are in
-`bitmaps.md`.
+Font table notes are in [`fonts.md`](fonts.md). Bitmap and UI resource notes
+are in [`bitmaps.md`](bitmaps.md).
 
 Far wrappers exist near `C000:088F` and `C000:0899`:
 

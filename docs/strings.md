@@ -67,7 +67,7 @@ tools/rom2.py strings --start 0x40000 --end 0x80000 -n 8
 
 | File offset | Physical | Notes |
 | ---: | ---: | --- |
-| `0x44D30` | `0xC4D30` | First confirmed 48x40 LCD error icon: main battery low. See `bitmaps.md`. |
+| `0x44D30` | `0xC4D30` | First confirmed 48x40 LCD error icon: main battery low. See [`bitmaps.md`](bitmaps.md). |
 | `0x44E20` | `0xC4E20` | Second confirmed 48x40 LCD error icon: CR2032 memory-retention battery low. |
 | `0x44F10` | `0xC4F10` | Third confirmed 48x40 LCD error icon: PCMCIA SRAM card battery low. |
 | `0x45000` | `0xC5000` | Dispatcher byte translation table, not a fourth 48x40 bitmap. |

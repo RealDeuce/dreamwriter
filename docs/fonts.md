@@ -525,5 +525,5 @@ file 0x5C000: 00 00 B0 C8 88 88 00 00 ...
 
 These later glyphs include accented characters, symbols, and line/art forms.
 
-Bitmap and UI resource notes are split out into `bitmaps.md`. The confirmed
+Bitmap and UI resource notes are split out into [`bitmaps.md`](bitmaps.md). The confirmed
 48x40 battery/error icons are separate from the 8-byte-per-glyph font stream.
