@@ -3,7 +3,7 @@
 # code, monitor-code, table, text, font, bitmap, resource, mixed, data, unknown.
 # confidence values: confirmed, probable, rough.
 start	end	type	confidence	segment	label	notes
-0x00000	0x1B413	data	probable		low-banked-engine-page-data	Dense slot-0 engine page data mapped at CPU 0x60000..0x7B412 during the banked spell/grammar call. 3000:527C synthesizes page descriptors beginning at 6000:0000 and reads the first byte of this window during slot setup; page format still unresolved.
+0x00000	0x1B413	data	probable		low-banked-engine-page-data	Dense slot-0 engine page data mapped at CPU 0x60000..0x7B412 during the banked spell/grammar call. 3000:527C synthesizes page descriptors beginning at 6000:0000; 3000:2D5C/20C2/20F8 consume the active descriptor as a nibble-coded slot page stream. Header/token format still unresolved.
 0x1B413	0x1B420	data	confirmed		low-payload-zero-tail	All-zero tail/padding after the low mapped engine page data.
 0x1B420	0x1C000	data	confirmed		low-bank-erased-padding	All 0xFF padding between the low payload zero tail and the Proximity copyright block.
 0x1C000	0x1C070	text	confirmed		proximity-copyright	Merriam-Webster/Proximity copyright strings plus terminator/control bytes before the dictionary header padding.

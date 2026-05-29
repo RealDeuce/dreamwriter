@@ -364,13 +364,57 @@ second group of eight descriptors is copied:
 ```
 
 So the low block is no longer merely mapped by the spell/grammar wrapper; it is
-page data for slot `0`. The actual page format remains undecoded. The active
-callback base is a separate table: `3000:18EC` loads `[9360]` from
+page data for slot `0`. The page header and token classes remain undecoded, but
+the stream reader is now visible. The active callback base is a separate table:
+`3000:18EC` loads `[9360]` from
 `3C00:1604 + slot * 2`, giving callback bases `3C00:0CAE` for slot `0` and
 `3C00:219A` for slot `1`, then stores the page-list pointer in `[9104]`.
 The startup/init path also selects slot `0`: service `0x00` reaches
 `3000:4CC2 -> 3000:4D6A -> 3000:4F76 -> 3000:527C(0)`, and service `0x01`
 enters at `3000:4D6A`.
+
+`3000:18EC(slot)` makes the selected slot active by setting `[9104]` to
+`832A + slot * 0x32`; `3000:2D5C(index)` then selects one six-byte descriptor
+from that list:
+
+```asm
+3000:2D60  mov bx,[bp+04]      ; descriptor index
+3000:2D63  mov ax,bx
+3000:2D65  shl bx,1
+3000:2D67  add bx,ax
+3000:2D69  shl bx,1            ; index * 6
+3000:2D6B  mov si,[9104]
+3000:2D6F  mov ax,[bx+si]
+3000:2D71  mov dx,[bx+si+2]
+3000:2D74  mov [8EFC],ax
+3000:2D77  mov [8EFE],dx
+```
+
+Only the first four bytes of each descriptor are used here, as the active
+far pointer `[8EFC:8EFE]`. The final two descriptor bytes are still unknown.
+The parser state uses `[8EE6]` as an offset into that active stream and `[8EE8]`
+as mixed page/phase state: `[8EE8] & 7` selects the descriptor index, while bit
+`0x10` is toggled by the nibble reader.
+
+`3000:20C2` is the core nibble reader. It loads through `LES SI,[8EFC]`,
+reads from `[ES:SI + [8EE6]]`, and alternates high/low nibbles by toggling
+`[8EE8]` bit `0x10`; the low-nibble phase increments `[8EE6]`. `3000:20F8`
+is the companion byte reader from the same stream. If the nibble phase is clear
+it returns the next aligned byte and increments `[8EE6]`; if the phase bit is
+set it combines the current low nibble with the next byte's high nibble to
+return an unaligned byte.
+
+The visible consumers are `3000:1D7E` and `3000:1E6C`. Both compute the
+descriptor index from `[8EE8] & 7`, call `3000:2D5C`, and seed `[8EE6] = 6`
+when starting at offset zero with the low page/state bit clear. That suggests
+the first six bytes of a page are header-like data, although the fields are not
+decoded yet. The stream uses `0x0F` as an extension sentinel in at least one
+count/value path, and when `[8EE6]` reaches the `0x4000` boundary the code wraps
+by advancing `[8EE8]` and resetting the page offset.
+
+This confirms `0x00000..0x1B413` is consumed as a separate nibble-coded slot
+page stream. It is not the same format as the 1 KiB compressed dictionary pages
+loaded by `3000:B076` and walked by `3000:8B0A`/`3000:8F06`.
 
 The direct references to stream cursor words `[9682]` and `[9684]` are still
 limited to the stream reset/read/seek helpers at `3000:65FE`, `3000:660F`, and
@@ -385,7 +429,7 @@ calling `3000:0000`:
 | CPU range | Bank port/value | ROM file range | Confirmed use |
 | ---: | --- | ---: | --- |
 | `0x30000..0x3FFFF` | `0x11 = 0x02` | `0x30000..0x3FFFF` | Banked spell code. |
-| `0x60000..0x7B412` | `0x13 = 0x03` | `0x00000..0x1B412` | Slot-0 engine page data. `3000:527C` synthesizes descriptors beginning at `6000:0000` and reads the first byte of this window during slot setup. |
+| `0x60000..0x7B412` | `0x13 = 0x03` | `0x00000..0x1B412` | Slot-0 engine page data. `3000:527C` synthesizes descriptors beginning at `6000:0000`; `3000:2D5C`/`3000:20C2`/`3000:20F8` later consume it as nibble-coded slot page streams. |
 | `0x7B413..0x7B41F` | `0x13 = 0x03` | `0x1B413..0x1B41F` | All-zero tail/padding after the dense payload. |
 | `0x7B420..0x7BFFF` | `0x13 = 0x03` | `0x1B420..0x1BFFF` | All `0xFF` padding before the copyright block. |
 | `0x7C000..0x7FFFF` | `0x13 = 0x03` | `0x1C000..0x1FFFF` | Copyright/padding at logical stream offset `0`; dictionary header starts at offset `0x100`. |
@@ -431,12 +475,12 @@ block is immediately before logical offset zero, whereas a backwards-growing
 prelude would more naturally leave erased space at the low end of the mapped
 window.
 The `0x00000..0x1B413` former `banked-dictionary-data` label is now confirmed
-as slot-0 engine page data, but not as a decoded format. It is followed by a
-13-byte zero tail at `0x1B413..0x1B420`, then all-`0xFF` erased padding through
-`0x1C000`. Because the confirmed reader is the banked spell/grammar service and
-the editor also exposes a thesaurus path, the broad role is linguistic data,
-but the exact contents could include grammar, spelling, thesaurus, or common
-engine tables.
+as slot-0 engine page data consumed through a nibble-coded page stream, but not
+as a fully decoded format. It is followed by a 13-byte zero tail at
+`0x1B413..0x1B420`, then all-`0xFF` erased padding through `0x1C000`. Because
+the confirmed reader is the banked spell/grammar service and the editor also
+exposes a thesaurus path, the broad role is linguistic data, but the exact
+contents could include grammar, spelling, thesaurus, or common engine tables.
 
 The `0x1C000..0x30000` stream was also scanned as data for references back into
 `0x00000..0x1B413`. Individual byte patterns can look like low absolute
@@ -580,6 +624,11 @@ ROM map:
 | `3000:963A` | Finds a byte in a NUL-terminated string. |
 | `3000:9666` | Finds the last occurrence of a byte in a NUL-terminated string. |
 | `3000:969E` | Lexicographic string compare helper. |
+| `3000:1D7E` | Slot-page parser stepper using descriptor index `[8EE8] & 7`, stream offset `[8EE6]`, and the nibble reader at `3000:20C2`. |
+| `3000:1E6C` | Slot-page parser/record builder using the same descriptor stream; saves/restores stream cursor state when consulting callback-table data. |
+| `3000:2D5C` | Selects a six-byte active slot descriptor from `[9104] + index * 6` and loads its far pointer into `[8EFC:8EFE]`. |
+| `3000:20C2` | Reads the next nibble from active slot-page stream `[8EFC:8EFE] + [8EE6]`, toggling `[8EE8]` bit `0x10` as the high/low phase. |
+| `3000:20F8` | Reads the next byte or unaligned byte from the same active slot-page stream, depending on the current nibble phase. |
 | `3000:ADBE` | Reads an arbitrary-width value from the compressed bitstream. |
 | `3000:AEB6` | Reads the next byte/nibble-aligned unit from the compressed bitstream. |
 | `3000:AFB4` | Skips forward in the compressed bitstream. |

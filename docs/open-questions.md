@@ -106,14 +106,20 @@
     ROM read/branch on port `0x20` has been found. Hardware tracing should check
     whether a fixture strap, reset-vector overlay, or external serial/boot mode
     can select this monitor.
-29. Decode the low mapped engine page format at file `0x00000..0x1B413`. The
-    banked linguistic wrapper maps it at CPU `0x60000..0x7B412`, followed by a
-    short zero tail and then `0xFF` padding through CPU `0x7BFFF`. The direct
-    consumer is now known: `3000:527C` builds slot-0 page descriptors beginning
-    at `6000:0000` and immediately reads the first byte of file `0x00000`.
-    What remains unknown is the page record format and which parser/thesaurus
-    routines consume each page after setup. The confirmed dictionary reader at
-    `3000:660F` can also address this area in principle if handed a
+29. Finish decoding the low mapped engine page format at file
+    `0x00000..0x1B413`. The banked linguistic wrapper maps it at CPU
+    `0x60000..0x7B412`, followed by a short zero tail and then `0xFF` padding
+    through CPU `0x7BFFF`. The direct setup path is known: `3000:527C` builds
+    slot-0 page descriptors beginning at `6000:0000` and reads the first byte
+    of file `0x00000`. The active stream path is also now known:
+    `3000:18EC` selects the descriptor list in `[9104]`, `3000:2D5C` loads one
+    six-byte descriptor's far pointer into `[8EFC:8EFE]`, and
+    `3000:20C2`/`3000:20F8` read nibbles/bytes using offset `[8EE6]` and mixed
+    descriptor/phase state `[8EE8]`. Remaining questions are the six-byte page
+    header implied by the `[8EE6] = 6` start rule, the final two bytes of each
+    six-byte descriptor, the nibble token classes, and which higher-level
+    parser/thesaurus routines consume each page. The confirmed dictionary reader
+    at `3000:660F` can also address this area in principle if handed a
     signed-negative logical stream offset around `-0x1CFF0..-0x1BDE`, but the
     known seek callers use non-negative offsets so far. Large positive offsets
     around `0xE4000..0xFF412` would wrap to this area in the reader's 20-bit
