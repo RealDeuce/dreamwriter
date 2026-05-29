@@ -129,8 +129,9 @@
     record class and high nibble selects bucket/mask handling, followed by
     extended 4-bit count chunks and `dict[0x34]`-bit record pointers. `3000:AC48`
     now shows those pointers are 17-bit values split into `pointer >> 9` page
-    indexes and `pointer & 0x01FF` inline selectors. The remaining question is
-    the exact meaning of the record classes, buckets, inline record layout, and
-    how `3000:8B0A`/`3000:8F06` materialize the selected page record, plus
-    whether any slot-0 page data participates in less direct grammar/thesaurus
-    decisions.
+    indexes and `pointer & 0x01FF` inline selectors. `3000:8B0A`/`3000:8F06`
+    now show the inline selector reaches a byte-coded page edit stream whose
+    cursor is `dict[0x26]`; zero advances to the next page and `0xFF` is an
+    escape/extended marker. The remaining question is the exact meaning of the
+    record classes, buckets, and edit-stream token ranges, plus whether any
+    slot-0 page data participates in less direct grammar/thesaurus decisions.

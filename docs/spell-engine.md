@@ -592,6 +592,10 @@ ROM map:
 | `3000:A6A2` | Copies or normalizes related-word text into the shared output string pool, splitting on internal `0x0E` and `/` separators. |
 | `3000:A7C2` | Chooses a related record pointer from small threshold/pointer tables, with special type remaps through `3000:83E4`. |
 | `3000:AA54` | Tests whether a slash/compound-separated expanded string already contains a target fragment. |
+| `3000:8B0A` | Decodes the current page edit stream at `dict[0x26]` into the staged word buffer and updates the stream cursor. |
+| `3000:8F06` | Advances from the current page edit-stream record to the next materialized word, loading the next page when needed. |
+| `3000:89E2` | Loads dictionary page `dict[0x22] + [8A5A]` into `0x864E`. |
+| `3000:8A0E` | Post-processes the staged word ending at `8AB2`, producing the compact class/output buffer at `8AA4`. |
 | `3000:AB4C` | Resolves a dictionary entry position by loading a 1 KiB compressed page and scanning expanded entries. |
 | `3000:AC48` | Expands a packed 17-bit record pointer into caller text, either by copying from the resident word table or by loading a 1 KiB dictionary page. |
 
@@ -727,6 +731,36 @@ lead byte plus `dict[0x06]`. The final record pointer is stored at `dict[0x26]`
 and the base word copied from `dict[0x18][page_index]` is staged at `0x8A5C`.
 The normal dictionary expansion helpers `3000:8B0A` and `3000:8F06` then walk
 within that page until the selected inline record has been materialized.
+
+`3000:8B0A` materializes the word at the current page edit-stream cursor. It
+uses `dict[0x26]` as the source cursor, `[8AB2]` as the destination cursor into
+the staged word buffer, and then writes both values back before returning:
+
+```asm
+3000:8B17  mov di,[8AB2]
+3000:8B1B  mov ax,[7528]   ; dict[0x26]
+...
+3000:8B6B  mov [8AB2],di
+3000:8B72  mov ax,[bp-08]
+3000:8B76  mov [bx+26],ax  ; dict[0x26]
+3000:8B79  call 3000:8A0E
+```
+
+The edit stream is byte-coded. Literal-ish bytes below the current dictionary
+threshold at `[8A50]+4` are copied directly. Other token ranges either copy
+two-byte fragments from `dict[0x16]`, copy bytes from later stream positions,
+or stop the current word when a zero token is reached. `0xFF` acts as an
+escape/extended marker in the stream. The final call to `3000:8A0E`
+post-processes the staged bytes and builds the compact `8AA4` buffer that
+later code uses for record type/class checks.
+
+`3000:8F06` is the next-record stepper for the same page stream. It reads the
+current `dict[0x26]` byte. If the byte is zero, `3000:8F98` increments `[8A5A]`
+and calls `3000:89E2` to load the next dictionary page at
+`(dict[0x22] + [8A5A]) * 0x400`; it then resets `dict[0x26]` to `0x8655` and
+copies the new base word from `dict[0x18][8A5A]` into `0x8A5C`. Otherwise,
+`8F06` applies one edit-token operation to the staged word buffer, updates
+`dict[0x26]`, and re-enters `8B0A` to finish materializing the word.
 
 This means the traced Thesaurus path is currently tied to the confirmed
 compressed dictionary stream and its packed record metadata. The low slot-0
