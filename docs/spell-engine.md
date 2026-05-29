@@ -69,7 +69,9 @@ Confirmed dispatch entries:
 | `0x00` | `3000:4AC6` | Called by `C000:02B8` during cold boot sequence. |
 | `0x01` | `3000:4ACC` | Called by `C000:02B0` during cold boot sequence. |
 | `0x3C` | `3000:4BC2` | Called through `C000:189E`, which adds `0x3C` to `DL`. |
-| `0x3D` | `3000:4BCA` | Same `C000:189E` path when caller provides `DL = 1`. |
+| `0x3D..0x45` | `3000:4BCA` | Same `C000:189E` path for numbered choices. The stub subtracts `0x3C` and passes the one-based selected number to `3000:5026`. |
+| `0x46` | `3000:4BDE` | Same `C000:189E` path when caller provides `DL = 0x0A`; result-list setup/count. |
+| `0x47` | `3000:4BE8` | Same `C000:189E` path when caller provides `DL = 0x0B`; formatted result-row fetch. |
 | `0x58` | `3000:4BF2` | Diagnostic `Q` command. |
 | `0x59` | `3000:4BFA` | Diagnostic `R` command. |
 
@@ -216,6 +218,96 @@ Other concrete banked service calls in the editor spell/grammar cluster:
 | `C688:E59A` | `0x47` | `AH=05`, `DL=0x0B`; fills 0x50-byte result records. |
 | `C688:F0A6` | `0x07` | Error/status query after `C688:EF24`. |
 
+## Editor Thesaurus Front-End
+
+The `F8` editor dispatch entry at `C688:E274` is the observed Alt+8
+Thesaurus path. It first calls `C688:4F85`; if that succeeds it enters
+`C688:E282`, then returns through the normal editor loop:
+
+```asm
+C688:E274  call C688:4F85
+C688:E277  jnc C688:E27C
+C688:E279  jmp C688:EDBE
+C688:E27C  call C688:E282
+C688:E27F  jmp C688:EC9F
+```
+
+`C688:E282` clears bit `0x80` in `[8DB4]`, copies or normalizes the current
+word into `[8DBA]`, draws resource `0x76` through `C688:7689`, creates a
+selection/list wrapper through `C688:71B5` with `CL=1`, `DX=75A0`, then enters
+the main Thesaurus loop at `C688:E2EA`.
+
+The Thesaurus front-end uses the same `AH=05` banked-service adjustment as the
+spell/grammar suggestion browser:
+
+| C688 call site | Effective service | Observed role |
+| --- | ---: | --- |
+| `C688:E552` | `0x46` | `DL=0x0A` before `AH=05`; query word at `7F28`, result count returned in `DL` and copied to `[8DB5]` / `[8E3D]`. |
+| `C688:E59A` | `0x47` | `DL=0x0B` before `AH=05`; fills the next 0x50-byte result row at `7F50`, then the UI copies it into the visible row buffer. |
+| `C688:E403` | `0x3C + [8DB6]` | Selected-number expansion. `DL` is loaded from `[8DB6]` before `AH=05`, so numbered choices 1..9 enter services `0x3D..0x45`. |
+
+`C688:E530` is the list builder. It shows the wait resource `0x7B`, copies the
+query word from `[8DBA]` to `7F28`, calls service `0x46`, and loops over
+service `0x47` to populate 0x50-byte row buffers. `C688:E5DA` computes each
+destination as `0x5800 + 0x370 + 0x50 * ([8DB6] - 1)` and stores it in
+`[8E36]`.
+
+Inside the banked dispatcher, services `0x3D..0x45` all share
+`3000:4BCA -> 3000:5026`. The stub converts the service ID back to the
+one-based selected number. `3000:5026` rewinds/walks the current candidate list
+through `3000:685E` and `3000:687C`, selects the requested candidate, then
+calls `3000:6892` repeatedly to append related words from the auxiliary list.
+It inserts `", "` between returned strings and terminates the caller buffer.
+This is the banked side of the Thesaurus meanings string that the C688 UI later
+paginates.
+
+The main loop at `C688:E2EA` then displays and navigates those rows. Numeric
+selection stores the selected number in `[8DB6]`, shows the `to replace` /
+`CAN to meanings` prompts, calls the selected-number banked service, and enters
+the meanings display path. `C688:E672` initializes meaning pagination state in
+`[8DB8]` and `[8DB9]`; the formatter around `C688:E6C2..E720` copies
+comma-separated meaning text into display rows and wraps the marked text in
+`F2`/`F3` display controls. `C688:E228` later copies the text between those
+markers into `7F28`, copies the original query from `[8DBA]` to `7F68`, and
+calls `C688:DF42`, which is the likely replacement/apply step.
+
+Important Thesaurus state bytes:
+
+| Address | Working role |
+| ---: | --- |
+| `[8DBA]` | Current query word copied from the editor/current-word buffer. |
+| `[8DB5]` | Result count returned by service `0x46`. |
+| `[8DB6]` | Current result/selection number. |
+| `[8DB8]`, `[8DB9]` | Meaning pagination counters initialized by `C688:E672`. |
+| `[8E36]` | Pointer to the current 0x50-byte row buffer. |
+| `[8E38]` | Visible row/page index. |
+| `[8E39]` | Result-window paging state. |
+| `[8E3C]` | Boundary/marker flag set by next/previous page movement. |
+| `[8E3D]` | Copy of the result count. |
+
+The UI resource table base is file `0x559C0`; entry words at
+`0x559C4 + id*2` point to payloads relative to that table. The Thesaurus
+cluster currently maps as:
+
+| Resource ID | Payload | Visible text / role |
+| ---: | ---: | --- |
+| `0x76` | `0x573FE` | Main Thesaurus screen, including `===  T H E S A U R U S  ===`. |
+| `0x77` | `0x57441` | `Select No. or CAN to exit`. |
+| `0x78` | `0x5746F` | Selection prompt fragment. |
+| `0x79` | `0x57476` | `to replace`. |
+| `0x7A` | `0x5748A` | `*** NO SYNONYM IN DICTIONARY ***`. |
+| `0x7B` | `0x574B3` | `*** W A I T ***`. |
+| `0x7C` | `0x574CB` | `CAN to meanings`. |
+| `0x7D` | `0x574E4` | `for next screen`. |
+| `0x7E` | `0x574FF` | `for previous screen`. |
+| `0x7F` | `0x5751D` | `CAN to meannings` as spelled in ROM. |
+
+This strongly ties the editor Thesaurus to the same banked candidate-list
+services used by spelling/grammar, but it still does not prove whether the
+low slot-0 page data is thesaurus-specific, grammar-specific, or common engine
+data. The next useful target is the service `0x46` / `0x47` / selected-number
+handler chain inside the banked engine.
+
 This path now has two separate ROM data feeds. The compressed dictionary stream
 is read through `3000:660F`, while the active engine slot setup builds direct
 page descriptors for the lower mapped window at CPU `0x60000..0x7BFFF`.
@@ -230,6 +322,7 @@ working map:
 | `0x24`/`0x25` | `3000:4B88`/`3000:4B92 -> 3000:527C` | Selects engine slot `0` or `1` and rebuilds that slot's page-descriptor list. |
 | `0x28` | `3000:4B98 -> 3000:4F38 -> 3000:4666` | Resets parser/tokenizer state: clears `[6D80]`, `[6D7E]`, `[6DA4]`, `[6DA3]`, points `[6D7C]` at the word buffer `8AB4`, and sets parser state `[6D7A]=9`. |
 | `0x2A` | `3000:4BA4 -> 3000:4F44` | Grammar-mode word feed/check. Translates the caller's text to `8F00`, calls the parser at `3000:470A`, stores the parser result in `[966A]`, and re-runs `3000:470A` once if the result is `>= 0x40`. |
+| `0x3D..0x45` | `3000:4BCA -> 3000:5026` | Selected-result expansion for services produced by `AH=05` with caller `DL=1..9`. Rewinds/walks the active candidate list, then emits comma-separated related words by repeatedly calling `3000:6892`. |
 | `0x46` | `3000:4BDE -> 3000:50C4` | Result-list setup/count path used by the editor's `AH=05, DL=0x0A` call. It calls `3000:673A`, stores the count in `[8454]`, and caps the display count at nine items. |
 | `0x47` | `3000:4BE8 -> 3000:50F4` | Formats the next numbered result row into the caller buffer. It emits `"N) "`, copies the primary candidate text via `3000:677A`, appends spacing, then copies secondary text via `3000:67E8`. |
 
@@ -529,6 +622,9 @@ Service-facing helpers around `3000:5016..5216` wrap this candidate manager.
 `3000:5016` initializes the candidate state through `3000:66D4`. The following
 helpers expose candidate counts and formatted output by calling `3000:673A`,
 `3000:677A`, `3000:67E8`, `3000:685E`, `3000:687C`, and `3000:6892`.
+The selected-number helper `3000:5026` receives a one-based result number,
+rewinds the candidate cursor, advances to that candidate, and emits the
+candidate's related-word list as comma-separated text through `3000:6892`.
 
 Small helpers around `3000:677A..688F` copy the active candidate, move to the
 next/previous candidate, and return the current candidate's first or later

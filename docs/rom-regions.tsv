@@ -146,7 +146,7 @@ start	end	type	confidence	segment	label	notes
 0x534E1	0x53602	table	confirmed	C688	printer-text-handler-vector-table	Word vector table with many default C688:C6E8 entries and selected handlers for printer text/control cases.
 0x53602	0x53800	code	confirmed	C688	printer-text-formatting-tail	Continuation of printer text formatting and cursor/spacing helpers before the final character output tail.
 0x53800	0x53885	code	confirmed	C688	printer-character-output-tail	Final printer/character output helpers before the startup/menu resource block; C688:CFF1 calls the spacing flush helper, emits AL through C688:C82A, then clears CL.
-0x53885	0x58000	resource	confirmed	C688	wp-menu-and-ui-resources	Main application startup banner, menu, and word-processor UI strings/resources; display-script stream proper begins at file 0x53888 / C688:D008.
+0x53885	0x58000	mixed	confirmed	C688	wp-menu-ui-resources-and-linguistic-frontends	Main application startup banner, menu, word-processor UI strings/resources, and editor linguistic front-end code embedded before/around resource streams. Includes the Thesaurus entry at C688:E274 / file 0x54AF4 and the resource table at file 0x559C0; display-script stream proper begins at file 0x53888 / C688:D008.
 0x58000	0x5C8B6	font	confirmed	D800	font-runs	Main thin/bold/small/narrow/sparse font runs and width metadata.
 0x5C8B6	0x5C98E	font	confirmed	D800	glyph-stream-tail	Final 27 sparse-symbol glyph slots from the MAME-declared font stream; coherent 8-byte glyph slots end at file 0x5C98E.
 0x5C98E	0x5EC21	code	probable	DC98	dc98-core-menu-renderer-code	DC98 code begins at offset 000E; includes terminal/display helpers, date/time wrappers, and the horizontal icon menu renderer through DC98:22A0.

@@ -103,7 +103,7 @@ EA -> C688:ED15
 D2 -> C688:AD5C
 F7 -> C688:D8AF
 F5 -> C688:ED1A
-F8 -> C688:E274
+F8 -> C688:E274   ; observed editor Alt+8 / Thesaurus path
 03 -> C688:ECF6
 FF -> C688:EB15
 ```
@@ -125,7 +125,7 @@ Some targets are already useful anchors:
 | `C688:EF59` | `0x557D9` | Far-calls `DC98:4D08`; if the result is not `FFFF`, stores `AL` to `[7884]`. |
 | `C688:AD5C` | `0x515DC` | Opens `H:ADDRESS.ODB`, reads records, and prints/steps through address-book data. Strong organizer/address-book anchor. |
 | `C688:D8AF` | `0x5412F` | Large file/document-style flow with nested `C688:92DF` table. |
-| `C688:E274` | `0x54AF4` | Similar large file/document-style flow with nested `C688:92DF` table. |
+| `C688:E274` | `0x54AF4` | Editor Thesaurus entry. Calls `C688:E282`, draws resource `0x76`, then enters the Thesaurus list/meaning loop at `C688:E2EA`. See [`spell-engine.md`](spell-engine.md#editor-thesaurus-front-end). |
 
 `C688:ED84` embeds another table after `C688:ED87 call C688:92E2`, keyed by
 `[79A6]`:

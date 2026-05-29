@@ -119,9 +119,9 @@
     around `0xE4000..0xFF412` would wrap to this area in the reader's 20-bit
     segment math, but the confirmed stream API rejects positive seeks above
     `0x14000`.
-30. Trace the editor Thesaurus path (`Alt+8`). The string table already has
-    a thesaurus display-script cluster at file `0x57400`, including
-    `===  T H E S A U R U S  ===`, query prompts, and
-    `*** NO SYNONYM IN DICTIONARY ***` at `0x57491`. This path is a strong next
-    candidate for explaining whether slot-0 page data is grammar-only,
-    thesaurus-related, or shared linguistic engine data.
+30. Decode the Thesaurus service handlers behind the traced editor path. The
+    `F8` / observed Alt+8 entry now reaches `C688:E274`, draws resource `0x76`,
+    and uses banked services `0x46`, `0x47`, and `0x3C + selected-number`.
+    The remaining question is whether those handlers consume the slot-0 page
+    data as thesaurus-specific data, grammar-specific data, or common
+    linguistic engine data.

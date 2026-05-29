@@ -34,7 +34,7 @@ tools/rom2.py strings --start 0x40000 --end 0x80000 -n 8
 | `0x53A2F` | `0xD3A2F` | 36x34 visible 1bpp rounded button bitmap used by the first menu screen; stored as 5 bytes per row. |
 | `0x55B6C` | `0xD5B6C` | Start of clear/print/store/spell-check UI string cluster. |
 | `0x56B88` | `0xD6B88` | Spell-check run display-script record. The title is stored as spaced text: `S P E L L   C H E C K   R U N`. |
-| `0x57400` | `0xD7400` | Thesaurus UI display-script cluster. Includes `===  T H E S A U R U S  ===`, query/selection prompts, `*** NO SYNONYM IN DICTIONARY ***` at `0x57491`, wait text, and next/previous meaning-screen prompts. |
+| `0x57400` | `0xD7400` | Thesaurus UI display-script cluster. Resource IDs `0x76..0x7F` cover the main `===  T H E S A U R U S  ===` screen, selection prompts, `*** NO SYNONYM IN DICTIONARY ***` at `0x57491`, wait text, next/previous meaning-screen prompts, and the ROM typo `CAN to meannings`. See [`spell-engine.md`](spell-engine.md#editor-thesaurus-front-end). |
 | `0x57540` | `0xD7540` | Grammar-check UI cluster. Contains the grammar error prompts and bypass/cancel text. |
 | `0x57920` | `0xD7920` | Combined spell-and-grammar run display-script record. The title is stored as spaced text: `S P E L L   &   G R A M M A R  C H E C K   R U N`; the preceding font/control byte is `0x16`, matching the taller on-screen title. |
 | `0x57CEC` | `0xD7CEC` | DreamLink UI cluster. |
