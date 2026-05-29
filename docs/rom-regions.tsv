@@ -145,7 +145,15 @@ start	end	type	confidence	segment	label	notes
 0x53800	0x53885	code	confirmed	C688	printer-character-output-tail	Final printer/character output helpers before the startup/menu resource block; C688:CFF1 calls the spacing flush helper, emits AL through C688:C82A, then clears CL.
 0x53885	0x58000	resource	confirmed	C688	wp-menu-and-ui-resources	Main application startup banner, menu, and word-processor UI strings/resources; display-script stream proper begins at file 0x53888 / C688:D008.
 0x58000	0x5C8B6	font	confirmed	D800	font-runs	Main thin/bold/small/narrow/sparse font runs and width metadata.
-0x5C8B6	0x6EFC2	mixed	rough	DC98	organizer-wp-app-mixed	Organizer/WP application code mixed with resources; needs function-boundary pass.
+0x5C8B6	0x5C98E	font	confirmed	D800	glyph-stream-tail	Final 27 sparse-symbol glyph slots from the MAME-declared font stream; coherent 8-byte glyph slots end at file 0x5C98E.
+0x5C98E	0x5EC21	code	probable	DC98	dc98-core-menu-renderer-code	DC98 code begins at offset 000E; includes terminal/display helpers, date/time wrappers, and the horizontal icon menu renderer through DC98:22A0.
+0x5EC21	0x5F6AB	code	confirmed	DC98	wp-setup-menu-and-romcard-loader	WP setup/menu wrappers plus OTHERS -> SYSTEM/PREFERENCES/ROM CARD code, including the EROMCARD.X loader at DC98:2B75.
+0x5F6AB	0x61D43	code	confirmed	DC98	wp-file-copy-and-document-picker-code	WP OTHERS wrapper, FILE copy flow, directory-list builder, and shared document picker/list UI through DC98:53C2.
+0x61D43	0x633B8	code	probable	DC98	organizer-menu-and-calculator-display-code	Organizer top icon menu wrapper plus calculator numeric display/rendering helpers before the CALCULATOR app entry.
+0x633B8	0x6628D	code	probable	DC98	calculator-calendar-and-scheduler-prelude	Organizer CALCULATOR main flow and intervening organizer/calendar-style code before the SCHEDULER entry at DC98:990D.
+0x6628D	0x69D3B	code	probable	DC98	organizer-scheduler-worldclock-addressbook-code	SCHEDULER, WORLD CLOCK render/edit/alarm handlers, ADDRESS BOOK entry, and related organizer code through the next-alarm selector.
+0x69D3B	0x6DFA0	code	probable	DC98	alarm-terminal-file-wrapper-and-late-runtime-code	Next-alarm selector, terminal ECMA-48 parser/render helpers, DOS-like file wrappers, far-call thunks, and late runtime/helper code before resource tables.
+0x6DFA0	0x6EFC2	resource	probable	EE2C	late-dc98-display-resource-tables	Display/resource tables and bitmap-like payloads referenced by late DC98 code through EE2C/EE2F segment loads before the confirmed horizontal-menu icon resources.
 0x6EFC2	0x70500	resource	confirmed	EF70	comm-printer-romcard-icons	Communication, printer, ROM-card, and DreamLink menu icons/strings.
 0x70500	0x78DC0	mixed	rough	F050	typing-tutor-and-late-resources	Typing tutor lessons/resources and mixed late-ROM code/data.
 0x78DC0	0x78DD0	code	confirmed	F8DC	reset-trampoline	Reset trampoline writes bank ports 0x16/0x17 then jumps to C000:0000.
