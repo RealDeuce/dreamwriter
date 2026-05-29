@@ -86,7 +86,7 @@ uses it for code-only I/O sweeps.
 
 | File range | Physical range | First-pass notes |
 | --- | --- | --- |
-| `0x00000..0x3FFFF` | `0x80000..0xBFFFF` | Dictionaries, spelling/grammar data, character tables, and typing lesson text. The unresolved low mapped linguistic payload runs through file `0x1B413`, followed by a zero tail and erased padding to `0x1C000`. Visible strings include Merriam-Webster/Proximity copyrights at file `0x1C000`, the dictionary stream header at `0x1C100`, word lists around file `0x25987`, and character tables around file `0x3C096`. |
+| `0x00000..0x3FFFF` | `0x80000..0xBFFFF` | Dictionaries, spelling/grammar data, character tables, and typing lesson text. The low mapped payload runs through file `0x1B413`, followed by a zero tail and erased padding to `0x1C000`; `3000:527C` now confirms it is slot-0 engine page data by synthesizing a `6000:0000` descriptor and reading the first byte during slot setup, though the page format remains undecoded. Visible strings include Merriam-Webster/Proximity copyrights at file `0x1C000`, the dictionary stream header at `0x1C100`, word lists around file `0x25987`, and character tables around file `0x3C096`. |
 | `0x40000..0x467FF` | `0xC0000..0xC67FF` | Reset/startup code, interrupt stubs, low-level keyboard/LCD/power routines, diagnostic command code, terminal-mode strings, the three 48x40 battery/error icons at `0x44D30..0x44FFF`, and the dispatcher table at `0x45000`. |
 | `0x46800..0x46A1C` | `0xC6800..0xC6A1C` | `C688:` far-call entry area plus diagnostic display script and embedded help strings. |
 | `0x46A1D..0x46D12` | `0xC6A1D..0xC6D12` | C688 diagnostic/card wrappers, ROM-card execution helpers, inline display-script entry, and small state tables. |

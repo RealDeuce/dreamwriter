@@ -614,6 +614,17 @@ active auto-off reload value in `[6D31]`:
 The values match a 10 Hz idle countdown. The buzzer hardware path and auto-off
 power path are documented in [`hardware.md`](hardware.md).
 
+`DC98:2A83` is the WP OTHERS -> PREFERENCES screen. It draws the resource at
+`EF8E:0000` / file `0x6F8EE`, then edits two toggle rows:
+
+| UI row | Backing storage | Confirmed behavior |
+| --- | --- | --- |
+| `GRAMMAR CHECKING : { ON } { OFF }` | word `[6D55]` | Startup initializes this to `0`; the C688 spell/grammar front-end treats `[6D55] == 0` as grammar enabled. |
+| `STICKY SHIFT KEY : { ON } { OFF }` | byte `[6D24]` | Startup initializes this to `1`; keyboard code also references `[6D24]`. |
+
+The PREFERENCES handler commits both values only on the select key
+(`DI == 0xDA`); cancel-style exits leave the original backing values intact.
+
 ## Resource Lookup Service
 
 When `C688:76BF` is called with an 8-bit resource ID in `SI`, it calls

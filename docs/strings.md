@@ -33,13 +33,16 @@ tools/rom2.py strings --start 0x40000 --end 0x80000 -n 8
 | `0x53A1C` | `0xD3A1C` | Word processor menu string. |
 | `0x53A2F` | `0xD3A2F` | 36x34 visible 1bpp rounded button bitmap used by the first menu screen; stored as 5 bytes per row. |
 | `0x55B6C` | `0xD5B6C` | Start of clear/print/store/spell-check UI string cluster. |
-| `0x56B91` | `0xD6B91` | Spell check run screen. |
-| `0x57546` | `0xD7546` | Grammar check UI cluster. |
+| `0x56B88` | `0xD6B88` | Spell-check run display-script record. The title is stored as spaced text: `S P E L L   C H E C K   R U N`. |
+| `0x57400` | `0xD7400` | Thesaurus UI display-script cluster. Includes `===  T H E S A U R U S  ===`, query/selection prompts, `*** NO SYNONYM IN DICTIONARY ***` at `0x57491`, wait text, and next/previous meaning-screen prompts. |
+| `0x57540` | `0xD7540` | Grammar-check UI cluster. Contains the grammar error prompts and bypass/cancel text. |
+| `0x57920` | `0xD7920` | Combined spell-and-grammar run display-script record. The title is stored as spaced text: `S P E L L   &   G R A M M A R  C H E C K   R U N`; the preceding font/control byte is `0x16`, matching the taller on-screen title. |
 | `0x57CEC` | `0xD7CEC` | DreamLink UI cluster. |
 | `0x6F7A0` | `0xEF7A0` | `EROMCARD.X`; nearby `OTHERS` submenu effective table base is `0x6F7AC`, with labels beginning at `0x6F7C8`: `SYSTEM`, `PREFERENCES`, `T I M E`, `ROM CARD`. `DC98:2B75` loads this file from the candidate card drive, validates header words `0xA4F0/0x1997`, then calls the loaded far entry pointer at `[0xA4F4]`. |
 | `0x6F7EF` | `0xEF7EF` | ROM software-card strings: `ROM CARD`, `No ROM card is in the slot`, `Inadequate work memory`, `Can not open EROMCARD.X`, `Not enough memory`, `ROM Card ID error`. |
 | `0x6F823` | `0xEF823` | WP OTHERS -> SYSTEM setup resource begins with `AUTO POWER OFF PERIOD : { 2 } { 3 } { 5 } { 10 } { 15 } { 20 } { UNLIMITED }` and `(minutes)`. Handler `DC98:288A` stores the selected index in `[6D2F]`. |
 | `0x6F88A` | `0xEF88A` | WP OTHERS -> SYSTEM settings text: `POWER ON BUZZER : { TYPE 1 } { TYPE 2 } { TYPE 3 } { NO }`. Space previews the selected buzzer type through `C000:077C`; handler stores the setting in `[6D30]`. |
+| `0x6F8EE` | `0xEF8EE` | WP OTHERS -> PREFERENCES settings resource: `EDITOR PREFERENCES`, `GRAMMAR CHECKING : { ON } { OFF }`, and `STICKY SHIFT KEY : { ON } { OFF }`. Handler `DC98:2A83` stores grammar in `[6D55]` and sticky shift in `[6D24]`. |
 | `0x6FA78` | `0xEFA78` | Word processor horizontal icon menu cluster; effective table base is `0x6FA7C`, labels begin at `0x6FA98`: `EDIT TEXT`, `FILE`, `CLEAR TEXT`, `PRINTER`, `COMMUNICATE`, `OTHERS`. |
 | `0x6FAE8` | `0xEFAE8` | Word processor `FILE` submenu cluster; effective table base is `0x6FAEC`, labels begin at `0x6FB08`: `RECALL`, `STORE`, `DELETE`, `RENAME`, `COPY`, `INITIALIZE`. This is the PCMCIA SRAM-card storage workflow. |
 | `0x6FB58` | `0xEFB58` | Word processor `PRINTER` submenu cluster; effective table base is `0x6FB5C`, labels begin at `0x6FB78`: `PRINT OUT`, `SET UP 1`, `SET UP 2`. `SET UP 1` reaches `DC98:24DB`; `SET UP 2` reaches the shared RS-232 setup screen. |

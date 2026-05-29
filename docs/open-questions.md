@@ -106,13 +106,22 @@
     ROM read/branch on port `0x20` has been found. Hardware tracing should check
     whether a fixture strap, reset-vector overlay, or external serial/boot mode
     can select this monitor.
-29. Identify the real consumer, if any, for the low mapped linguistic payload at
-    file `0x00000..0x1B413`. The banked linguistic wrapper maps it at CPU
-    `0x60000..0x7B412`, followed by a short zero tail and then `0xFF` padding
-    through CPU `0x7BFFF`. The confirmed dictionary reader at `3000:660F`
-    can address this area in principle if handed a negative logical stream
-    offset, but the known seek callers use non-negative offsets so far. The
-    erased block's position immediately before logical offset zero also argues
-    against a simple backwards-growing dictionary prelude. Because the product
-    supports grammar checking as well as spelling, this range may hold grammar
-    or other linguistic tables rather than dictionary words.
+29. Decode the low mapped engine page format at file `0x00000..0x1B413`. The
+    banked linguistic wrapper maps it at CPU `0x60000..0x7B412`, followed by a
+    short zero tail and then `0xFF` padding through CPU `0x7BFFF`. The direct
+    consumer is now known: `3000:527C` builds slot-0 page descriptors beginning
+    at `6000:0000` and immediately reads the first byte of file `0x00000`.
+    What remains unknown is the page record format and which parser/thesaurus
+    routines consume each page after setup. The confirmed dictionary reader at
+    `3000:660F` can also address this area in principle if handed a
+    signed-negative logical stream offset around `-0x1CFF0..-0x1BDE`, but the
+    known seek callers use non-negative offsets so far. Large positive offsets
+    around `0xE4000..0xFF412` would wrap to this area in the reader's 20-bit
+    segment math, but the confirmed stream API rejects positive seeks above
+    `0x14000`.
+30. Trace the editor Thesaurus path (`Alt+8`). The string table already has
+    a thesaurus display-script cluster at file `0x57400`, including
+    `===  T H E S A U R U S  ===`, query prompts, and
+    `*** NO SYNONYM IN DICTIONARY ***` at `0x57491`. This path is a strong next
+    candidate for explaining whether slot-0 page data is grammar-only,
+    thesaurus-related, or shared linguistic engine data.

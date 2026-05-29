@@ -128,6 +128,162 @@ and `0x9662` is in the writable part of the same `3C00` segment.
 | `3C00:8EEC` | Mode flag used by service routines around `3000:4DA8`. |
 | `3C00:966C` | Callback/function pointer invoked by parser path at `3000:0224`. |
 
+## Editor Grammar Preference
+
+WP -> OTHERS -> PREFERENCES edits the grammar-checking option at `[6D55]`.
+`DC98:2A83` / file `0x5F403` draws the `EDITOR PREFERENCES` resource at
+`EF8E:0000`, loads `[6D55]` into a local word, and stores it back on accept.
+The UI text is `GRAMMAR CHECKING : { ON } { OFF }`; startup initializes
+`[6D55]` to zero at `C000:484F`, so the index encoding appears to be
+`0 == ON`, `1 == OFF`.
+
+The spell/grammar run path checks the same byte in the C688 linguistic
+front-end:
+
+```asm
+C688:ED32  mov byte [8E3E],01
+C688:ED36  call C688:936A
+C688:ED39  cmp dl,01
+C688:ED3E  cmp byte [6D55],00
+C688:ED43  jnz C688:ED56
+C688:ED45  mov byte [8E3E],00
+C688:ED4A  call C688:EF24
+```
+
+This confirms the editor preference is not just a UI setting. When the service
+call reports `DL == 1`, `[6D55] == 0` enables the grammar side of the combined
+spell/grammar pass; nonzero skips that setup. This does not yet identify a
+gate for the low mapped engine page data at file `0x00000..0x1B413`: the
+confirmed `[6D55]` references are startup defaulting, Preferences read/write,
+and this C688 front-end branch, not a direct guard around `3000:660F` or the
+dictionary stream offset setup.
+
+## Editor Spell/Grammar Front-End
+
+The editor UI reaches the banked service through `C688:936A`, a far wrapper for
+`C000:1712`. In that dispatcher, `AH=04` jumps directly to `C000:18A1`, so the
+current `DL` is the banked service ID. `AH=05` first goes through `C000:189E`,
+which adds `0x3C` to `DL`, then calls `C000:18A1`.
+
+This makes the combined spelling/grammar UI at `C688:ED1F` a concrete service
+front-end rather than just a display loop:
+
+```asm
+C688:ED2D  mov byte [8E3E],01
+C688:ED32  mov dl,23
+C688:ED34  mov ah,04
+C688:ED36  call C688:936A      ; banked service 0x23
+C688:ED39  cmp dl,01
+...
+C688:ED45  mov byte [8E3E],00 ; grammar pass
+C688:ED4A  call C688:EF24
+```
+
+`C688:EF24` calls `C688:EF31`, which seeds `DL=0x28` and enters the shared
+word-check helper. When `[8E3E] == 0` that helper calls banked service `0x28`
+directly; otherwise it follows the spelling-mode wrapper path. The main
+checker loop at `C688:D283` uses the same helper with service `0x16` in spelling
+mode and `0x2A` in grammar mode:
+
+```asm
+C688:D832  mov dl,16
+C688:D837  cmp byte [8E3E],00
+C688:D83B  mov dl,2A
+C688:D840  call C688:D84F
+```
+
+Other concrete banked service calls in the editor spell/grammar cluster:
+
+| C688 call site | Service ID | Notes |
+| --- | ---: | --- |
+| `C688:D32D` | `0x32` | Sent when the editor front-end accepts a space/separator-like token. |
+| `C688:D37E` | `0x1C` | Conditional path when the word buffer starts with `0x28` / `(`. |
+| `C688:D394` | `0x30` | Follow-up when the front-end's `0x8DA8` flag bit 2 was set. |
+| `C688:D85B` | current `DL` | Direct call in grammar mode from the shared word-check helper. |
+| `C688:D871` | current `DL` | Spelling-mode call after UI/status update. |
+| `C688:D882`, `C688:D890` | `0x04` | Retry/shorten path used by the spelling-mode helper. |
+| `C688:D9E4`, `C688:DA3E` | `0x09` | Initializes or refreshes a result/count used by the suggestion browser. |
+| `C688:DB71` | `0x08` | Query using text extracted from the marked display buffer. |
+| `C688:DB9B`, `C688:DC0E` | `0x09` | Re-enters the result/count path while navigating suggestions. |
+| `C688:DC61`, `C688:DD84` | `0x10` or state byte `[8DB7]` | Fetches suggestion/display text into `8DDB`. |
+| `C688:DDA0`, `C688:E207` | `0x11` | Advances through fetched suggestion/display text. |
+| `C688:E11B` | `0x12` or `0x13` | Branches on `[8E35]`, likely selecting result class/view. |
+| `C688:E127` | `0x18` | Used in the `[8E35] == 0x39` special path. |
+| `C688:E131` | `0x12` | Companion call in the same special path. |
+| `C688:E13C` | `0x19` | Companion call in the same special path. |
+| `C688:E403` | `0x3C + [8DB6]` | `AH=05`; selects or expands the numbered candidate currently shown. |
+| `C688:E552` | `0x46` | `AH=05`, `DL=0x0A`; returns a count-like value for a result list. |
+| `C688:E59A` | `0x47` | `AH=05`, `DL=0x0B`; fills 0x50-byte result records. |
+| `C688:F0A6` | `0x07` | Error/status query after `C688:EF24`. |
+
+This path now has two separate ROM data feeds. The compressed dictionary stream
+is read through `3000:660F`, while the active engine slot setup builds direct
+page descriptors for the lower mapped window at CPU `0x60000..0x7BFFF`.
+
+The first decode pass through the editor-facing service handlers gives this
+working map:
+
+| Service ID | Handler | Working role |
+| ---: | --- | --- |
+| `0x16` | `3000:4B4C -> 3000:4EDC` | Spelling-mode parse/check wrapper. Translates the caller's text into the engine alphabet at `8F00`, sets `[8EEC]=1`, initializes the parser record through `3000:193A`, appends the word through `3000:1990`, then drives the parser/checker through `3000:1A16`. |
+| `0x23` | `3000:4B80` | Returns `[6004] + 1`; this is a state/index query used before optionally entering the grammar pass. |
+| `0x24`/`0x25` | `3000:4B88`/`3000:4B92 -> 3000:527C` | Selects engine slot `0` or `1` and rebuilds that slot's page-descriptor list. |
+| `0x28` | `3000:4B98 -> 3000:4F38 -> 3000:4666` | Resets parser/tokenizer state: clears `[6D80]`, `[6D7E]`, `[6DA4]`, `[6DA3]`, points `[6D7C]` at the word buffer `8AB4`, and sets parser state `[6D7A]=9`. |
+| `0x2A` | `3000:4BA4 -> 3000:4F44` | Grammar-mode word feed/check. Translates the caller's text to `8F00`, calls the parser at `3000:470A`, stores the parser result in `[966A]`, and re-runs `3000:470A` once if the result is `>= 0x40`. |
+| `0x46` | `3000:4BDE -> 3000:50C4` | Result-list setup/count path used by the editor's `AH=05, DL=0x0A` call. It calls `3000:673A`, stores the count in `[8454]`, and caps the display count at nine items. |
+| `0x47` | `3000:4BE8 -> 3000:50F4` | Formats the next numbered result row into the caller buffer. It emits `"N) "`, copies the primary candidate text via `3000:677A`, appends spacing, then copies secondary text via `3000:67E8`. |
+
+`3000:193A` initializes the parser record at `93CC` with primary and secondary
+word buffers at `90BE` and `90E2`; `[84D6]` points at the current record and
+`[8AD6]` is the current append pointer. `3000:1990` appends translated bytes to
+that record and then dispatches through the active engine table at `[9360]+0x10`.
+`3000:1A16` drives the active table callbacks at `[9360]+0x0A`, `+0x0C`,
+`+0x0E`, and `+0x10` until a final status is reached.
+
+`3000:527C` is the first confirmed reader for the low mapped payload. It stores
+the selected slot in `[6004]`, then calls `3000:003D(slot,index)` for indexes
+`0..7`. That helper returns an offset/segment pair:
+
+| Slot | Index range | Returned descriptors | Mapped ROM file pages |
+| ---: | ---: | --- | ---: |
+| `0` | `0..7` | `6000:0000`, `6400:0000`, ... `7C00:0000` | `0x00000`, `0x04000`, ... `0x1C000` |
+| `1` | `0..7` | `9000:0000`, `9400:0000`, ... `AC00:0000` | `0x30000`, `0x34000`, `0x38000`, and `0x3C000` for the descriptors that remain inside the wrapper's `0x14` ROM window; `A000:0000` and above are outside the remapped ROM windows during this call. |
+
+The descriptors are copied into a runtime list at `832A + slot * 0x32`, and
+`[9104]` is later set to that list by `3000:18EC`. During setup, the first
+descriptor is immediately dereferenced:
+
+```asm
+3000:52DD  les bx,[bx]
+3000:52DF  mov al,[es:bx]
+```
+
+For slot `0`, that reads byte `0x04` from `6000:0000`, which is file
+`0x00000`. The byte is split into high/low nibbles and controls whether a
+second group of eight descriptors is copied:
+
+```asm
+3000:530D  and ax,00F0
+3000:5312  shr ax,cl
+3000:5317  and cx,000F
+3000:531A  dec cx
+3000:531D  jl  3000:52B2
+```
+
+So the low block is no longer merely mapped by the spell/grammar wrapper; it is
+page data for slot `0`. The actual page format remains undecoded. The active
+callback base is a separate table: `3000:18EC` loads `[9360]` from
+`3C00:1604 + slot * 2`, giving callback bases `3C00:0CAE` for slot `0` and
+`3C00:219A` for slot `1`, then stores the page-list pointer in `[9104]`.
+The startup/init path also selects slot `0`: service `0x00` reaches
+`3000:4CC2 -> 3000:4D6A -> 3000:4F76 -> 3000:527C(0)`, and service `0x01`
+enters at `3000:4D6A`.
+
+The direct references to stream cursor words `[9682]` and `[9684]` are still
+limited to the stream reset/read/seek helpers at `3000:65FE`, `3000:660F`, and
+`3000:66AE`; the newly confirmed low-block consumer is this page-descriptor
+path, not the positive dictionary stream API.
+
 ## Dictionary ROM Windows
 
 During `C000:18A1`, the linguistic wrapper maps several ROM windows before
@@ -136,11 +292,12 @@ calling `3000:0000`:
 | CPU range | Bank port/value | ROM file range | Confirmed use |
 | ---: | --- | ---: | --- |
 | `0x30000..0x3FFFF` | `0x11 = 0x02` | `0x30000..0x3FFFF` | Banked spell code. |
-| `0x60000..0x7B412` | `0x13 = 0x03` | `0x00000..0x1B412` | Dense mapped payload; no confirmed reader yet. |
+| `0x60000..0x7B412` | `0x13 = 0x03` | `0x00000..0x1B412` | Slot-0 engine page data. `3000:527C` synthesizes descriptors beginning at `6000:0000` and reads the first byte of this window during slot setup. |
 | `0x7B413..0x7B41F` | `0x13 = 0x03` | `0x1B413..0x1B41F` | All-zero tail/padding after the dense payload. |
 | `0x7B420..0x7BFFF` | `0x13 = 0x03` | `0x1B420..0x1BFFF` | All `0xFF` padding before the copyright block. |
 | `0x7C000..0x7FFFF` | `0x13 = 0x03` | `0x1C000..0x1FFFF` | Copyright/padding at logical stream offset `0`; dictionary header starts at offset `0x100`. |
 | `0x80000..0x8FFFF` | `0x14 = 0x02` | `0x20000..0x2FFFF` | Continuation of the confirmed dictionary stream. |
+| `0x90000..0x9FFFF` | `0x14 = 0x02` | `0x30000..0x3FFFF` | Banked service code and `3C00` constants are also visible here; slot-1 descriptors from `3000:527C` point at this range. |
 
 The key reader is `3000:660F`. It treats `[3C00:9684]:[3C00:9682]` as a
 signed-capable logical byte offset, then computes a source `DS:SI` pair from
@@ -156,13 +313,21 @@ loaded into `DS`:
 3000:6681  rep movsw
 ```
 
-Logical offset `0` maps to CPU `0x7C000`, file `0x1C000`. Negative logical
-offsets are possible at the arithmetic level: offset `-0x1C000` maps back to
-CPU `0x60000`, file `0x00000`, and offsets through about `-0xBED` cover the
-dense low mapped payload. `3000:66AE` only rejects seeks above `0x14000`; it
-does not reject negative offsets. That means the low mapped payload is
-reachable through the normal stream reader if a caller intentionally seeds a
-negative logical offset.
+Logical offset `0` maps to CPU `0x7C000`, file `0x1C000`. The segment math is
+not a simple flat `0x7C000 + offset`: it keeps a 15-bit intra-segment offset and
+folds higher bits into `DS`, so the 20-bit physical address can wrap. If handed
+large positive offsets, the same math would wrap back to the low mapped payload
+at about `0xE4000..0xFF412`. However, `3000:66AE` and the read-side bounds
+check in `3000:660F` reject normal positive seeks above `0x14000`, so that
+wraparound path is not available through the confirmed stream API.
+
+Signed-negative logical offsets are still possible at the arithmetic level
+because the bounds checks use signed comparisons against high word `0x0001`.
+With the exact segment construction, the low mapped payload begins at logical
+offset about `-0x1CFF0`: that maps to CPU `0x60000`, file `0x00000`. The dense
+payload is covered through about `-0x1BDE`, mapping to file `0x1B412`. That
+means the low mapped payload is reachable through the normal stream reader only
+if a caller intentionally seeds a signed-negative logical offset in that range.
 
 The unresolved part is therefore the caller, not the addressing mechanism. The
 known seek callers inspected so far use non-negative offsets derived from the
@@ -172,11 +337,13 @@ natural negative-offset prelude to the dictionary stream: the unused `0xFF`
 block is immediately before logical offset zero, whereas a backwards-growing
 prelude would more naturally leave erased space at the low end of the mapped
 window.
-The `0x00000..0x1B413` former `banked-dictionary-data` label remains a mapped
-payload, not a decoded format. It is followed by a 13-byte zero tail at
-`0x1B413..0x1B420`, then all-`0xFF` erased padding through `0x1C000`. Since the
-product also has grammar checking, this low mapped payload should be treated
-as possible grammar/linguistic data, not only a spelling dictionary.
+The `0x00000..0x1B413` former `banked-dictionary-data` label is now confirmed
+as slot-0 engine page data, but not as a decoded format. It is followed by a
+13-byte zero tail at `0x1B413..0x1B420`, then all-`0xFF` erased padding through
+`0x1C000`. Because the confirmed reader is the banked spell/grammar service and
+the editor also exposes a thesaurus path, the broad role is linguistic data,
+but the exact contents could include grammar, spelling, thesaurus, or common
+engine tables.
 
 The `0x1C000..0x30000` stream was also scanned as data for references back into
 `0x00000..0x1B413`. Individual byte patterns can look like low absolute
@@ -292,7 +459,21 @@ simple `mov r16,0x6000..0x7BFF` / `mov sreg,r16` load sequence in the banked
 `3000` code. The low payload has much less zero density than the confirmed
 dictionary stream (`~1.3%` versus `~8.5%` in the compressed word region), which
 argues against treating it as just another page of the same dictionary stream
-without a confirmed reader.
+without a confirmed reader. A plain-code sanity check also argues against
+treating it as ordinary V20 code: representative disassembly windows decode as
+random-looking instruction soup with frequent privileged/interrupt/FPU-style
+operations, far returns with arbitrary immediates, and implausible branch
+targets rather than stable function structure.
+
+Simple obfuscation checks have not explained the block either. The low payload
+has entropy around `7.80` bits/byte, higher than the confirmed `3000` code
+region (`~6.85`) and the confirmed dictionary stream (`~7.42`). Single-byte
+XOR/add/sub transforms do not reveal text, and repeating-key column checks for
+small powers and common periods still look high-entropy rather than code-like
+or text-like. That does not rule out encryption or a custom packed format, but
+the sharp boundary at file `0x1B413` followed by a short zero tail and erased
+`0xFF` padding argues for a deliberately bounded payload rather than random
+fall-through code.
 
 Low-level helpers in the late part of the `3000` bank are now separated in the
 ROM map:
