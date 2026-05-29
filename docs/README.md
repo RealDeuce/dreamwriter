@@ -16,6 +16,7 @@ Start here:
 | [`wp-editor-heap.md`](wp-editor-heap.md) | Word-processor live document heap, block allocator, and cross-application use evidence. |
 | [`diagnostics.md`](diagnostics.md) | Diagnostic chord, command loop, banner/help strings, and warm IRQ entry. |
 | [`hardware.md`](hardware.md) | Keyboard, LCD/framebuffer, I/O ports, and low RAM state seen so far. |
+| [`hardware-confirmation.md`](hardware-confirmation.md) | Board-inspection checklist for confirming clocks, devices, ports, and status wiring. |
 | [`fonts.md`](fonts.md) | Main glyph table, candidate width table, and font variants. |
 | [`bitmaps.md`](bitmaps.md) | Confirmed LCD bitmap icons and candidate UI/icon resources. |
 | [`strings.md`](strings.md) | String/resource landmarks for application-level mapping. |

@@ -172,7 +172,8 @@ Perhaps power on/off related??
 
 
 IRQ 0xF9: (T400: C049A)
-Purpose unknown. IRQ handler clear bit 0 of 6DA9.
+Timer wake source. Firmware arms it by writing a count to port 0x53; the
+handler clears bit 0 of 6DA9.
 
 
 IRQ 0xFA: (T400: C04AE)
@@ -316,10 +317,11 @@ private:
 	void buzzer_high_w(u8 data);
 	void buzzer_gate_w(u8 data);
 	void buzzer_update_clock();
+	void timer_count_w(u8 data);
 
 	void nakajies_palette(palette_device &palette) const;
 	TIMER_DEVICE_CALLBACK_MEMBER(kb_timer);
-	TIMER_DEVICE_CALLBACK_MEMBER(periodic_timer);
+	TIMER_CALLBACK_MEMBER(f9_timer);
 	void nakajies_io_map(address_map &map) ATTR_COLD;
 	void nakajies_map(address_map &map) ATTR_COLD;
 
@@ -338,6 +340,7 @@ private:
 	memory_bank_array_creator<8> m_rambank;
 	required_memory_region m_rom_region;
 
+	emu_timer *m_f9_timer = nullptr;
 	u8 m_irq_enabled = 0;
 	u8 m_irq_active = 0;
 	u8 m_lcd_memory_start = 0;
@@ -589,6 +592,12 @@ void nakajies_state::buzzer_gate_w(u8 data)
 }
 
 
+void nakajies_state::timer_count_w(u8 data)
+{
+	m_f9_timer->adjust(data ? attotime::from_ticks(data, X301 / 20480) : attotime::never);
+}
+
+
 u8 nakajies_state::keyboard_r()
 {
 	return (m_matrix > 0x00) ? m_port_row[m_matrix - 1]->read() : 0;
@@ -604,6 +613,7 @@ void nakajies_state::nakajies_io_map(address_map &map)
 	map(0x0050, 0x0050).w(FUNC(nakajies_state::buzzer_low_w));
 	map(0x0051, 0x0051).w(FUNC(nakajies_state::buzzer_high_w));
 	map(0x0052, 0x0052).w(FUNC(nakajies_state::buzzer_gate_w));
+	map(0x0053, 0x0053).w(FUNC(nakajies_state::timer_count_w));
 	map(0x0060, 0x0060).rw(FUNC(nakajies_state::irq_enable_r), FUNC(nakajies_state::irq_enable_w));
 	map(0x0090, 0x0090).rw(FUNC(nakajies_state::irq_clear_r), FUNC(nakajies_state::irq_clear_w));
 	map(0x00a0, 0x00a0).r(FUNC(nakajies_state::unk_a0_r));
@@ -783,6 +793,8 @@ void nakajies_state::machine_start()
 			m_rambank[i]->configure_entries(j, m_ram_size / 0x20000, &m_ram_base[0], 0x20000);
 	}
 
+	m_f9_timer = timer_alloc(FUNC(nakajies_state::f9_timer), this);
+
 	save_item(NAME(m_irq_enabled));
 	save_item(NAME(m_irq_active));
 	save_item(NAME(m_lcd_memory_start));
@@ -809,6 +821,7 @@ void nakajies_state::machine_reset()
 	m_buzzer_high = 0;
 	std::fill(std::begin(m_bank_select), std::end(m_bank_select), 0);
 	m_centronics_busy = 0;
+	m_f9_timer->adjust(attotime::never);
 	m_beeper->set_clock(0);
 	m_beeper->set_state(0);
 
@@ -862,9 +875,9 @@ TIMER_DEVICE_CALLBACK_MEMBER(nakajies_state::kb_timer)
 }
 
 
-TIMER_DEVICE_CALLBACK_MEMBER(nakajies_state::periodic_timer)
+TIMER_CALLBACK_MEMBER(nakajies_state::f9_timer)
 {
-	set_irq(0x40); // IRQ vector 0xf9: short periodic wake/acknowledge handler.
+	set_irq(0x40); // IRQ vector 0xf9: short timer wake/acknowledge handler.
 }
 
 
@@ -973,8 +986,7 @@ void nakajies_state::nakajies210(machine_config &config)
 	m_pcmcia->bvd2().set(FUNC(nakajies_state::pcmcia_battery_voltage_2_w));
 	m_pcmcia->wp().set(FUNC(nakajies_state::pcmcia_write_protect_w));
 
-	TIMER(config, "kb_timer").configure_periodic(FUNC(nakajies_state::kb_timer), attotime::from_hz(250));
-	TIMER(config, "periodic_timer").configure_periodic(FUNC(nakajies_state::periodic_timer), attotime::from_hz(10));
+	TIMER(config, "kb_timer").configure_periodic(FUNC(nakajies_state::kb_timer), attotime::from_hz(X301 / 20480));
 
 	m_ram_size = 128 * 1024;
 }

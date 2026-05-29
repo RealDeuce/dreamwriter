@@ -82,6 +82,7 @@ the command reference.
 | [`docs/wp-editor-heap.md`](docs/wp-editor-heap.md) | Word-processor live document heap, block allocator, and cross-application use evidence. |
 | [`docs/diagnostics.md`](docs/diagnostics.md) | Diagnostic chord, command loop, banner/help strings, and warm IRQ entry. |
 | [`docs/hardware.md`](docs/hardware.md) | Keyboard, LCD/framebuffer, I/O ports, serial, printer, PCMCIA, sound, and low RAM state. |
+| [`docs/hardware-confirmation.md`](docs/hardware-confirmation.md) | Board-inspection checklist for confirming clocks, devices, ports, and status wiring. |
 | [`docs/fonts.md`](docs/fonts.md) | Main glyph table, width table candidates, and font variants. |
 | [`docs/bitmaps.md`](docs/bitmaps.md) | Confirmed LCD bitmap icons and candidate UI/icon resources. |
 | [`docs/strings.md`](docs/strings.md) | String/resource landmarks for application-level mapping. |

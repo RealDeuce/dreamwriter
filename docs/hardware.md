@@ -25,10 +25,24 @@ The firmware stores level state, not just key edges. Normal key repeat is
 handled higher up using state around `6EB0..6EB3`.
 
 MAME models a 10-row, active-high keyboard matrix. The periodic keyboard timer
-runs at 250 Hz. It increments `m_matrix`, asserts IRQ bit `0x10` for row scans
-(vector `FB`), and after row 9 resets `m_matrix` to zero and asserts IRQ bit
-`0x20` (vector `FA`). Reading port `0xB0` returns `ROW[m_matrix - 1]`, or zero
-when `m_matrix` is zero.
+currently runs at `X301 / 20480`, or about `960 Hz` from the known 19.66 MHz
+crystal.
+It increments `m_matrix`, asserts IRQ bit `0x10` for row scans (vector `FB`),
+and after row 9 resets `m_matrix` to zero and asserts IRQ bit `0x20` (vector
+`FA`). Reading port `0xB0` returns `ROW[m_matrix - 1]`, or zero when
+`m_matrix` is zero.
+
+The keyboard scan source appears separate from the `F9` idle/wake timer latch
+at port `0x53`, but MAME currently models both as derived from the same
+`X301 / 20480` clock. The rate is inferred from the firmware repeat counters
+and tied to a plausible CPU/crystal divider rather than the RTC. A full keyboard
+scan consumes ten row IRQs plus the scan-cycle/reset IRQ, so about `960 Hz`
+produces roughly 87 full scans/second. The repeat path seeds `[6EB3]` with
+`0x41` on a new keypress and reloads it with `0x08` after each repeat, giving
+about a 0.75 second initial delay and about 11 repeats/second. The previous
+250 Hz row timer
+stretched the initial repeat delay to almost three seconds, which made held keys
+in the WP editor appear not to repeat.
 
 | Row | Bits |
 | ---: | --- |
@@ -118,7 +132,8 @@ C000:08A2  retf
 | `0x30` | Control latch mirrored at `[6D94]`. Diagnostic `T`/`N` toggles bit `0x80`; RS-232 setup writes bit `0x10` plus inverted baud index in bits `0..2`; Centronics output pulses bit `0x20` for `-STB`. |
 | `0x40` | Centronics parallel data output latch. Startup/idle writes `0xFF`. |
 | `0x50..0x52` | Buzzer/tone counter. Firmware writes a 16-bit divisor to `0x50`/`0x51`, writes `0x7F` to `0x52` to enable, and writes `0xFF` to `0x52` to disable. |
-| `0x60` | IRQ enable register in MAME; firmware mirrors the written value at `[6D4F]`. The idle wait at `C000:4A94` writes `[6D4F]` here immediately before `sti; hlt`; Centronics output clears bit `0x40` while ACK-driven output is active and sets it when the buffer empties. |
+| `0x53` | Timer latch for IRQ `F9`. Firmware writes small counts through `C000:0B3C`; observed values are `0x0A`, `0x56`, and `0x60`. Current MAME models this as a one-shot driven by `X301 / 20480`, so `0x60` expires at almost exactly 10 Hz. The latch value currently looks like a count only, not an interrupt-vector selector. |
+| `0x60` | IRQ/source control register in MAME; firmware mirrors the written value at `[6D4F]`. The idle wait at `C000:4A94` writes `[6D4F]` here immediately before `sti; hlt`; Centronics output clears bit `0x40` while ACK-driven output is active and sets it when the buffer empties. The `F9` timer arm helper clears bit `0x02` here, while its disarm helper sets bit `0x02`, so this port is probably more than a plain IRQ mask. |
 | `0x61` | Keyboard idle path writes `0xFE`. |
 | `0x70` | Warm diagnostic IRQ path writes `0x01` before halting in a loop. |
 | `0x90` | IRQ active/source clear register in MAME. Bit `n` clears vector `FF-n`; confirmed uses include bit 7 for vector `F8`, bit 5 for keyboard scan-cycle/reset vector `FA`, bit 4 for keyboard row-scan vector `FB`, bit 3 for serial receive vector `FC`, bit 1 for Centronics ACK vector `FE`, and bit 0 for vector `FF`. |
@@ -580,13 +595,13 @@ stores the selected index in `[6D2F]`, then maps it through a word table at
 | `20` minutes | `5` | `0x2EE0` / `12000` |
 | `UNLIMITED` | `6` | `0x0000` |
 
-The values match a 10 Hz idle countdown. The active countdown lives in
+The values match a nominal 10 Hz idle countdown. The active countdown lives in
 `[680B]`; idle paths reload it from `[6D31]` and decrement it while checking
 for keyboard/activity and battery-warning work. The decrement is foreground
-idle-loop code after `sti; hlt` returns, not code inside an interrupt handler;
-the interrupt source that wakes `hlt` still needs hardware confirmation. When
-`[680B]` reaches zero and `[6D31] != 0`, the firmware enters a retained
-power-transition path:
+idle-loop code after `sti; hlt` returns, not code inside an interrupt handler.
+The wake source appears to be a programmable timer latch at port `0x53`, not a
+free-running RTC interrupt. When `[680B]` reaches zero and `[6D31] != 0`, the
+firmware enters a retained power-transition path:
 
 ```asm
 C000:49C2  dec word [680B]
@@ -621,6 +636,68 @@ C000:4AFC  call C000:4C39  ; clear warning overlay
 C000:4B0F  call C000:5915  ; translate key/event
 ```
 
+The timer arm/disarm helpers are:
+
+```asm
+C000:0B3C  or   byte [6DA9],01
+C000:0B41  and  byte [6D4F],FD
+C000:0B46  mov  al,[6D4F]
+C000:0B49  out  60,al
+C000:0B4B  mov  al,ah
+C000:0B4D  out  53,al       ; arm timer count
+C000:0B4F  ret
+
+C000:0B50  and  byte [6DA9],FE
+C000:0B55  or   byte [6D4F],02
+C000:0B5A  mov  al,[6D4F]
+C000:0B5D  out  60,al       ; mask/disarm timer IRQ path
+C000:0B5F  ret
+```
+
+Direct callers arm counts `0x0A`, `0x56`, and `0x60`. The main keyboard idle
+loop uses `0x60`; if the timer input is the same `X301 / 20480` rate used for
+the keyboard scan model, `0x60` ticks expire at almost exactly 100 ms with the
+current `X301 = 19.66 MHz` MAME constant. If the real crystal is the common
+`19.6608 MHz` value, then `X301 / 20480 = 960 Hz` exactly and `0x60` produces
+exactly 10 Hz. This is a more plausible hardware-shaped divider than the earlier
+`X301 / 20000` approximation.
+
+The alternate idle path at `C000:4974` splits the same nominal tick into two
+timer writes:
+
+```asm
+C000:498E  call C000:0B50   ; clear/disarm previous F9 state
+C000:4991  mov  ah,0x0A
+C000:4993  call C000:0B3C   ; short foreground/service slice
+...
+C000:49C2  dec  word [680B] ; auto-off countdown tick
+...
+C000:49D6  mov  ah,0x56
+C000:49D8  call C000:0B3C   ; long remainder before next entry
+```
+
+`0x0A + 0x56 = 0x60`, so these appear to be two phases of the same idle
+cadence rather than separate clock rates.
+
+There is no current ROM evidence that the value written to `0x53` selects the
+interrupt vector. All direct `out 0x53` writes go through `C000:0B3C`, and all
+observed wait loops track the same software pending bit, `[6DA9] bit `0x01`.
+Only the `F9` handler and the explicit disarm helper clear that bit:
+
+```asm
+C000:049A  ; IRQ F9
+  out 90,40
+  and byte [6DA9],FE
+
+C000:0B50  ; explicit disarm
+  and byte [6DA9],FE
+```
+
+If `0x53` can route to another interrupt, that interrupt has not yet been found
+clearing the matching software state. The stronger selector/control clue is
+port `0x60` / `[6D4F]` bit `0x02`: `C000:0B3C` clears it before writing the
+timer latch, while `C000:0B50` sets it when disarming.
+
 Two short IRQ handlers are plausible simple `hlt` wake sources:
 
 ```asm
@@ -638,16 +715,12 @@ C000:0724  ; IRQ FD, likely USART transmit-ready
 ```
 
 `F9` is especially interesting because the idle loops test `[6DA9]` bit `0x01`
-near the auto-off decrement sites. The actual periodic source and frequency
-still need hardware confirmation. As an emulator working hypothesis, driving
-IRQ `F9` at 10 Hz should wake `hlt` often enough for the auto-off countdown and
-time-display refresh paths without pretending that keypresses are occurring.
-
-This matches an observed MAME behavior change: before adding a 10 Hz IRQ `F9`
-source, the Organizer WORLD CLOCK seconds display advanced only when keypresses
-woke the CPU. With the 10 Hz source present, seconds advance normally, and the
-selected home-city field blinks at a sub-second UI rate, likely divided down
-from the same periodic wake source. The exact blink divisor has not been traced.
+near the auto-off decrement sites. MAME originally modeled this as a
+free-running 10 Hz source, which was enough to make the Organizer WORLD CLOCK
+seconds display advance without keypresses. The current working model follows
+the ROM more closely: writes to port `0x53` schedule a one-shot `F9`, and the
+firmware re-arms that one-shot each time it needs another idle wake. The exact
+hardware divider still needs board confirmation.
 
 ## Power / Wake Hypothesis
 
