@@ -106,19 +106,28 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C688:022B` | `0x46AAB` | ROM-card executable trampoline. Calls the far entry pointer loaded at `[0xA4F4]`. |
 | `C688:0240` | `0x46AC0` | Inline display/script interpreter entry; jumps to `C688:3879`. |
 | `C688:042D` | `0x46CAD` | Display/script state-bit helper. Uses the byte mask table at `C688:0475` and RAM-pointer table at `C688:047D`. |
+| `C688:294B` | `0x491CB` | WP editor heap RAM probe. Walks the candidate window table at `C688:8A17`, write-tests memory, and builds the 128-byte block free list. |
 | `C688:29D9` | `0x49259` | Main application startup reached by `C688:000B`; clears UI work state and enters startup display path. |
 | `C688:3879` | `0x4A0F9` | Inline display-script dispatcher body. Pops the caller return address as a script pointer and dispatches through the table at `C688:38A4`. |
 | `C688:39C7` | `0x4A247` | Editor block allocator. Takes one block from `[7A50]`, links it into the active editor streams, and decrements `[7A54]`. |
 | `C688:3A38` | `0x4A2B8` | Editor block release/rotate helper. Returns a block to the free list and increments `[7A54]`. |
+| `C688:3E81` | `0x4A701` | Editor control-code classifier. Scans the overlapping table at `C688:3E60..3E7E` for command/control bytes and branches to editor text-flow handlers. |
+| `C688:6391` | `0x4CC11` | Editor command dispatch. Selects the compact jump-opcode table at `C688:63F8` or the alternate table at `C688:670F` and jumps using the low byte of `[79C4]`. |
+| `C688:6897` | `0x4D117` | Editor display/action classifier. Uses the packed nibble/action table at `C688:6978` to update `[7F23]` and dispatch display/editor state actions. |
 | `C688:6B8C` | `0x4D40C` | Hands the copied `0x7F28` resource block to the `C000:170E` renderer service. |
 | `C688:71A4` | `0x4DA24` | Selection/list wrapper using buffer `0x7555`; calls `C688:721D` for draw/setup and `C688:722F` for key handling. |
 | `C688:721D` | `0x4DA9D` | Chooses `C688:9461` for `CL != 0` selectable menu/list drawing, otherwise calls `C688:9541` directly. |
 | `C688:72E5` | `0x4DB65` | Selection/list wrapper variant used by several application submenu loops. |
+| `C688:7689` | `0x4DF09` | Screen/resource setup wrapper used by first-menu and file/menu flows; clears per-screen state, calls `C688:9541`, and enters the selection/list setup path. |
 | `C688:7766` | `0x4DFE6` | Startup display/update sequence that emits fixed update codes through `C688:77A3`. |
 | `C688:77A3` | `0x4E023` | Individual boot update helper; switches display/profile state and applies the update. |
 | `C688:77B4` | `0x4E034` | Copies first menu/graphic resource block from `C688:D133` / file `0x539B3`. |
 | `C688:77C1` | `0x4E041` | Copies a `C688` resource block to low RAM `0x7F28`, then calls `C688:6B8C`. |
+| `C688:7836` | `0x4E0B6` | Small WP status/template display record consumed through `C688:9D50`; code resumes at `C688:7841`. |
+| `C688:790E` | `0x4E18E` | WP FILE -> DELETE handler. Draws confirmation prompts and deletes the selected document through the DOS-like file API. |
+| `C688:7993` | `0x4E213` | WP FILE -> INITIALIZE handler. Draws the initialize confirmation flow and invokes the private format path. |
 | `C688:8312` | `0x4EB92` | First menu/input dispatcher reached after the startup menu resource is copied. |
+| `C688:8A17` | `0x4F297` | Candidate RAM-window probe table walked by `C688:294B` while building the WP editor heap. |
 | `C688:8CFB` | `0x4F57B` | Document/list flow after the `LIST OF DOC.` template. Handles current selection state, inline key dispatch, and returns to the shared application event loop. |
 | `C688:9187` | `0x4FA07` | Shared document picker entry. Calls the storage-target setup path, invokes `DC98:52E5` with `[6806] | 0x40`, then copies the selected name into the caller buffer. |
 | `C688:92DF` | `0x4FB5F` | Inline key dispatch trampoline. Consumes caller-embedded key/target entries and rewrites the return address. |

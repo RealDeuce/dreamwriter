@@ -98,7 +98,19 @@ start	end	type	confidence	segment	label	notes
 0x4A0F9	0x4A11F	code	confirmed	C688	inline-display-script-dispatcher	C688:3879 dispatcher entered by C688:0240; consumes caller-embedded opcodes and jumps through the C688:38A4 table.
 0x4A11F	0x4A247	mixed	probable	C688	display-script-dispatch-tables	Display-script dispatch table/header plus nearby inline display-script bytes before the editor heap routines.
 0x4A247	0x4A4E8	code	confirmed	C688	editor-block-heap-manager	C688:39C7..3C68 allocation/free/read/write helpers for the word-processor editor block heap.
-0x4A4E8	0x4F51C	mixed	rough	C688	app-code-and-ui-tables-tail-before-doc-template	Main application code, tables, and inline resources before the document-list template; needs further splitting.
+0x4A4E8	0x4A6DE	code	probable	C688	editor-navigation-code-before-control-table	Editor/navigation text-flow code immediately after the heap manager and before the control-code scan table.
+0x4A6DE	0x4A701	mixed	confirmed	C688	editor-control-code-scan-table-overlap	C688:3E5E jump tail overlaps the first byte scanned by the 0x1F-byte control-code table at C688:3E60..3E7E; code resumes at C688:3E81.
+0x4A701	0x4CC78	mixed	probable	C688	editor-command-and-inline-display-code	Editor command/text-flow handlers with inline C688:0240 display-script bytes before the compact command dispatch table.
+0x4CC78	0x4CC99	table	confirmed	C688	editor-command-jump-opcode-table	Compact short/near jump opcode table at C688:63F8..6418 selected through C688:6391 using the low byte of [79C4].
+0x4CC99	0x4D1F8	code	probable	C688	editor-command-handler-code-before-action-table	Editor command handlers and display/update helpers before the C688:6978 action table.
+0x4D1F8	0x4D234	table	confirmed	C688	editor-display-action-nibble-table	C688:6978 packed nibble/action table consumed by C688:6897 to update 0x7F23 and dispatch display/editor state actions.
+0x4D234	0x4E0B6	code	probable	C688	resource-selection-and-startup-copy-code	Resource-renderer wrappers, selection/list helpers, file-menu helpers, and startup display-copy/update code through C688:7835.
+0x4E0B6	0x4E0C1	resource	confirmed	C688	wp-status-refresh-display-record	Small C688:7836 display record passed through C688:9D50 during WP status/template refresh.
+0x4E0C1	0x4EBB7	mixed	probable	C688	file-menu-and-storage-ui-handlers	File-menu/storage UI handlers and helper code before the first-menu dispatch table; includes inline display/key-dispatch records.
+0x4EBB7	0x4EBCF	table	confirmed	C688	first-menu-dispatch-table	First two-button screen dispatch/jump table around C688:8337..834E; [75EF] is initialized to C688:833B.
+0x4EBCF	0x4F297	code	probable	C688	first-menu-editor-file-handlers	First-menu branch handlers plus editor/file state helpers before the RAM-window probe table.
+0x4F297	0x4F2C0	table	confirmed	C688	editor-ram-window-probe-table	C688:8A17 candidate RAM-window probe table walked by C688:294B while building the WP editor heap free list.
+0x4F2C0	0x4F51C	code	probable	C688	first-menu-editor-state-and-document-template-prelude	Editor state save/restore and document-list setup code before the C688:8C9C document-list template.
 0x4F51C	0x4F57B	resource	confirmed	C688	document-list-screen-template	C688:8C9C template copied by C688:9541 into low RAM 0x78E3; contains the LIST OF DOC. title and fixed layout bytes.
 0x4F57B	0x50310	mixed	probable	C688	wp-document-picker-and-ui-loader-code	Document picker/list, key dispatch, menu/list resource loader, editor character-output helpers, and inline key/display-script bytes after the document-list template.
 0x50310	0x50376	table	confirmed	C688	wp-accent-character-composition-tables	C688:9A90 accented-character trigger, pointer, and character-to-glyph tables consumed by C688:9AF6/C688:9B0A.

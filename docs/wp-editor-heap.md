@@ -24,7 +24,7 @@ C688:29EB  rep  stosb
 C688:2A01  call C688:294B
 ```
 
-`C688:294B` walks the table at `C688:8A17`, write-tests candidate memory, and
+`C688:294B` walks the table at `C688:8A17` / file `0x4F297`, write-tests candidate memory, and
 links discovered 128-byte blocks. At the end:
 
 ```asm
@@ -37,9 +37,9 @@ C688:29CD  mov  si,[7A52]    ; total block count
 C688:29D1  mov  [7A54],si    ; free block count
 ```
 
-Observed table bytes begin with candidate high-page values from `0x00` through
-`0xD0`, then terminate with `0xFF`. The probe increments `[7A52]` for each
-accepted block.
+Observed table bytes at `0x4F297..0x4F2BF` begin with candidate high-page values
+from `0x00` through `0xD0`, then terminate with `0xFF`. The probe increments
+`[7A52]` for each accepted block.
 
 ## Block Format And Counters
 
