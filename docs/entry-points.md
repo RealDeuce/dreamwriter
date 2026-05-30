@@ -58,7 +58,8 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:0B7C` | `0x40B7C` | Short RTC alarm compare helper. Compares selected alarm day/hour/minute fields against the RTC shadow. |
 | `C000:0B90` | `0x40B90` | Full RTC alarm compare helper. Compares selected alarm date/time fields `6D41..6D4B` against the RTC shadow. |
 | `C000:0BAF` | `0x40BAF` | Minute-fallback RTC compare helper. Checks whether RTC seconds are `00`. |
-| `C000:0ED6` | `0x40ED6` | Interrupt/vector setup. Fills most IVT entries with `C000:118B`, installs IRQ stubs, installs `INT 21h` as `C000:0006`, installs `INT 1` as `C000:157D`, and copies a far-call table to RAM `0x0200`. |
+| `C000:0ED6` | `0x40ED6` | Interrupt/vector setup. Fills most IVT entries with `C000:118B`, installs IRQ stubs, installs `INT 21h` as `C000:0006`, installs `INT 1` as `C000:157D`, and copies the `C000:0F94` far-call table to RAM `0x0200`. |
+| `C000:0F94` | `0x40F94` | Startup far-call table copied to RAM `0x0200`. This is the underlying vector table used by the 325 ROM's `F200:xxxx` trampoline page; the T400 keeps the low-RAM table but does not keep the `F200` trampoline page itself. |
 | `C000:106F` | `0x4106F` | Keyboard row-scan reset/start helper. Enables the `FB` row-scan source through port `0x60`, dummy-reads `0xB0`, pulses port `0x61` from `0xFE` to `0xFF`, and clears row index `[6D29]`. |
 | `C000:1240` | `0x41240` | Diagnostic entry routine. Calls chord compare, then diagnostic UI/loop. |
 | `C000:1252` | `0x41252` | Compares RAM `6D06..6D0F` with expected `SPACE+F+J` matrix bytes. |
@@ -111,9 +112,9 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C688:0053` | `0x468D3` | Retained/warm RAM signature check; returns carry on mismatch. |
 | `C688:019D` | `0x46A1D` | Diagnostic display-script wrapper. Renders 15 bytes from `C688:017F` through `C000:16E7`. |
 | `C688:01AB` | `0x46A2B` | Diagnostic display-script wrapper variant. Renders 15 bytes from `C688:018E` through the same `C000:16E7` path. |
-| `C688:01E6` | `0x46A66` | ROM-card execution setup. Prepares the `0xA4F0` load context, marks `[6D54]=1`, and returns `[7A54] * 0x80` as the loader's work-memory limit. |
-| `C688:020C` | `0x46A8C` | ROM-card execution cleanup. Tears down the `0xA4F0` context and clears `[6D54]`. |
-| `C688:022B` | `0x46AAB` | ROM-card executable trampoline. Calls the far entry pointer loaded at `[0xA4F4]`. |
+| `C688:01E6` | `0x46A66` | ROM-card execution setup. Sets `ES=0x0A4F`, calls setup helpers, marks `[6D54]=1`, and returns `[7A54] * 0x80` as the loader's work-memory/file-size limit. |
+| `C688:020C` | `0x46A8C` | ROM-card execution cleanup. Sets `ES=0x0A4F`, calls cleanup/service helpers, and clears `[6D54]`. |
+| `C688:022B` | `0x46AAB` | ROM-card executable trampoline. Saves `CX/DX/SI/DI/BP`, calls the far entry pointer loaded at `[0xA4F4]`, and preserves the loaded program's returned `AX`. |
 | `C688:0240` | `0x46AC0` | Inline display/script interpreter entry; jumps to `C688:3879`. |
 | `C688:042D` | `0x46CAD` | Display/script state-bit helper. Uses the byte mask table at `C688:0475` and RAM-pointer table at `C688:047D`. |
 | `C688:294B` | `0x491CB` | WP editor heap RAM probe. Walks the candidate window table at `C688:8A17`, write-tests memory, and builds the 128-byte block free list. |
@@ -192,7 +193,7 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `DC98:26B8` | `0x5F038` | WP `COMMUNICATE` submenu wrapper around `DC98:124C`. |
 | `DC98:275A` | `0x5F0DA` | WP `FILE` submenu wrapper around `DC98:124C`. |
 | `DC98:2807` | `0x5F187` | WP top icon menu wrapper around `DC98:124C`. |
-| `DC98:2B75` | `0x5F4F5` | WP OTHERS -> ROM CARD loader. Finds `EROMCARD.X`, loads it at `0xA4F0`, validates header words `0xA4F0/0x1997`, then calls the loaded far entry pointer. |
+| `DC98:2B75` | `0x5F4F5` | WP OTHERS -> ROM CARD loader. Finds `EROMCARD.X`, checks it against the `[7A54] * 0x80` work-memory limit, loads it at `0xA4F0`, validates header words `0xA4F0/0x1997`, then calls the loaded far entry pointer. |
 | `DC98:2D2B` | `0x5F6AB` | WP `OTHERS` submenu wrapper around `DC98:124C`. |
 | `DC98:455F` | `0x60EDF` | WP FILE -> COPY direction selector. Handles Built-in/Card/DreamLink copy directions. |
 | `DC98:4D67` | `0x616E7` | Directory-list builder. Uses DOS find-first/find-next on `X:*.*`, reads standard DTA fields, sorts 19-byte records, and caps at 128 entries. |

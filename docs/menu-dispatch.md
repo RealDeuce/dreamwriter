@@ -566,7 +566,8 @@ with the find-first DTA file size at `[bp-0x29]/[bp-0x27]`, opens the file with
 `DC98:E946`, reads it to `0xA4F0` through `DC98:EE08`, and closes the handle
 through `DC98:EE2E`.
 
-The loaded file then gets a small executable-format check:
+The loaded file then gets a small executable-format check and an indirect far
+call:
 
 ```asm
 DC98:2CE2  mov bx,[0A4F0]
@@ -576,12 +577,12 @@ DC98:2CEE  cmp bx,0A4F0
 DC98:2D15  call C688:022B      ; calls far [0xA4F4]
 ```
 
-So the current read is: ROM CARD accepts a card if `EROMCARD.X` can be found and
-opened through the normal DOS-like file services on one of the candidate card
-drives, then requires header words
-`[0xA4F0] == 0xA4F0` and `[0xA4F2] == 0x1997` before jumping through the loaded
-entry pointer at `0xA4F4`. Failure paths use `Inadequate work memory`, `Can not
-open EROMCARD.X`, `Not enough memory`, and `ROM Card ID error`.
+So the menu-level read is: ROM CARD accepts a card if `EROMCARD.X` can be found
+and opened through the normal DOS-like file services on one of the candidate
+drives, then requires header words `[0xA4F0] == 0xA4F0` and
+`[0xA4F2] == 0x1997` before jumping through the loaded far pointer at
+`0xA4F4`. The detailed header, size check, error paths, and handoff ABI are in
+[`file-system.md`](file-system.md#rom-card-loader).
 
 `DC98:288A` is now confirmed as the WP OTHERS -> SYSTEM settings screen. It
 draws the resource containing `AUTO POWER OFF PERIOD : { 2 } { 3 } { 5 }

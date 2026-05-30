@@ -7,9 +7,10 @@ Size:   524288 bytes
 SHA256: bb6a437d4c25f90eb7a0b8bc3d41e1ca2c74196aabe60954a598c66405397757
 ```
 
-This repo is for mapping and tooling around the 2.1 ROM only. MAME also has a
+This repo is for mapping and tooling around the T400 2.1 ROM. MAME also has a
 3.1 BIOS for `drwrt400`; it is not copied here. Be careful not to mix addresses
-between 2.1 and 3.1.
+between 2.1 and 3.1. Comparative notes may reference other DreamWriter ROMs, but
+those addresses are explicitly labeled as non-T400.
 
 ## MAME
 
@@ -80,6 +81,7 @@ the command reference.
 | [`docs/startup-ui.md`](docs/startup-ui.md) | Cold-start UI path, inline display scripts, boot update sequence, and first menu graphic. |
 | [`docs/menu-dispatch.md`](docs/menu-dispatch.md) | Inline key dispatch tables and the shared application menu event loop. |
 | [`docs/file-system.md`](docs/file-system.md) | FILE menu storage flow, DOS-like file API wrappers, and directory/DTA evidence. |
+| [`docs/basic-eromcard.md`](docs/basic-eromcard.md) | Feasibility notes for wrapping the DreamWriter 325 BASIC interpreter as `EROMCARD.X`. |
 | [`docs/dreamlink-protocol.md`](docs/dreamlink-protocol.md) | DreamLink RS-232 file-transfer protocol, command frames, listings, and data stream framing. |
 | [`docs/wp-editor-heap.md`](docs/wp-editor-heap.md) | Word-processor live document heap, block allocator, and cross-application use evidence. |
 | [`docs/diagnostics.md`](docs/diagnostics.md) | Diagnostic chord, command loop, banner/help strings, and warm IRQ entry. |
@@ -296,9 +298,15 @@ Card Memory-
 
 The `ROM CARD` menu path is decoded at `DC98:2B75`. It builds
 `([0x6805]+1):EROMCARD.X`, falls back to `[0x6805]:EROMCARD.X`, opens it via
-the DOS-like file services, loads it to `0xA4F0`, validates header words
+the DOS-like file services, checks that it fits within `[7A54] * 0x80` bytes of
+work memory, loads it to `0xA4F0`, validates header words
 `[0xA4F0] == 0xA4F0` and `[0xA4F2] == 0x1997`, then calls the far entry stored
-at `[0xA4F4]`.
+at `[0xA4F4]`. The far pointer is stored in normal x86 `offset,segment` order at
+file offset `+0x04`; the loaded entry receives `AX = [7A54] * 0x80`. See
+[`docs/file-system.md`](docs/file-system.md#rom-card-loader).
+
+This is not a CP/M `.COM`, PC DOS `.COM`, or MZ `.EXE` load path: the loader
+requires the custom `0xA4F0/0x1997` header and calls an explicit far pointer.
 
 The `FILE` menu storage paths distinguish built-in RAM, card storage, and
 DreamLink transfer. The local storage layer is FAT12-derived but uses a custom
@@ -309,8 +317,8 @@ volume header/geometry block; see [`docs/file-system.md`](docs/file-system.md).
 - Physical power/wake path and why MAME reset shows `INITIALIZING` instead of
   the documented copyright banner.
 - Board-level wiring for port `0xA0` battery, card, and printer-status bits.
-- Full `EROMCARD.X` header format, drive mapping, and whether PCMCIA memory can
-  execute in place.
+- `EROMCARD.X` candidate-drive mapping and whether a loaded stub can execute
+  further code from PCMCIA memory.
 - Custom FAT12-derived volume header and geometry details.
 - Remaining display/resource script opcodes and status-icon cluster.
 - Recursive disassembler/function-boundary tooling for broader call graphs.

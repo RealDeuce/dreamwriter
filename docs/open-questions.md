@@ -19,9 +19,10 @@
    graphics, or another packed resource.
 7. Classify the code or packed data beginning around `0x5C98E`, immediately
    after the MAME-declared glyph stream.
-8. Finish naming the remaining non-file/private services behind the `INT 21h`
-   dispatcher at `C000:5098`, especially early console/device helpers and the
-   `AX=4420..4427` control calls.
+8. Refine the friendly names and calling conventions for the remaining
+   non-file/private `INT 21h` helpers. The dispatcher service set is now
+   exhaustively mapped, but `AH=03`, `AX=4421`, `AX=4424`, and `AX=4425` still
+   need better high-level names.
 9. Identify the encoding and consumer for the candidate status/icon resource
    cluster around `0x55110..0x552AC`.
 10. Confirm how the startup banner resource at `0x53888..0x539AA` is selected.
@@ -56,15 +57,17 @@
     strobe, and uses IRQ `FE` as ACK-driven output. Board pins are still needed
     to confirm whether any Centronics `PE`/`SEL`/`ERROR` lines are present on
     the same register or simply unused by the firmware.
-16. Confirm the external PCMCIA memory decode, ROM-card executable format, and
-    card-drive mapping. MAME now has the slot/status lines wired, but no card
-    memory window is exposed yet. Current trace of `DC98:2B75` finds
-    `EROMCARD.X` through the same DOS-like file API
-    used by the FAT12-style storage layer, loads it at `0xA4F0`, validates
-    header words `0xA4F0/0x1997`, and calls far `[0xA4F4]`; remaining questions
-    are the full header layout, how `[0x6805]` maps to the physical PCMCIA slot,
-    and whether a stub can intentionally execute more code from the mapped card
-    window.
+16. Confirm the external PCMCIA memory decode and ROM-card drive mapping. MAME
+    now has the slot/status lines wired, and `DC98:2B75` is decoded as a normal
+    file-loader for `EROMCARD.X`: it searches `([0x6805]+1):EROMCARD.X` then
+    `[0x6805]:EROMCARD.X`, loads the file at `0xA4F0`, validates header words
+    `0xA4F0/0x1997`, and calls far `[0xA4F4]` with `AX = [7A54] * 0x80`.
+    Remaining questions are how `[0x6805]` maps to the physical PCMCIA slot,
+    whether official ROM cards exposed a normal filesystem image, and whether a
+    loaded stub can intentionally execute more code from the mapped card window.
+    A separate feasibility thread for wrapping the DreamWriter 325 BASIC
+    interpreter as `EROMCARD.X` is parked in
+    [`basic-eromcard.md`](basic-eromcard.md).
 17. Decode the custom volume header and geometry used under the FAT12-style file
     implementation. The lower handlers use standard 8.3 directory entries and
     FAT12 allocation, but mount/format code checks header words `0x1997` and

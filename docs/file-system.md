@@ -148,30 +148,35 @@ C000:0F6F  stosw
 C000:0006  jmp C000:5098
 ```
 
-`C000:5098` saves caller registers into a small stack frame, stores the original
-`AH` at `[6F5F]`, maps `AH` through the byte table at `C000:5000`, then calls a
-near handler pointer from the word table at `C000:5060`. Unsupported functions
-fall into a tight loop at `C000:5110`; `AH=FF` is a private direct service that
-calls `C000:2C4A`.
+`C000:5098` saves caller registers into a small stack frame, switches `DS` to
+zero, stores the original `AH` at `[6F5F]`, clears `[6EC1]`, maps `AH` through
+the byte table at `C000:5000`, then calls a near handler pointer from the word
+table at `C000:5060`. The dispatcher updates the caller's saved flags before
+`iret` so handlers can report DOS-style carry/error status.
 
-Confirmed public service map:
+This table is exhaustive for `AH < 0x60`: byte-table entries with value `FF`
+fall into the tight loop at `C000:5110`, and `AH >= 0x60` does the same.
+`AH=FF` bypasses the table and calls the private formatter at `C000:2C4A`
+directly.
+
+Confirmed service map:
 
 | `AH` | Handler | Meaning |
 | ---: | --- | --- |
-| `03` | `C000:5117` | Console/device input status path. |
-| `04` | `C000:0D71` | Character/device output using `DL`; used by low-level text output. |
-| `05` | `C000:5146` | Device input helper. |
-| `08` | `C000:5155` | Keyboard/input helper. |
-| `0B` | `C000:515C` | Input status helper. |
-| `0E` | `C000:5163` | Select current drive. |
-| `19` | `C000:5167` | Get current drive. |
-| `1A` | `C000:516B` | Set DTA. |
+| `03` | `C000:5117` | Serial/input status path. Calls the serial receive helper `C000:4B8D`; if `[70A5]` bit `0x02` is clear it returns immediately with high status clear, otherwise it waits through the keyboard/cancel path at `C000:49F8`. |
+| `04` | `C000:0D71` | Serial/device character output using `DL`. Waits for port `0xC1` readiness, sends through port `0xC0`, and returns `AL=FF` if the wait is cancelled by input. |
+| `05` | `C000:5146` | Parallel printer character output. Calls the Centronics byte writer at `C000:0920`. |
+| `08` | `C000:5155` | Blocking keyboard/event read through `C000:4A8D`; used by application wrappers as console input. |
+| `0B` | `C000:515C` | Nonblocking keyboard/event status through `C000:4977`; returns `AL=FF` when input is pending, otherwise `AL=00`. |
+| `0E` | `C000:5163` | Select current drive. Calls `C000:28A7`, stores internal drive byte `DL+1` when caller `DL <= 9`, and returns `AL=09`. |
+| `19` | `C000:5167` | Get current internal drive byte from `[6D35]`. |
+| `1A` | `C000:516B` | Set DTA pointer from caller `DS:DX` into `[6F6C]:[6F6A]`. |
 | `2A` | `C000:516F` | Get date. |
 | `2B` | `C000:51C7` | Set date. |
 | `2C` | `C000:5209` | Get time. |
 | `2D` | `C000:523D` | Set time. |
-| `2F` | `C000:5270` | Get DTA. |
-| `36` | `C000:5274` | Get free disk space. |
+| `2F` | `C000:5270` | Get DTA, returning `ES:BX` from `[6F6C]:[6F6A]`. |
+| `36` | `C000:5274` | Get free disk space. Uses `DL` or the current drive when `DL=0`; returns DOS-style `AX/BX/CX/DX`, with `AX=FFFF` on error. |
 | `3C` | `C000:5278` -> `C000:29AD` | Create/truncate file. |
 | `3D` | `C000:527C` -> `C000:2B84` | Open file. |
 | `3E` | `C000:5280` -> `C000:2C41` | Close file. |
@@ -185,7 +190,8 @@ Confirmed public service map:
 | `4F` | `C000:52F8` -> `C000:2E27` | Find next. |
 | `56` | `C000:52FC` -> `C000:2FE5` | Rename file. |
 | `57` | `C000:5300` -> `C000:30DA` | Get/set file date/time. |
-| `5B` | `C000:5304` -> `C000:2A1B` | Create new file. |
+| `5B` | `C000:5304` -> `C000:2A1B` | Create new file, failing if the file already exists. |
+| `FF` | `C000:2C4A` | Private format/initialize service; requires `BL=A5` and uses `DL=08/09/0A` for built-in RAM, PCMCIA SRAM, or DreamLink. |
 
 The date/time services are backed by the RTC port block, not the storage layer:
 `C000:516F`/`5209` decode BCD shadow bytes read from ports `0xD0..0xDC`, while
@@ -193,11 +199,16 @@ The date/time services are backed by the RTC port block, not the storage layer:
 RTC. These services still follow the DOS register convention closely enough for
 application code to use normal-looking `AH=2A`/`2B`/`2C`/`2D` calls.
 
+A direct `CD 21` byte scan of `t4_ir_2.1.ic303` matches this map: code-shaped
+call sites use the service numbers above, including the `AX=442x` private IOCTL
+range. Early low-ROM/resource-looking `CD 21` byte hits do not set up an
+`INT 21h` call and are treated as data until proven otherwise.
+
 ## IOCTL And Endpoint Status
 
 The `AH=44` dispatcher at `C000:5298` is not a broad DOS IOCTL
 implementation. It recognizes standard-looking `AX=4400`, then a private range
-`AX=4420..4429`:
+`AX=4420..4429`; every other `AH=44` subfunction returns with carry set:
 
 | `AX` | Handler | Current read |
 | ---: | --- | --- |
@@ -354,12 +365,27 @@ The WP OTHERS -> ROM CARD path at `DC98:2B75` uses the same DOS-like file API
 instead of a separate ROM-card directory format. It constructs
 `([0x6805] + 1):EROMCARD.X`, probes it with `DC98:EF7B` (`AH=1A` set DTA plus
 `AH=4E` find first), and falls back to `[0x6805]:EROMCARD.X` through the same
-wrapper.
+wrapper. There is no direct card-type or ROM/CIS check in this routine; a card
+is accepted only to the extent that the normal file layer can find and open
+`EROMCARD.X`.
 
 On a successful find-first result, the loader takes the file size from the DTA
-size fields at offsets `+0x1A/+0x1C`, checks available work memory, opens the
-same path with `DC98:E946` (`AH=3D`), reads the whole file to `0xA4F0` with
-`DC98:EE08` (`AH=3F`), and closes it with `DC98:EE2E` (`AH=3E`).
+size fields at offsets `+0x1A/+0x1C`, calls `C688:01E6` to prepare the
+execution context, and compares the 32-bit file size against the returned work
+memory limit. `C688:01E6` sets `ES=0x0A4F`, calls three C688 helpers, marks
+`[6D54]=1`, and returns `[7A54] * 0x80` in `AX`. The loader keeps this value in
+`DI` as the byte limit and rejects larger files with `Inadequate work memory`.
+
+After the size check, it opens the same path with `DC98:E946`, reads the whole
+file to linear address `0xA4F0` with `DC98:EE08`, and closes it with
+`DC98:EE2E`. The wrappers ultimately use the standard-looking file calls:
+
+| Wrapper | Service | ROM CARD use |
+| --- | --- | --- |
+| `DC98:EF7B` | `AH=1A`, then `AH=4E` | Set caller DTA and find `EROMCARD.X`. |
+| `DC98:E946` | open path, eventually `AH=3D` | Open `EROMCARD.X`; mode is pushed as zero. |
+| `DC98:EE08` | `AH=3F` | Read `CX = file_size_low` bytes to `0xA4F0`. |
+| `DC98:EE2E` | `AH=3E` | Close the handle. |
 
 Only after the file is loaded does the ROM-card-specific check happen:
 
@@ -371,11 +397,61 @@ DC98:2CEE  cmp bx,0A4F0
 DC98:2D15  call C688:022B      ; calls far [0xA4F4]
 ```
 
-So the current read is that `EROMCARD.X` is a normal 8.3 file on a checked
-storage endpoint, and the special ROM-card format begins inside that loaded
-file. The remaining ROM-card questions are the full executable header layout,
-the exact candidate-drive mapping from `[0x6805]`, and whether a loaded stub can
-intentionally execute further code from the mapped card window.
+The minimum loaded-file header is therefore:
+
+| File offset | Meaning |
+| ---: | --- |
+| `+0x00` | Word `0xA4F0`, matching the load address. |
+| `+0x02` | Word `0x1997`, the ROM-card executable ID. |
+| `+0x04` | Far entry pointer called through `C688:022B`, in normal x86 `offset,segment` memory order. |
+
+This does not match CP/M `.COM` or PC DOS `.COM`. Both are raw memory images
+with no executable header and a fixed transient-program entry convention, rather
+than an explicit entry pointer inside the file. CP/M enters at `0100h` in the
+TPA; DOS inherited the same offset after its PSP. Here the firmware requires
+four non-code signature bytes, does not create a CP/M zero page or DOS PSP, and
+transfers control through the far pointer at file offset `+0x04` rather than
+jumping to the beginning of the loaded image. It also does not match an MZ
+`.EXE`: there is no `MZ`/`ZM` signature, relocation table, or DOS loader path.
+The `0x1997` word is also used by the DreamWriter volume header at `C000:3B2B`,
+so it reads more like a local signature convention than a known external
+executable format. The `.X` extension therefore looks like a
+DreamWriter-specific load-and-call format layered on the device's DOS-like file
+services.
+
+`C688:022B` saves `CX`, `DX`, `SI`, `DI`, and `BP`, then executes
+`call far [0xA4F4]`. It does not save `AX`, so the loaded program sees
+`AX = [7A54] * 0x80`, the same work-memory limit used for the size check.
+`C688:020C` runs after the loaded entry returns, sets `ES=0x0A4F`, calls the
+cleanup helpers, sends `AH=0x04, DL=0x59` through the resource/service path, and
+clears `[6D54]`.
+
+The loaded file is resident at physical address `0x0A4F0`. A file whose entry
+code starts immediately after the eight-byte header could point at that code as
+either `0000:A4F8` or `0A4F:0008`; the firmware only validates the two header
+words, not the far pointer target.
+
+Failure paths are specific enough to identify which phase failed:
+
+| Failure | Displayed string |
+| --- | --- |
+| Neither candidate path exists | `No ROM card is in the slot` |
+| File size exceeds `[7A54] * 0x80` | `Inadequate work memory` |
+| Open fails | `Can not open EROMCARD.X` |
+| Read returns fewer bytes than the DTA size | `Not enough memory` |
+| Header words are not `0xA4F0, 0x1997` | `ROM Card ID error` |
+
+The important implication is that `ROM CARD` is not execute-in-place from the
+card by itself. It loads an ordinary file through the same storage layer into
+RAM and calls its far pointer. A small SRAM-card stub still looks viable, but
+any second-stage execution from the PCMCIA memory window would have to be done
+by the loaded program after handoff. Remaining questions are the exact
+candidate-drive mapping from `[0x6805]`, the intended ABI beyond `AX`, and
+whether official ROM cards used the same filesystem or a ROM image arranged so
+the file API could see `EROMCARD.X`.
+
+For the separate idea of repackaging the DreamWriter 325 BASIC interpreter as a
+T400 `EROMCARD.X`, see [`basic-eromcard.md`](basic-eromcard.md).
 
 ## Directory Format Evidence
 
