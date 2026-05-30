@@ -29,11 +29,11 @@ The first DreamWriter-specific module should provide these primitives:
 
 | Primitive | GW-BASIC use | DreamWriter source |
 | --- | --- | --- |
-| `SCROUT` | Draw a character at a cursor position. | LCD text/vector path or direct framebuffer writer. |
-| `SCRINP` | Read character under cursor. | Framebuffer-backed screen model, or initially stub. |
+| `SCROUT` | Draw a character at a cursor position. | Implemented over the console shadow buffer and ROM text vector. |
+| `SCRINP` | Read character under cursor. | Implemented from the console shadow buffer. |
 | `SCROLL` | Scroll screen window. | Framebuffer line copy plus clear. |
-| `CLREOL` | Clear from cursor to end of line. | Framebuffer fill. |
-| `SETCSR` | Cursor display mode/position. | Initially no-op or inverse-cell cursor. |
+| `CLREOL` | Clear from cursor to end of line. | Implemented by blanking cells through `SCROUT`. |
+| `SETCSR` | Cursor display mode/position. | Present as a no-op until GW-BASIC data state is wired. |
 | `KEYINP` | Poll for one key without blocking. | T400 keyboard vector or direct key queue. |
 | `DONOTE` | Start/stop sound. | T400 beeper port path; initially stub. |
 
@@ -77,6 +77,63 @@ and `console_hide_cursor` erases that recorded cell rather than assuming the
 logical cursor has not moved. A logical column of 80 is the one-past-right-edge
 state and displays by sticking to column 79, so a full line still has a visible
 cursor.
+
+`SCROLL` is implemented as the GW-BASIC OEM primitive, using the source cell,
+destination cell, and size registers expected by `scndrv.asm`. It moves the
+matching 80x8 shadow text cells and raw LCD pixels for the same 6x8-cell
+rectangle. The pixel path is a bit-level memmove, so non-byte-aligned 6-pixel
+columns and overlapping down/right moves work correctly. Byte-aligned
+rectangles use the V20/8086 string-instruction fast path (`rep movsw` forward,
+`rep movsb` backward), so the common full-width vertical text scroll does not
+fall through to the bit-at-a-time path. `SCROLL` deliberately does not clear
+newly exposed cells; the generic screen driver does that with `CLREOL`/`SCROUT`
+after calling `SCROLL`. The current console newline path also calls this
+primitive, then clears the exposed bottom row for its own simpler console
+semantics.
+
+Direct LCD helpers use `lcd_framebuffer_base` as runtime display state. It is
+initialized to the normal T400 framebuffer at `0x1000`, but code that switches
+LCD scanout, such as the BASIC wrapper's alternate `0x8000` framebuffer, must
+call `lcd_set_framebuffer_base` after changing the display buffer. The
+framebuffer address is not a compile-time property of the console. Near code
+keeps `DS` as the application data segment; direct framebuffer copies use
+explicit segment-zero memory accesses instead of changing `DS` around console
+state reads.
+
+`SCROUT`, `SCRINP`, and `CLREOL` are now exported with the 1-based position
+contract used by `scndrv.asm`: `DH=column`, `DL=line`. They preserve the
+console's local cursor state because GW-BASIC tracks cursor position in its own
+screen-driver variables and passes explicit positions to the OEM hooks.
+`SETCSR` is intentionally inert for now; the real implementation needs the
+ported GW-BASIC data segment, especially `CSRTYP`, before it can map cursor
+mode requests onto the local reverse-video cursor helper.
+
+`src/gw/dwio.asm` exports the OMF-facing DreamWriter hook module. It reuses
+the same console primitive layer for `CLRSCN`, `SCROLL`, `SCROUT`, `SCRINP`,
+and `CLREOL`, and implements `KEYINP` as a nonblocking poll through the ROM's
+`INT 21h` keyboard services. The T400 keyboard table reports cursor events as
+`0x10..0x13`, physical `INSERT` as `0x0D`, and physical `ENTER` as `0xDA`.
+`KEYINP` maps those into Microsoft Universal keyboard controls:
+
+| DreamWriter event | MS Universal result |
+| ---: | ---: |
+| `0x10` right | `AX=0xFF1C`, carry set |
+| `0x11` left | `AX=0xFF1D`, carry set |
+| `0x12` down | `AX=0xFF1F`, carry set |
+| `0x13` up | `AX=0xFF1E`, carry set |
+| `0x0D` insert | `AX=0xFF12`, carry set |
+| `0x7F` delete, if produced | `AX=0xFF7F`, carry set |
+| `0xDA` enter/select | `AL=0x0D`, carry clear |
+
+Returning cursor and editor controls in the `0xFFxx` form is important:
+`POLKEY` only runs `ON KEY` trap checks for two-byte MS Universal control
+functions, and the line editor treats `AH=0xFF` as an editor operation rather
+than as two printable bytes.
+
+This matches the GW-BASIC split: text scrolling is not a graphics command, but
+on a shared bitmap display it must move whatever pixels are already in the
+scrolled rectangle rather than redrawing only shadow text cells and erasing
+plotted graphics.
 
 The disk path is less clean. `giodsk.asm` uses CP/M/MS-DOS FCB-style calls via
 the `CALLOS` macro in `msdosu`. A first bring-up can disable disk commands or

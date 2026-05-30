@@ -148,3 +148,8 @@
     escape/extended marker. The remaining question is the exact meaning of the
     record classes, buckets, and edit-stream token ranges, plus whether any
     slot-0 page data participates in less direct grammar/thesaurus decisions.
+31. Implement the `dw-basic` `SETCSR` OEM hook after the GW-BASIC data segment
+    is ported. The current shim exports `SETCSR` as a no-op because the real
+    behavior depends on GW-BASIC's `CSRTYP` cursor-mode variable; once that
+    state exists, map `CSRTYP` requests onto the local reverse-video cursor
+    helpers in `dw-basic/src/include/dwconsole.asm`.

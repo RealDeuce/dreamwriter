@@ -45,6 +45,26 @@ One MAME command line for the generated card image:
 Expected display:
 
 ```text
+LINE 03 SHOULD BE TOP
+...
+LINE 10 - PRESS KEY
+```
+
+The first preflight screen should show lines 3 through 10 after the console
+forces bottom-row scrolling. Press any key.
+
+The second preflight screen should show a small raw-pixel box near the left side
+and a copied box lower and to the right. That screen calls the real `SCROLL`
+primitive on a graphics-only rectangle, so it checks that scrolling moves pixels
+that were not drawn through the text shadow buffer. Press any key.
+
+The third preflight screen exercises the easier GW-BASIC OEM screen hooks. It
+should show `SCROUT WROTE THIS`, then `SCRINP OK`, and the `CLREOL` line should
+have the text after the marker erased. Press any key.
+
+The normal smoke screen then appears:
+
+```text
 DW-BASIC BRINGUP
 >
 ```

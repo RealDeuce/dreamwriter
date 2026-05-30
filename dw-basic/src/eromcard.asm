@@ -19,6 +19,10 @@ entry:
     retf
 
 app_main:
+    call scroll_text_demo
+    call scroll_graphics_demo
+    call oem_primitive_demo
+
     call console_clear
 
     mov ax, title
@@ -63,8 +67,177 @@ app_main:
     call dw_getkey
     ret
 
+scroll_text_demo:
+    call console_clear
+    mov ax, text_scroll_lines
+    mov dx, 0x0000
+    call console_goto
+    call console_puts
+    call dw_getkey
+    ret
+
+scroll_graphics_demo:
+    call console_clear
+    mov ax, graphics_title
+    mov dx, 0x0000
+    call console_goto
+    call console_puts
+
+    call draw_source_box
+    mov ax, 0x0302
+    mov bx, 0x1905
+    mov cx, (10 << 8) | 2
+    call SCROLL
+
+    mov ax, graphics_prompt
+    mov dx, 0x0700
+    call console_goto
+    call console_puts
+    call dw_getkey
+    ret
+
+oem_primitive_demo:
+    call console_clear
+    mov ax, oem_title
+    mov dx, 0x0000
+    call console_goto
+    call console_puts
+
+    mov ax, oem_scroute_text
+    mov dx, 0x0304
+    call oem_puts_at
+
+    mov dh, 5
+    mov dl, 4
+    call SCRINP
+    cmp al, "S"
+    jne .scrinp_fail
+    mov ax, oem_scrinp_ok
+    jmp .show_scrinp
+.scrinp_fail:
+    mov ax, oem_scrinp_fail
+.show_scrinp:
+    mov dx, 0x0404
+    call oem_puts_at
+
+    mov ax, oem_clreol_text
+    mov dx, 0x0504
+    call oem_puts_at
+    mov dh, 25
+    mov dl, 6
+    call CLREOL
+
+    mov ax, oem_prompt
+    mov dx, 0x0700
+    call console_goto
+    call console_puts
+    call dw_getkey
+    ret
+
+; AX = CS-relative string, DH=row, DL=zero-based column.
+oem_puts_at:
+    push ax
+    push dx
+    push si
+    mov si, ax
+    mov al, dh
+    mov dh, dl
+    inc dh
+    mov dl, al
+    inc dl
+.loop:
+    lodsb
+    test al, al
+    jz .done
+    xor ah, ah
+    call SCROUT
+    inc dh
+    jmp .loop
+.done:
+    pop si
+    pop dx
+    pop ax
+    ret
+
+draw_source_box:
+    push ax
+    push cx
+    push dx
+    push es
+    xor ax, ax
+    mov es, ax
+
+    mov dx, 8
+    mov cx, 12
+.top:
+    mov al, 1
+    call lcd_put_pixel
+    inc cx
+    cmp cx, 72
+    jb .top
+
+    mov dx, 23
+    mov cx, 12
+.bottom:
+    mov al, 1
+    call lcd_put_pixel
+    inc cx
+    cmp cx, 72
+    jb .bottom
+
+    mov cx, 12
+    mov dx, 8
+.left:
+    mov al, 1
+    call lcd_put_pixel
+    inc dx
+    cmp dx, 24
+    jb .left
+
+    mov cx, 71
+    mov dx, 8
+.right:
+    mov al, 1
+    call lcd_put_pixel
+    inc dx
+    cmp dx, 24
+    jb .right
+
+    pop es
+    pop dx
+    pop cx
+    pop ax
+    ret
+
 LINE_BUFFER_MAX equ 78
 
+text_scroll_lines:
+    db "LINE 01 SHOULD SCROLL OFF", 13
+    db "LINE 02 SHOULD SCROLL OFF", 13
+    db "LINE 03 SHOULD BE TOP", 13
+    db "LINE 04", 13
+    db "LINE 05", 13
+    db "LINE 06", 13
+    db "LINE 07", 13
+    db "LINE 08", 13
+    db "LINE 09", 13
+    db "LINE 10 - PRESS KEY", 0
+graphics_title:
+    db "GRAPHICS SCROLL: BOX SHOULD ALSO APPEAR LOWER RIGHT", 0
+graphics_prompt:
+    db "TWO BOXES VISIBLE - PRESS KEY", 0
+oem_title:
+    db "OEM PRIMITIVES", 0
+oem_scroute_text:
+    db "SCROUT WROTE THIS", 0
+oem_scrinp_ok:
+    db "SCRINP OK", 0
+oem_scrinp_fail:
+    db "SCRINP FAIL", 0
+oem_clreol_text:
+    db "CLREOL KEEPS THIS | ERASED TEXT", 0
+oem_prompt:
+    db "SCROUT/SCRINP/CLREOL - PRESS KEY", 0
 title:
     db "DW-BASIC BRINGUP", 0
 prompt:

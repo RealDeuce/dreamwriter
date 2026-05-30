@@ -1,0 +1,68 @@
+; Error-code constants from gw-basic/gwdata.asm.
+
+%ifndef DW_BASIC_GWERRORS_INC
+%define DW_BASIC_GWERRORS_INC
+
+%define ERRC_ERRNF 1
+%define ERRC_ERRSN 2
+%define ERRC_ERRRG 3
+%define ERRC_ERROD 4
+%define ERRC_ERRFC 5
+%define ERRC_ERROV 6
+%define ERRC_ERROM 7
+%define ERRC_ERRUS 8
+%define ERRC_ERRBS 9
+%define ERRC_ERRDD 10
+%define ERRC_ERRDV0 11
+%define ERRC_ERRID 12
+%define ERRC_ERRTM 13
+%define ERRC_ERRSO 14
+%define ERRC_ERRLS 15
+%define ERRC_ERRST 16
+%define ERRC_ERRCN 17
+%define ERRC_ERRUF 18
+%define ERRC_ERRNR 19
+%define ERRC_ERRRE 20
+%define ERRC_ERRUE 21
+%define ERRC_ERRMO 22
+%define ERRC_ERRLBO 23
+%define ERRC_ERRDTO 24
+%define ERRC_ERRDVF 25
+%define ERRC_ERRFN 26
+%define ERRC_ERROTP 27
+%define ERRC_ERRWH 29
+%define ERRC_ERRWE 30
+%define ERRC_NONDSK 30
+%define ERRC_DSKERR 49
+%define ERRC_DSKER1 (ERRC_DSKERR-ERRC_NONDSK)
+%define ERRC_ERRUE1 (ERRC_ERRUE+ERRC_DSKERR-ERRC_NONDSK)
+
+%define ERRC_ERRFOV 50
+%define ERRC_ERRIER 51
+%define ERRC_ERRBFN 52
+%define ERRC_ERRFNF 53
+%define ERRC_ERRBFM 54
+%define ERRC_ERRFNO 54
+%define ERRC_ERRFAO 55
+%define ERRC_ERRDIO 57
+%define ERRC_ERRDPE 57
+%define ERRC_ERRIOE 57
+%define ERRC_ERRFAE 58
+%define ERRC_ERRDFL 61
+%define ERRC_ERRRPE 62
+%define ERRC_ERRBRN 63
+%define ERRC_ERRIFN 64
+%define ERRC_ERRNMF 64
+%define ERRC_ERRMMM 65
+%define ERRC_ERRFDR 66
+%define ERRC_ERRTMF 67
+%define ERRC_ERRDNA 68
+%define ERRC_ERRCBO 69
+%define ERRC_ERRDWP 70
+%define ERRC_ERRDNR 71
+%define ERRC_ERRDME 72
+%define ERRC_ERRADV 73
+%define ERRC_ERRRAD 74
+%define ERRC_LSTERR 75
+
+%endif
