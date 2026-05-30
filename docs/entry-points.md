@@ -76,6 +76,16 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:3064` | `0x43064` | Private `INT 21h AX=4428` endpoint probe. Returns availability bits for built-in RAM, PCMCIA SRAM card, and DreamLink. |
 | `C000:311E` | `0x4311E` | Private `INT 21h AX=4429` DreamLink finish/flush helper; returns success without action for non-DreamLink handles. |
 | `C000:3C08` | `0x43C08` | Card-storage capacity probe used during format. Write-tests the banked card window in 32 KiB steps and records the detected count. |
+| `C000:3F78` | `0x43F78` | DreamLink command-frame prefix sender. Delays, then sends byte `0x13`. |
+| `C000:4082` | `0x44082` | DreamLink shared response parser. Validates the expected command byte in `[7037]`, reads status/payload bytes, and dispatches command-specific payload handlers. |
+| `C000:4384` | `0x44384` | DreamLink create/truncate sender for `AH=3C`. |
+| `C000:4459` | `0x44459` | DreamLink open sender for `AH=3D`. |
+| `C000:44C0` | `0x444C0` | DreamLink read setup sender for `AH=3F`. |
+| `C000:4511` | `0x44511` | DreamLink read data receiver. Handles block boundaries, EOF byte `0x1A`, and `0x08` escape decoding. |
+| `C000:4622` | `0x44622` | DreamLink write setup sender for `AH=40`. |
+| `C000:4647` | `0x44647` | DreamLink write data sender. Handles block boundaries and `0x08` escapes for control bytes. |
+| `C000:4707` | `0x44707` | DreamLink close sender for `AH=3E`. |
+| `C000:47AC` | `0x447AC` | DreamLink initialize/format sender reached by private `AH=FF`, `BL=A5`, `DL=0A`. |
 | `C000:49C2` | `0x449C2` | Auto power-off countdown check in an idle path. Decrements `[680B]`; when it reaches zero and `[6D31] != 0`, saves resume target `4977` and jumps to the retained power-transition path at `C000:035D`. |
 | `C000:4961` | `0x44961` | Periodic idle warm/power marker check. Sets carry when `[680D] == 0` and `[6809] == 0x1992`, causing timer-driven wait loops to enter the retained power-transition path. |
 | `C000:4A8D` | `0x44A8D` | Main keyboard/event idle loop. Uses `C000:4B2D` to check the keyboard ring buffer, reloads `[680B]` from `[6D31]` on keyboard activity, and enters the retained power-transition path on timeout. |
@@ -168,7 +178,7 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:1089` | `0x41089` | Terminal-mode loop. Initializes serial, polls translated keys, remaps arrows to one-byte C0 controls, and sends through `INT 21h AH=04`. |
 | `C000:4B8D` | `0x44B8D` | Serial receive queue drain / software flow-control helper. Sends XON when space recovers. |
 | `C000:4BED` | `0x44BED` | Serial receive queue insert helper. Sends XOFF/XON flow-control bytes when enabled. |
-| `C000:41A8` | `0x441A8` | DreamLink serial peer probe. Temporarily forces `9600 8N1`, XON/XOFF disabled. |
+| `C000:41A8` | `0x441A8` | DreamLink serial peer probe. Programs the USART for `9600 8N1` with XON/XOFF disabled, then restores the user setting bytes in RAM without reinitializing the USART. |
 | `DC98:0D2A` | `0x5D6AA` | Get-date wrapper around `INT 21h AH=2A`; stores weekday/year/month/day at `72DD`, `72D7`, `72D9`, and `72DB`. |
 | `DC98:0D4E` | `0x5D6CE` | Get-time wrapper around `INT 21h AH=2C`; stores hour/minute/second at `72DF`, `72E1`, and `72E3`. |
 | `DC98:0D72` | `0x5D6F2` | Set-date wrapper around `INT 21h AH=2B`; loads year/month/day from `72D7`, `72D9`, and `72DB`. |

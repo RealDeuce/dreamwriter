@@ -579,15 +579,25 @@ indicates DTR duplicates RTS and there is no CD/carrier-detect signal. The
 firmware's transmit-ready check should still be treated as CTS-influenced until
 the exact chip and glue logic are confirmed.
 
+The full T400 user manual's RS-232C appendix matches this signal set. It lists
+a 9-pin connector with pin 2 RX in, pin 3 TX out, pin 4 DTR out, pin 5 GND, pin
+7 RTS out, pin 8 CTS in, and pins 1/6/9 not connected. It also describes
+handshaking as either data signals (`TX`, `RX`) or control signals (`RTS`,
+`CTS`, `GND`, `DTR`), with no carrier-detect line.
+
 Receive is interrupt-driven through IRQ vector `FC` at `C000:0550`, which clears
 IRQ bit `0x08`, reads `0xC1`, records framing/parity/overrun-like bits
 `0x08/0x10/0x20` in `[6D57]`, acknowledges with command `0x37`, then reads the
 received byte from `0xC0` and queues it through `C000:4BED`. XON/XOFF handling
 uses `0x13`/`0x11` when `6D2E` is enabled.
 
-`C000:41A8`, the DreamLink endpoint probe, temporarily forces `9600 8N1` with
-XON/XOFF disabled (`6D2A=6`, `6D2B=1`, `6D2C=0`, `6D2D=0`, `6D2E=0`) while
-probing the peer, then restores the user's settings.
+`C000:41A8`, the DreamLink endpoint probe, forces the USART hardware to
+`9600 8N1` with XON/XOFF disabled (`6D2A=6`, `6D2B=1`, `6D2C=0`, `6D2D=0`,
+`6D2E=0`) before probing the peer. It saves and restores those setting bytes in
+RAM, but it does not call the serial init routine again after restoring them.
+The following DreamLink file commands use the normal byte send/receive helpers
+without reprogramming the USART, so the active transfer line discipline appears
+to be the forced probe discipline rather than the user's configured one.
 
 The WP -> COMMUNICATE -> TERMINAL entry point is `C688:EC5A`, which calls the
 low-ROM terminal service through `C000:1712` with `AH=7`. The terminal loop at
@@ -681,6 +691,16 @@ The WP -> PRINTER menu at `DC98:265D` has `PRINT OUT`, `SET UP 1`, and
 The setup strings start around `0x6FC3D` and include `PRINTER SET UP`,
 `PRINTER`, `INTERFACE : {PARALLEL} {SERIAL}`, and
 `PAPER FEED: {AUTOMATIC} {MANUAL}`.
+
+The common printer byte emitter is `C688:C82A`. It first checks abort/error
+flags in `[82A3]`, then chooses the low-level output path from printer setup
+byte `6D5A`: parallel output calls `INT 21h AH=05`, while serial output calls
+`INT 21h AH=04`. This confirms that WP -> PRINTER can send the formatted
+printer stream out the RS-232 port for a directly attached serial printer. The
+DreamLink manual's "Print Through" flow is different: the PC side selects
+`PRINTER` as the destination, but the DreamWriter-side action is FILE -> STORE
+to the DreamLink directory. That makes print-through a host-side destination for
+the DreamLink file-transfer path, not this WP -> PRINTER serial output path.
 
 The printer formatter has C688-side print/merge helpers beginning at
 `0x50BD5`, motion/spacing helpers through `0x52317`, then a denser

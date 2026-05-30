@@ -238,6 +238,48 @@ length, byte `[7049]`, `0x11`, then a `0x40` command/response transaction via
 when the selected destination is endpoint index `2`, matching DreamLink as the
 RS-232 transfer target.
 
+## DreamLink File Protocol
+
+DreamLink file transfer is exposed as a third storage endpoint rather than a
+separate application-level transport. Endpoint `0x08` is built-in RAM storage,
+endpoint `0x09` is PCMCIA card storage, and endpoint `0x0A` is the RS-232
+DreamLink peer.
+
+The protocol details are now tracked in
+[`dreamlink-protocol.md`](dreamlink-protocol.md). In short, the normal DOS-like
+handlers branch to DreamLink-specific command senders when `C000:4064` resolves
+a handle to endpoint `0x0A`:
+
+| File API | DreamLink routine | Current read |
+| --- | --- | --- |
+| `AH=3C` create/truncate | `C000:4384` | Sends command `0x3C`, timestamp fields, filename, accumulator byte, then terminator `0x11`. |
+| `AH=3D` open | `C000:4459` | Sends command `0x3D`, open mode byte `0x00`, filename, accumulator byte, then `0x11`. |
+| `AH=3F` read | `C000:44C0`, `C000:4511` | Sends command `0x3F` to start a read, then receives escaped file data blocks. |
+| `AH=40` write | `C000:4622`, `C000:4647` | Sends command `0x40` to start a write, then sends escaped file data blocks. |
+| `AH=3E` close | `C000:4707` | Sends command `0x3E` with the resolved handle/index. |
+| `AH=FF`, `BL=A5`, `DL=0A` | `C000:47AC` | Sends command `0x44 0x05 0x00`; used by the initialize/format path. |
+
+The local DreamLink PC manual at
+[`reference/dreamlink-manual.pdf`](reference/dreamlink-manual.pdf) matches this
+model. From the DreamWriter's perspective, the file-transfer and
+print-through operations map onto ordinary FILE menu actions:
+
+| User-visible operation | Firmware view |
+| --- | --- |
+| Send file from DreamWriter to PC | DreamLink is the destination. The user selects FILE -> STORE, tabs to the DreamLink directory, and the firmware creates/opens a file on endpoint `0x0A` and writes data through command `0x40`. |
+| Send file from PC to DreamWriter | DreamLink is the source. The user selects FILE -> RECALL, tabs to the DreamLink directory, and the firmware opens a file on endpoint `0x0A` and reads data through command `0x3F`. |
+| Print through PC | The PC-side software selects `PRINTER` as its destination, but the DreamWriter-side manual flow is still FILE -> STORE to the DreamLink directory. This is probably the same outbound DreamLink write path as "send file to PC", with the PC deciding whether to save or print the received document. |
+
+The endpoint probe at `C000:41A8` is the only DreamLink path seen so far that
+programs the serial hardware. It saves the user's bytes at `6D2A..6D2E`, writes
+`6D2A=6`, `6D2B=1`, `6D2C=0`, `6D2D=0`, and `6D2E=0`, calls `C000:0CBC` to
+initialize the USART, then restores the saved bytes in RAM. There is no second
+`C000:0CBC` call after the restore, and the create/open/read/write/close
+senders above only call the byte send/receive helpers. That means the active
+DreamLink transport appears to be forced to the probe's line discipline
+(`9600 8N1`, software flow control disabled), even though the user-visible
+configuration bytes are restored after discovery.
+
 ## Initialize / Format Path
 
 The FILE `INITIALIZE` menu item enters `C688:EB91`, which wraps the UI handler
@@ -364,6 +406,11 @@ The picker stores each listed item as a 19-byte record, sorts entries by name,
 and caps the listing at `0x80` entries. The displayed fields are the 8.3 name,
 attribute flags, size, and packed date. Files at 64 KiB or larger are displayed
 in KiB by dividing size by `0x400` and appending `K`.
+
+The full T400 user manual's error-message appendix says the user-visible
+directory-full condition occurs when built-in or card memory already has 64
+files. That is lower than the picker display cap and is likely a store-layer
+limit rather than a UI-list limit.
 
 ## Scheduler Database
 
