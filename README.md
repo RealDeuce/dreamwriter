@@ -95,6 +95,7 @@ the command reference.
 | [`docs/reference/dreamlink-manual.pdf`](docs/reference/dreamlink-manual.pdf) | DreamLink PC software manual; documents FILE -> STORE/RECALL transfer flow, host-side file format selection, and print-through mode. |
 | [`docs/reference/dreamwriter-t400-manual.pdf`](docs/reference/dreamwriter-t400-manual.pdf) | DreamWriter T400 user manual; broad user-facing reference, currently missing pages 10 and 11 in the source copy. |
 | [`tools/README.md`](tools/README.md) | Command reference for `tools/rom2.py`. |
+| [`dw-basic/README.md`](dw-basic/README.md) | NASM-targeted DreamWriter BASIC port workspace and first `EROMCARD.X` smoke target. |
 
 ## Boot Path
 

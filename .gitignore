@@ -8,6 +8,7 @@ __pycache__/
 /.cache/
 /build/
 /out/
+/dw-basic/build/
 
 # MAME runtime state
 /cfg/
