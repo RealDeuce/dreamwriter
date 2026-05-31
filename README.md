@@ -219,7 +219,12 @@ C0372  out 70,al
 C0374  jmp C0374
 ```
 
-In MAME, pressing F1 triggers IRQ `FF` and reaches `C02EE`. With
+In MAME, the `Home` power key samples the held keyboard rows into `6D06..6D0F`
+before the retained-RAM wake/reset path, and reset entry samples them again
+before the ROM starts. The port `0x61` `FE -> FF` scan-enable edge samples them
+again after the firmware resets its scan state. Holding `F+J+SPACE` while
+pressing `Home` therefore reaches the ROM's warm diagnostic path. The synthetic
+F1 IRQ can still be used as a direct debugger shortcut to `C02EE`; with
 `F+J+SPACE` held, breakpoints at `C02EE`, `C0316`, `C0329`, and `C0370` all hit.
 
 ## Keyboard
@@ -341,8 +346,10 @@ Current high-confidence findings:
 - MAME keyboard matrix correctly reports held-key level state for that chord.
 - Normal MAME reset takes the cold boot path and does not check the diagnostic
   chord.
-- MAME F1 triggers synthetic IRQ `FF`, entering `C02EE`. Holding `F+J+SPACE`
-  while pressing F1 reaches `C0329`, which arms the warm diagnostic state.
+- MAME `Home` samples the held keyboard rows before the retained-RAM wake/reset
+  path, and reset entry samples them again before the ROM starts. Holding
+  `F+J+SPACE` while pressing `Home` reaches the warm diagnostic state. F1
+  remains a direct synthetic IRQ `FF` debugger shortcut.
 - `-steadykey` is bad for this driver; do not use it.
 - The LCD is modeled as RAM scanout selected by I/O port `0x00`; the firmware
   is probably not bit-banging the LCD refresh.

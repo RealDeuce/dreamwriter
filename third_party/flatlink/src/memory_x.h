@@ -78,6 +78,7 @@ Segment *load_seg(int index);
 Segment *load_all_segs(int *count);
 
 void add_pub_name(Segment *seg, int offset, char *name);
+void add_abs_pub_name(int offset, char *name);
 int check_duplicate_pub_name();
 PubName *search_pub_name(char *name, char *f_name);
 

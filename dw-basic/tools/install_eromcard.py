@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import math
 import struct
 from pathlib import Path
@@ -24,6 +25,15 @@ def write_word(data: bytearray, offset: int, value: int) -> None:
 
 def write_dword(data: bytearray, offset: int, value: int) -> None:
     struct.pack_into("<I", data, offset, value & 0xFFFFFFFF)
+
+
+def fat_timestamp(now: dt.datetime | None = None) -> tuple[int, int]:
+    if now is None:
+        now = dt.datetime.now()
+    year = min(max(now.year, 1980), 2107) - 1980
+    date = (year << 9) | (now.month << 5) | now.day
+    time = (now.hour << 11) | (now.minute << 5) | (now.second // 2)
+    return time, date
 
 
 def root_offset(geometry: int) -> int:
@@ -75,7 +85,10 @@ def find_root_entry(card: bytes | bytearray, geometry: int, raw_name: bytes) -> 
         off = root + index * ROOT_ENTRY_SIZE
         first = card[off]
         if card[off : off + 11] == raw_name:
-            raise ValueError("EROMCARD.X already exists in image")
+            name = raw_name[:8].decode("ascii").rstrip()
+            ext = raw_name[8:].decode("ascii").rstrip()
+            display_name = f"{name}.{ext}" if ext else name
+            raise ValueError(f"{display_name} already exists in image")
         if first in (0x00, 0xE5):
             return off
     raise ValueError("root directory is full")
@@ -101,6 +114,7 @@ def install_file(card: bytearray, geometry: int, name: str, payload: bytes) -> N
     raw_name = encode_83(name)
     entry = find_root_entry(card, geometry, raw_name)
     clusters = allocate_clusters(card, geometry, len(payload))
+    packed_time, packed_date = fat_timestamp()
 
     for index, cluster in enumerate(clusters):
         off = data_offset(geometry, cluster)
@@ -111,6 +125,8 @@ def install_file(card: bytearray, geometry: int, name: str, payload: bytes) -> N
     card[entry : entry + ROOT_ENTRY_SIZE] = b"\x00" * ROOT_ENTRY_SIZE
     card[entry : entry + 11] = raw_name
     card[entry + 11] = 0x20
+    write_word(card, entry + 0x16, packed_time)
+    write_word(card, entry + 0x18, packed_date)
     write_word(card, entry + 0x1A, clusters[0])
     write_dword(card, entry + 0x1C, len(payload))
 
@@ -120,6 +136,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--card-in", default="/tmp/dw-card-1m.bin")
     parser.add_argument("--card-out", default="/tmp/dw-card-1m-dw-basic.bin")
     parser.add_argument("--payload", default="build/EROMCARD.X")
+    parser.add_argument(
+        "--extra",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+        help="install an additional 8.3 file into the SRAM image",
+    )
     return parser.parse_args()
 
 
@@ -135,8 +158,16 @@ def main() -> None:
 
     geometry = read_word(card, 4)
     install_file(card, geometry, "EROMCARD.X", payload)
+    installed = [f"EROMCARD.X ({len(payload)} bytes)"]
+    for item in args.extra:
+        name, sep, path = item.partition("=")
+        if not sep:
+            raise ValueError(f"--extra must be NAME=PATH, got {item!r}")
+        extra_payload = Path(path).read_bytes()
+        install_file(card, geometry, name, extra_payload)
+        installed.append(f"{name} ({len(extra_payload)} bytes)")
     Path(args.card_out).write_bytes(card)
-    print(f"installed EROMCARD.X ({len(payload)} bytes) into {args.card_out}")
+    print(f"installed {', '.join(installed)} into {args.card_out}")
 
 
 if __name__ == "__main__":

@@ -78,6 +78,9 @@ logical cursor has not moved. A logical column of 80 is the one-past-right-edge
 state and displays by sticking to column 79, so a full line still has a visible
 cursor.
 
+The display register-preservation contracts for `SCROUT` through the ROM text
+vector are documented in [`display-register-contracts.md`](display-register-contracts.md).
+
 `SCROLL` is implemented as the GW-BASIC OEM primitive, using the source cell,
 destination cell, and size registers expected by `scndrv.asm`. It moves the
 matching 80x8 shadow text cells and raw LCD pixels for the same 6x8-cell
@@ -139,6 +142,40 @@ The disk path is less clean. `giodsk.asm` uses CP/M/MS-DOS FCB-style calls via
 the `CALLOS` macro in `msdosu`. A first bring-up can disable disk commands or
 replace `CALLOS` with a DreamWriter file API shim for the subset used by
 `LOAD`, `SAVE`, sequential input, and sequential output.
+
+## Linker
+
+The converted GW-BASIC modules are assembled with `nasm -f obj` and linked with
+the vendored `third_party/flatlink` copy:
+
+```sh
+gmake -C dw-basic gw-basic-bin
+```
+
+The target uses `flatlink -f bin -offset 2048 -maxfixups 10000`, producing
+`build/gw-basic.bin` and `build/gw-basic.map`. Offset `0x0800` leaves room for
+the ROM CARD header and first-stage loader in the same segment. The card build
+copies the flatlink output to `build/GWBASIC.OVR`; the file itself starts with
+the first byte that must be loaded at `CS:0800`. `src/eromcard_gw.asm` opens
+`I:GWBASIC.OVR`, reads it back to `CS:0800`, and jumps to the map-derived
+`INIT` offset.
+
+The local flatlink copy has two small compatibility fixes needed by NASM's OMF
+output for this source set:
+
+| Fix | Reason |
+| --- | --- |
+| Segment-zero `PUBDEF` records are accepted as absolute public symbols. | `gwdata.obj` exports absolute constants such as `OPCNT` and `CNSLEN`; other modules import them. |
+| The per-object extern-name limit uses the allocated fixup-name capacity instead of the segment limit. | `gwmain.obj` has more than 100 extern names. |
+
+The first wrapped payload is `build/EROMCARD-GW.X`, built by
+`gmake -C dw-basic basic-payload`. It is intentionally a small first-stage
+loader: the ROM CARD entry sets `DS=CS`, checks the loader-provided work-memory
+limit against `LSTVAR + 2 + GW_BASIC_MIN_FREE`, loads `GWBASIC.OVR` while still
+using the ROM loader's original stack, then switches to a private stack below the
+loader-provided limit before jumping to GW-BASIC's `INIT`. If any check fails,
+it prints an error and returns. The default reserve is 4096 bytes and can be
+overridden on the make command line.
 
 ## Initial Feature Set
 

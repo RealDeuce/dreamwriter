@@ -123,12 +123,8 @@ void parse_pub_names(uchar *buf, int size, int bits32) {
 	if (s_idx==0) frame = read_word(buf, p);	// Base Frame
 
 	V_PRINT("pub_names Group=%d Segment=%d frame=%d\n", g_idx, s_idx, frame);
-	if (!s_idx) {
-		ERR_PRINT("PUB NAMES: Illegal target segment=%d\n",s_idx);
-		exit(23);
-	}
 
-	Segment *seg = load_seg(s_idx);
+	Segment *seg = s_idx ? load_seg(s_idx) : NULL;
 
 	while(p<size) {
 		int _p     = p;
@@ -142,7 +138,11 @@ void parse_pub_names(uchar *buf, int size, int bits32) {
 
 		VV_PRINT("    [%04X] offset=%06X type=%d %s\n", base_offset + _p, offset, t_idx, name);
 
-		add_pub_name(seg, offset, name);
+		if (seg) {
+			add_pub_name(seg, offset, name);
+		} else {
+			add_abs_pub_name(offset, name);
+		}
 	}
 }
 

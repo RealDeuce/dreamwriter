@@ -15,6 +15,7 @@ from pathlib import Path
 
 COMMENT_BLOCK_RE = re.compile(r"^\s*COMMENT\s+(.).*")
 CURRENT_RADIX = 10
+DATA_SYMBOLS: set[str] = set()
 REGISTERS = {
     "al",
     "ah",
@@ -46,6 +47,7 @@ SYMBOL_RENAMES = {
 }
 TOKEN_CONSTANT_NAMES = {
     "ABS",
+    "AND",
     "ASC",
     "ATN",
     "AUTO",
@@ -136,6 +138,7 @@ TOKEN_CONSTANT_NAMES = {
     "ON",
     "OPEN",
     "OPTION",
+    "OR",
     "OUT",
     "PEEK",
     "PEN",
@@ -190,6 +193,7 @@ TOKEN_CONSTANT_NAMES = {
     "WHILE",
     "WIDTH",
     "WRITE",
+    "XOR",
 }
 TOKEN_ALIAS_NAMES = {
     "ATNTK",
@@ -441,6 +445,127 @@ def split_label(stripped: str) -> tuple[str, str]:
     return rename_symbol(m.group(1)[:-1]) + ":\t", m.group(2)
 
 
+def collect_data_symbols(src: Path) -> set[str]:
+    symbols: set[str] = set()
+    in_data_segment = False
+    for line in src.read_text(errors="replace").splitlines():
+        code, _comment = split_comment(line)
+        stripped = code.strip()
+        upper = stripped.upper()
+
+        if upper.endswith("SEGMENT PUBLIC 'DATASG'"):
+            in_data_segment = True
+            continue
+        if upper.endswith("SEGMENT PUBLIC 'CODESG'"):
+            in_data_segment = False
+            continue
+        if upper.endswith("ENDS"):
+            in_data_segment = False
+            continue
+        if not in_data_segment:
+            continue
+
+        m = re.match(r"EXTRN\s+(.+)$", stripped, flags=re.I)
+        if m:
+            for item in m.group(1).split(","):
+                raw_name = item.strip().split(":")[0].strip()
+                if raw_name and not is_absolute_name(raw_name):
+                    symbols.add(rename_symbol(raw_name).upper())
+            continue
+
+        m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s*:\s*(DB|DW|DD)?\b", stripped, flags=re.I)
+        if m:
+            symbols.add(rename_symbol(m.group(1)).upper())
+            continue
+
+        m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s+(DB|DW|DD)\b", stripped, flags=re.I)
+        if m:
+            symbols.add(rename_symbol(m.group(1)).upper())
+
+    return symbols
+
+
+def split_operands(text: str) -> list[str]:
+    operands: list[str] = []
+    start = 0
+    bracket_depth = 0
+    in_string = False
+    for i, ch in enumerate(text):
+        if ch == '"':
+            in_string = not in_string
+        elif not in_string:
+            if ch == "[":
+                bracket_depth += 1
+            elif ch == "]" and bracket_depth:
+                bracket_depth -= 1
+            elif ch == "," and bracket_depth == 0:
+                operands.append(text[start:i].strip())
+                start = i + 1
+    operands.append(text[start:].strip())
+    return operands
+
+
+def first_symbol_name(text: str) -> str | None:
+    m = re.search(r"[A-Za-z_.$?][\w.$?]*", text)
+    if not m:
+        return None
+    return rename_symbol(m.group(0)).upper()
+
+
+def masm_operand_is_data_memory(original_operand: str) -> bool:
+    operand = original_operand.strip()
+    if not operand:
+        return False
+    if re.search(r"\bOFFSET\b", operand, flags=re.I):
+        return False
+    if "[" in operand or "]" in operand:
+        return False
+    operand = re.sub(r"\b(BYTE|WORD|DWORD)\s+PTR\b", "", operand, flags=re.I).strip()
+    if operand.lower() in REGISTERS:
+        return False
+    if operand.startswith('"') or re.fullmatch(r"[0-9]+[DO]?", operand, flags=re.I):
+        return False
+    symbol = first_symbol_name(operand)
+    return symbol in DATA_SYMBOLS if symbol else False
+
+
+def wrap_data_memory_operand(converted_operand: str) -> str:
+    operand = converted_operand.strip()
+    prefix = ""
+    m = re.match(r"(?i)^(byte|word|dword)\s+(.+)$", operand)
+    if m:
+        prefix = m.group(1).lower() + " "
+        operand = m.group(2).strip()
+    if operand.startswith("[") or operand.lower() in REGISTERS:
+        return converted_operand
+    return prefix + "[" + operand + "]"
+
+
+def wrap_masm_data_memory_operands(original_body: str, converted_code: str) -> str:
+    original_match = re.match(r"([A-Za-z][A-Za-z0-9]*)\s+(.+)$", original_body.strip())
+    if not original_match:
+        return converted_code
+    op = original_match.group(1).upper()
+    if op not in {"MOV", "ADD", "ADC", "SUB", "SBB", "CMP", "XCHG", "OR", "AND", "XOR", "TEST"}:
+        return converted_code
+    original_operands = split_operands(original_match.group(2))
+    if not any(masm_operand_is_data_memory(operand) for operand in original_operands):
+        return converted_code
+
+    converted_match = re.match(r"(\s*(?:[A-Za-z_.$?][\w.$?]*:\t)?)\s*([A-Za-z][A-Za-z0-9]*)\s+(.+)$", converted_code)
+    if not converted_match:
+        return converted_code
+    converted_operands = split_operands(converted_match.group(3))
+    if len(converted_operands) != len(original_operands):
+        return converted_code
+
+    for i, original_operand in enumerate(original_operands):
+        if masm_operand_is_data_memory(original_operand):
+            converted_operands[i] = wrap_data_memory_operand(converted_operands[i])
+
+    return converted_match.group(1) + converted_match.group(2) + " " + ", ".join(converted_operands)
+
+
 def convert_octal_byte(text: str) -> str:
     text = text.strip()
     if re.fullmatch(r"[0-7]+", text):
@@ -534,6 +659,7 @@ def convert_instruction(code: str) -> str:
     if m:
         name = rename_symbol(m.group(1))
         expr = convert_expr(m.group(2).strip())
+        expr = re.sub(r"\bOR\b", "|", expr, flags=re.I)
         if name in {"DATAS", "FORSZC"}:
             return name + " equ " + expr
         if re.search(rf"\b{re.escape(name)}\b", expr):
@@ -544,7 +670,9 @@ def convert_instruction(code: str) -> str:
 
     m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s+EQU\s+(.+)$", stripped, flags=re.I)
     if m:
-        return rename_symbol(m.group(1)) + " equ " + convert_expr(m.group(2).strip())
+        expr = convert_expr(m.group(2).strip())
+        expr = re.sub(r"\bOR\b", "|", expr, flags=re.I)
+        return rename_symbol(m.group(1)) + " equ " + expr
 
     m = re.match(r"ORG\s+(.+)$", stripped, flags=re.I)
     if m:
@@ -568,12 +696,11 @@ def convert_instruction(code: str) -> str:
         if len(args) == 2:
             return label + "db " + ", ".join(convert_octal_byte(arg) for arg in args)
         if len(args) == 3:
-            return "\n".join(
-                [
-                    label + "db " + convert_octal_byte(args[0]),
-                    "dw " + convert_expr(args[2]),
-                ]
-            )
+            lines = [label + "db " + convert_octal_byte(args[0])]
+            if args[1]:
+                lines.append("db " + convert_octal_byte(args[1]))
+            lines.append("dw " + convert_expr(args[2]))
+            return "\n".join(lines)
         if len(args) == 4:
             return "\n".join(
                 [
@@ -644,6 +771,15 @@ def convert_instruction(code: str) -> str:
     if re.match(r"DO_EXT$", body, flags=re.I):
         return "; DO_EXT handled by explicit extern declarations"
 
+    translated_macros = {
+        "HLFDE": "shr dx, 1",
+        "HLFHL": "shr bx, 1",
+        "NEGDE": "neg dx",
+        "NEGHL": "neg bx",
+    }
+    if body.upper() in translated_macros:
+        return label + translated_macros[body.upper()]
+
     # Common instruction expression fixes.
     code = convert_expr(code)
     code = re.sub(r"\bMOV\s+CH,\s*CNSLEN\+3\b", "mov cx, CNSLEN+3\nmov ch, cl", code, flags=re.I)
@@ -682,11 +818,12 @@ def convert_instruction(code: str) -> str:
         code,
         flags=re.I,
     )
+    code = wrap_masm_data_memory_operands(body, code)
     return code
 
 
 def convert_file(src: Path, dst: Path) -> None:
-    global CURRENT_RADIX
+    global CURRENT_RADIX, DATA_SYMBOLS
     dst.parent.mkdir(parents=True, exist_ok=True)
     out: list[str] = [
         "; Auto-converted mechanically from " + str(src),
@@ -696,6 +833,7 @@ def convert_file(src: Path, dst: Path) -> None:
     in_comment_block: str | None = None
     in_macro_block = False
     CURRENT_RADIX = 10
+    DATA_SYMBOLS = collect_data_symbols(src)
     for line in src.read_text(errors="replace").splitlines():
         if in_comment_block is not None:
             if line.strip() == in_comment_block:
@@ -728,7 +866,7 @@ def convert_file(src: Path, dst: Path) -> None:
             out.extend(converted.splitlines())
         elif comment:
             out.append(comment)
-    dst.write_text("\n".join(out) + "\n")
+    dst.write_text("\n".join(line.rstrip() for line in out) + "\n")
 
 
 def main() -> None:

@@ -55,7 +55,7 @@ extern ENDFOR
 ;       TOTAL   7 BYTES
 ;
 WHILE: ;KEEP THE WHILE TEXT POINTER HERE
-	MOV	[ENDFOR],BX ;SAVE TEXT ADDRESS
+	MOV [ENDFOR], BX ;SAVE TEXT ADDRESS
 	CALL	WNDSCN ;SCAN FOR THE MATCHING WEND
 ;CAUSE AN ERRWH IF NO WEND TO MATCH
 	CALL	CHRGTR ;POINT AT CHARACTWER AFTER WEND
@@ -71,10 +71,10 @@ WHILE: ;KEEP THE WHILE TEXT POINTER HERE
 	ADD	BX,CX ;ELIMINATE EVERYTHING UP TO AND INCLUDING
 ;THE MATCHING WHILE ENTRY
 	MOV	SP,BX
-	MOV	[SAVSTK],BX
-WNOTOL:	MOV	BX,CURLIN ;MAKE THE STACK ENTRY
+	MOV [SAVSTK], BX
+WNOTOL:	MOV BX, [CURLIN] ;MAKE THE STACK ENTRY
 	PUSH	BX
-	MOV	BX,ENDFOR ;GET TEXT POINTER FOR WHILE BACK
+	MOV BX, [ENDFOR] ;GET TEXT POINTER FOR WHILE BACK
 	PUSH	BX
 	PUSH	DX ;SAVE THE WEND TEXT POINTER
 	JMP	FNWEND ;FINISH USING WEND CODE
@@ -85,16 +85,16 @@ WEND:	JZ	??L000
 	CALL	FNDWND
 	JNZ	WEERR ;MUST MATCH OR ELSE ERROR
 	MOV	SP,BX ;TRUNCATE STACK AT MATCH POINT
-	MOV	[SAVSTK],BX ;[H,L] POINTING INTO STACK ENTRY
-	MOV	DX,CURLIN ;REMEMBER WEND LINE #
-	MOV	[NXTLIN],DX ;IN NXTLIN
+	MOV [SAVSTK], BX ;[H,L] POINTING INTO STACK ENTRY
+	MOV DX, [CURLIN] ;REMEMBER WEND LINE #
+	MOV [NXTLIN], DX ;IN NXTLIN
 	INC	BX ;INDEX INTO STACK ENTRY TO GET VALUES
 	INC	BX ;SKIP OVER TEXT POINTER OF WEND
 	MOV	DX,[BX] ;SET [D,E]=TEXT POINTER OF WHILE
 	INC	BX
 	INC	BX
 	MOV	BX,[BX] ;[H,L]=LINE NUMBER OF WHILE
-	MOV	[CURLIN],BX ;IN CASE OF ERROR OR CONTINUATION FIX CURLIN
+	MOV [CURLIN], BX ;IN CASE OF ERROR OR CONTINUATION FIX CURLIN
 	XCHG	BX,DX ;GET TEXT POINTER OF WHILE FORMULA INTO [H,L]
 FNWEND:	CALL	FRMEVL ;EVALUATE FORMULA
 extern VSIGN
@@ -106,8 +106,8 @@ extern VSIGN
 	MOV	CH,CL ;NEED IT IN THE HIGH BYTE
 	PUSH	CX
 	JMP	NEWSTT
-FLSWHL:	MOV	BX,NXTLIN ;SETUP CURLIN FOR WEND
-	MOV	[CURLIN],BX
+FLSWHL:	MOV BX, [NXTLIN] ;SETUP CURLIN FOR WEND
+	MOV [CURLIN], BX
 	POP	BX ;TAKE OFF TEXT OF WEND AS NEW TEXT POINTER
 	POP	CX ;GET RID OF TEXT POINTER OF WHILE
 	POP	CX ;TAKE OFF LINE NUMBER OF WHILE
@@ -221,21 +221,21 @@ extern FRQINT
 ; 8.) Run program
 CHAIN:
 	XOR	AL,AL ;Assume no MERGE
-	MOV	byte [MRGFLG],AL
-	MOV	byte [MDLFLG],AL ;Also no MERGE w/ DELETE option
+	MOV byte [MRGFLG], AL
+	MOV byte [MDLFLG], AL ;Also no MERGE w/ DELETE option
 extern OPTFLG
 extern TOPTFG
 extern OPTVAL
 extern TOPTVL
-	MOV	AL,byte [OPTFLG]
-	MOV	byte [TOPTFG],AL ;SAVE OPTION BASE VALUE
-	MOV	AL,byte [OPTVAL] ;SAVE OPTION VALUE FOR ARRAY BASE
-	MOV	byte [TOPTVL],AL
+	MOV AL, byte [OPTFLG]
+	MOV byte [TOPTFG], AL ;SAVE OPTION BASE VALUE
+	MOV AL, byte [OPTVAL] ;SAVE OPTION VALUE FOR ARRAY BASE
+	MOV byte [TOPTVL], AL
 	MOV	AL,byte [BX] ;Get current char
 	MOV	DX,TOK_MERGE ;Is it MERGE?
 	CMP	AL,DL ;Test
 	JNZ	NTCHNM ;NO
-	MOV	byte [MRGFLG],AL ;Set MERGE flag
+	MOV byte [MRGFLG], AL ;Set MERGE flag
 	INC	BX
 NTCHNM:	DEC	BX ;Rescan file name
 	CALL	CHRGTR
@@ -243,7 +243,7 @@ extern PRGFLI
 	CALL	PRGFLI ;Evaluate file name and OPEN it
 	PUSH	BX ;Save text pointer
 	MOV	BX,0 ;Get zero
-	MOV	[CHNLIN],BX ;Assume no CHAIN line #
+	MOV [CHNLIN], BX ;Assume no CHAIN line #
 	POP	BX ;Restore text pointer
 	DEC	BX ;Back up pointer
 	CALL	CHRGTR ;Scan char
@@ -257,7 +257,7 @@ db 0o54 ;Must be comma
 	CALL	FRMEVL ;Evaluate line # formula
 	PUSH	BX ;Save text poiner
 	CALL	FRQINT ;Force to int in [H,L]
-	MOV	[CHNLIN],BX ;Save it for later
+	MOV [CHNLIN], BX ;Save it for later
 	POP	BX ;Restore text poiner
 	DEC	BX ;Rescan last char
 	CALL	CHRGTR
@@ -284,7 +284,7 @@ db 0o54 ;Force comma to appear
 ??L003:
 	OR	AL,AL ;Flag to goto DNCMDA
 CHMWDL:	PUSHF ;Save ALL flag
-	MOV	byte [MDLFLG],AL ;Set MERGE w/ DELETE
+	MOV byte [MDLFLG], AL ;Set MERGE w/ DELETE
 	CALL	CHRGTR ;Get char after comma
 	CALL	SCNLIN ;Scan line range
 extern DEPTR
@@ -294,12 +294,12 @@ extern DEPTR
 	POP	DX ;Pop max line off stack
 	PUSH	CX ;Save pointer to start of 1st line
 	MOV	BX,CX ;Save pointer to start line
-	MOV	[CMSPTR],BX
+	MOV [CMSPTR], BX
 	CALL	FNDLIN ;Find the last line
 	JAE	FCERRG ;Must have exact match on end of range
 	MOV	DH,BH ;[D,E] =  pointer at the start of the line
 	MOV	DL,BL ;beyond the last line in the range
-	MOV	[CMEPTR],BX ;Save pointer to end line
+	MOV [CMEPTR], BX ;Save pointer to end line
 	POP	BX ;Get back pointer to start of range
 	CMP	BX,DX ;Make sure the start comes before the end
 FCERRG:	JNAE	??L004
@@ -309,9 +309,9 @@ FCERRG:	JNAE	??L004
 	JZ	??L005
 	JMP	DNCMDA ;"ALL" option was present
 ??L005:
-NTCHAL:	MOV	BX,CURLIN ;Save current line number on stack
+NTCHAL:	MOV BX, [CURLIN] ;Save current line number on stack
 	PUSH	BX
-	MOV	BX,TXTTAB ;Start searching for COMMONs at program start
+	MOV BX, [TXTTAB] ;Start searching for COMMONs at program start
 	DEC	BX ;Compensate for next instr
 CLPSC1:	INC	BX ;Look at first char of next line
 CLPSCN:	MOV	AL,byte [BX] ;Get char from program
@@ -323,7 +323,7 @@ CLPSCN:	MOV	AL,byte [BX] ;Get char from program
 	INC	BX
 	MOV	DX,[BX] ;Get line # in [D,E]
 	INC	BX
-	MOV	[CURLIN],DX ;Save current line # in CURLIN for errors
+	MOV [CURLIN], DX ;Save current line # in CURLIN for errors
 CSTSCN:	CALL	CHRGTR ;Get statment type
 AFTCOM:	OR	AL,AL
 	JZ	CLPSC1 ;EOL Scan next one
@@ -345,7 +345,7 @@ DOCOMM:	CALL	CHRGTR ;Get thing after COMMON
 	JZ	AFTCOM ;Get next thing
 NXTCOM:	PUSH	BX ;Save text pointer
 	MOV	AL,1 ;Call PTRGET to search for array
-	MOV	byte [SUBFLG],AL
+	MOV byte [SUBFLG], AL
 	CALL	PTRGTN ;This subroutine in F3 scans variables
 	JZ	FNDAAY ;Found array
 	MOV	AL,CH ;Try finding array with COMMON bit set
@@ -354,7 +354,7 @@ NXTCOM:	PUSH	BX ;Save text pointer
 	XOR	AL,AL ;Set zero CC
 	CALL	ERSFIN ;Search array table
 	MOV	AL,0 ;Clear SUBFLG in all cases
-	MOV	byte [SUBFLG],AL
+	MOV byte [SUBFLG], AL
 	JNZ	NTFN2T ;Not found, try simple
 	MOV	AL,byte [BX] ;Get terminator, should be "("
 	CMP	AL,"(" ;Test
@@ -377,7 +377,7 @@ SCNSMP:	POP	BX ;Rescan variable name for start
 	PUSH	DX
 	MOV	DX,PTRGTR ;address to common return point
 	PUSH	DX
-	MOV	AL,byte [VALTYP] ;Must have VALTYP in [D]
+	MOV AL, byte [VALTYP] ;Must have VALTYP in [D]
 	MOV	DH,AL
 	JMP	NOARYS ;Search symbol table
 COMPT2:	OR	DX,DX ;Found?
@@ -402,7 +402,7 @@ LPBKNC:	MOV	SI,CX
 	MOV	DI,CX
 	STOSB
 	RET ;done
-FNDAAY:	MOV	byte [SUBFLG],AL ;Array found, clear SUBFLG
+FNDAAY:	MOV byte [SUBFLG], AL ;Array found, clear SUBFLG
 	MOV	AL,byte [BX] ;Make sure really array spec
 	CMP	AL,"(" ;Really an array?
 	JNZ	SCNSMP ;No, scan as simp
@@ -443,9 +443,9 @@ db 0o54 ;Force comma to appear here
 	JMP	NXTCOM ;Get next COMMON variable
 ; Step 3 - Squeeze..
 CLPFIN:	POP	BX ;Restore previous CURLIN
-	MOV	[CURLIN],BX
-	MOV	DX,ARYTAB ;End of simple var squeeze to [D,E]
-	MOV	BX,VARTAB ;Start of simps
+	MOV [CURLIN], BX
+	MOV DX, [ARYTAB] ;End of simple var squeeze to [D,E]
+	MOV BX, [VARTAB] ;Start of simps
 CLPSLP:	CMP	BX,DX ;Are we done?
 	JZ	DNCMDS ;Yes done, with simps
 	PUSH	BX ;Save where this simp is
@@ -468,14 +468,14 @@ CLPSLP:	CMP	BX,DX ;Are we done?
 ??L011:
 	PUSH	CX ;This is where we will resume scanning vars later
 	CALL	VARDLS ;Delete variable
-	MOV	BX,ARYTAB ;Now correct ARYTAB by # of bytes deleted
+	MOV BX, [ARYTAB] ;Now correct ARYTAB by # of bytes deleted
 	ADD	BX,DX ;Add negative difference between old and new
-	MOV	[ARYTAB],BX ;Save new ARYTAB
+	MOV [ARYTAB], BX ;Save new ARYTAB
 	XCHG	BX,DX ;To [D,E]
 	POP	BX ;Get current place back in [H,L]
 	JMP	CLPSLP
 VARDLS:	XCHG	BX,DX ;Point to where var ends
-VARDL1:	MOV	BX,STREND ;One beyond last byte to move
+VARDL1:	MOV BX, [STREND] ;One beyond last byte to move
 DLSVLP:	CMP	BX,DX ;Done?
 	MOV	SI,DX
 	MOV	AL,[SI] ;Grab byte
@@ -497,9 +497,9 @@ DLSVLP:	CMP	BX,DX ;Done?
 	DEC	DX ;Correct # of bytes
 	DEC	CX ;Moved one too far
 	MOV	BX,CX ;Get new STREND [H,L]
-	MOV	[STREND],BX ;Store it
+	MOV [STREND], BX ;Store it
 	RET
-DNCMDS:	MOV	DX,STREND ;Limit of array search
+DNCMDS:	MOV DX, [STREND] ;Limit of array search
 CLPAKP:	CMP	BX,DX ;Done?
 	JZ	DNCMDA ;Yes
 	PUSH	BX ;Save pointer to VALTYP
@@ -531,8 +531,8 @@ CLPAKP:	CMP	BX,DX ;Done?
 ; This code is very similar to the string garbage collect code
 ; If BIGSTR is on, we also have to fix up the string back pointers.
 DNCMDA:
-	MOV	BX,VARTAB ;Look at simple strings
-CSVAR:	MOV	DX,ARYTAB ;Limit of search to [D,E]
+	MOV BX, [VARTAB] ;Look at simple strings
+CSVAR:	MOV DX, [ARYTAB] ;Limit of search to [D,E]
 	CMP	BX,DX ;Done?
 	JZ	CAYVAR ;Yes
 	CALL	SKPNAM ;Skip name, returns Z if was a string
@@ -545,7 +545,7 @@ CSKPVA:
 	ADD	BX,DX
 	JMP	CSVAR
 CAYVA2:	POP	CX ;Adjust stack
-CAYVAR:	MOV	DX,STREND ;New limit of search
+CAYVAR:	MOV DX, [STREND] ;New limit of search
 	CMP	BX,DX ;Done?
 	JZ	DNCCLS ;Yes
 	CALL	SKPNAM ;Skip over name
@@ -559,14 +559,14 @@ CAYVAR:	MOV	DX,STREND ;New limit of search
 	ADD	BX,CX ;Point after array
 	CMP	AL,3 ;String array?
 	JNZ	CAYVA2 ;No, look at next one
-	MOV	[TEMP3],BX ;Save pointer to end of array
+	MOV [TEMP3], BX ;Save pointer to end of array
 	POP	BX ;Get back pointer to array start
 	MOV	CL,byte [BX] ;Pick up number of DIMs
 	MOV	CH,0 ;Make double with high zero
 	ADD	BX,CX ;Go past DIMS
 	ADD	BX,CX
 	INC	BX ;One more to account for # of DIMs
-CAYSTR:	MOV	DX,TEMP3 ;Get end of array
+CAYSTR:	MOV DX, [TEMP3] ;Get end of array
 	CMP	BX,DX ;See if at end of array
 	JZ	CAYVAR ;Get next array
 	MOV	CX,CAYSTR ;Do next str in array
@@ -581,13 +581,13 @@ CDVARS:
 	JNZ	$+3
 	RET ;Ignore null strings
 	PUSH	BX ;Save where we are
-	MOV	BX,VARTAB ;Is string in program text or disk buffers?
+	MOV BX, [VARTAB] ;Is string in program text or disk buffers?
 	CMP	BX,DX ;Compare
 	POP	BX ;Restore where we are
 	JNB	$+3
 	RET ;No, must be in string space
 	PUSH	BX ;save where we are again.
-	MOV	BX,TXTTAB ;is it in buffers?
+	MOV BX, [TXTTAB] ;is it in buffers?
 	CMP	BX,DX ;test
 	POP	BX ;Restore where we are
 	JNAE	$+3
@@ -606,37 +606,37 @@ CDVARS:
 ; Step 5 - Move stuff up into string space!
 DNCCLS:
 	CALL	GARBA2 ;Get rid of unused strings
-	MOV	BX,STREND ;Load end of vars
+	MOV BX, [STREND] ;Load end of vars
 	MOV	CX,BX ;Into [B,C]
-	MOV	DX,VARTAB ;Start of simps into [D,E]
-	MOV	BX,ARYTAB
+	MOV DX, [VARTAB] ;Start of simps into [D,E]
+	MOV BX, [ARYTAB]
 	SUB	BX,DX ;Get length of simps in [H,L]
-	MOV	[TEMP9],BX ;Save here
-	MOV	BX,FRETOP ;Destination of high byte
-	MOV	[SAVFRE],BX ;Save FRETOP to restore later
+	MOV [TEMP9], BX ;Save here
+	MOV BX, [FRETOP] ;Destination of high byte
+	MOV [SAVFRE], BX ;Save FRETOP to restore later
 	CALL	BLTUC ;Move stuff up
 	MOV	BX,CX ;Now adjust top of memory below saved vars
 	DEC	BX ;One lower to be sure
-	MOV	[FRETOP],BX ;Update FRETOP to reflect new value
-	MOV	AL,byte [MDLFLG] ;MERGE w/ DELETE?
+	MOV [FRETOP], BX ;Update FRETOP to reflect new value
+	MOV AL, byte [MDLFLG] ;MERGE w/ DELETE?
 	OR	AL,AL ;Test
 	JZ	NTMDLT ;No
-	MOV	BX,CMSPTR ;Start of lines to delete
+	MOV BX, [CMSPTR] ;Start of lines to delete
 	MOV	CX,BX ;Into [B,C]
-	MOV	BX,CMEPTR ;End of lines to delete
+	MOV BX, [CMEPTR] ;End of lines to delete
 	CALL	DEL ;Delete the lines
-	MOV	[ARYTAB],BX ;***also set up ARYTAB and STREND
-	MOV	[STREND],BX ;in case we get error in CHAIN
+	MOV [ARYTAB], BX ;***also set up ARYTAB and STREND
+	MOV [STREND], BX ;in case we get error in CHAIN
 ;because of file lookup and then have to
 ;look at variables later (shouldnt be any)
 ;***PGA 7/7/81
 	CALL	LINKER ;Re-link lines just in case
 ; Step 6 - load new program
 NTMDLT:	MOV	AL,1 ;Set CHAIN flag
-	MOV	byte [CHNFLG],AL
+	MOV byte [CHNFLG], AL
 extern CHNENT
 extern OKGETM
-	MOV	AL,byte [MRGFLG] ;MERGEing?
+	MOV AL, byte [MRGFLG] ;MERGEing?
 	OR	AL,AL ;Set cc'S
 	JZ	??L013
 	JMP	OKGETM ;Do MERGE
@@ -645,23 +645,23 @@ extern OKGETM
 ; Step 7 - Move stuff back down
 global CHNRET
 CHNRET:
-	MOV	AL,byte [TOPTVL]
-	MOV	byte [OPTVAL],AL ;RESTORE IOTION BASE VALUE
-	MOV	AL,byte [TOPTFG]
-	MOV	byte [OPTFLG],AL ;LRESTORE OPTION FLG
+	MOV AL, byte [TOPTVL]
+	MOV byte [OPTVAL], AL ;RESTORE IOTION BASE VALUE
+	MOV AL, byte [TOPTFG]
+	MOV byte [OPTFLG], AL ;LRESTORE OPTION FLG
 	XOR	AL,AL ;Clear CHAIN, MERGE flags
-	MOV	byte [CHNFLG],AL
-	MOV	byte [MRGFLG],AL
-	MOV	BX,VARTAB ;Get current VARTAB
+	MOV byte [CHNFLG], AL
+	MOV byte [MRGFLG], AL
+	MOV BX, [VARTAB] ;Get current VARTAB
 	MOV	CX,BX ;Into [B,C]
-	MOV	BX,TEMP9 ;Get length of simps
+	MOV BX, [TEMP9] ;Get length of simps
 	ADD	BX,CX ;Add to present VARTAB to get new ARYTAB
-	MOV	[ARYTAB],BX
-	MOV	BX,FRETOP ;Where to start moving
+	MOV [ARYTAB], BX
+	MOV BX, [FRETOP] ;Where to start moving
 	INC	BX ;One higher
 	XCHG	BX,DX ;Into [D,E]
-	MOV	BX,SAVFRE ;Last byte to move
-	MOV	[FRETOP],BX ;Restore FRETOP from this
+	MOV BX, [SAVFRE] ;Last byte to move
+	MOV [FRETOP], BX ;Restore FRETOP from this
 MVBKVR:	CMP	BX,DX ;Done?
 	MOV	SI,DX
 	MOV	AL,[SI] ;Move byte down
@@ -676,16 +676,16 @@ MVBKVR:	CMP	BX,DX ;Done?
 	JNZ	MVBKVR
 	DEC	CX ;Point to last var byte
 	MOV	BX,CX ;[H,L]=last var byte
-	MOV	[STREND],BX ;This is new end
+	MOV [STREND], BX ;This is new end
 extern NLONLY
 	XOR	AL,AL ;
-	MOV	byte [NLONLY],AL ;allow all files to be closed
+	MOV byte [NLONLY], AL ;allow all files to be closed
 extern FINPRT
 	CALL	FINPRT ;close file zero and reset PTRFIL to 0
 	XOR	AL,AL
 	CALL	RESTORE ;Make sure DATA is valid by doing RESTORE
-	MOV	DX,CHNLIN ;Get CHAIN line # in [D,E]
-	MOV	BX,TXTTAB ;Get prog start in [H,L]
+	MOV DX, [CHNLIN] ;Get CHAIN line # in [D,E]
+	MOV BX, [TXTTAB] ;Get prog start in [H,L]
 	DEC	BX ;Point at zero before program
 	OR	DX,DX ;line number zero?
 	JNZ	??L014
@@ -738,7 +738,7 @@ WRTMLP:	CALL	FRMEVL ;Evaluate formula
 	JZ	WRTSTR ;We do
 	CALL	FOUT ;Convert to a string
 	CALL	STRLIT ;Literalize string
-	MOV	BX,FACLO ;Get pointer to string
+	MOV BX, [FACLO] ;Get pointer to string
 	INC	BX ;Point to address field
 	MOV	DX,[BX]
 	INC	BX
@@ -776,7 +776,7 @@ WRTFIN:
 extern CMPFBC
 extern PTRFIL
 	PUSH	BX ;Save text pointer
-	MOV	BX,PTRFIL ;See if disk file
+	MOV BX, [PTRFIL] ;See if disk file
 	MOV	AL,BH
 	OR	AL,BL
 	JZ	NTRNDW ;No

@@ -22,12 +22,13 @@ console_clear:
     mov di, console_text_buffer
     mov cx, CONSOLE_COLS * CONSOLE_ROWS
     mov al, " "
+    cld
     rep stosb
     xor dx, dx
 .loop:
     mov ax, console_blank_line
     xor cx, cx
-    call dw_puts_cs
+    call dw_puts_cs_raw
     add dx, CONSOLE_CELL_H
     cmp dx, CONSOLE_ROWS * CONSOLE_CELL_H
     jb .loop
@@ -118,8 +119,10 @@ console_hide_cursor:
 
 ; AX = CS-relative NUL-terminated string.
 console_puts:
+    pushf
     push ax
     push si
+    cld
     mov si, ax
 .loop:
     lodsb
@@ -130,6 +133,7 @@ console_puts:
 .done:
     pop si
     pop ax
+    popf
     ret
 
 ; AL = character. Handles CR/LF and printable byte output.
@@ -233,6 +237,9 @@ SCROLL:
 ; GW-BASIC OEM character output primitive.
 ; AX = character, DH=1-based column, DL=1-based line.
 ; Writes one cell without changing the console's current cursor position.
+; The original Microsoft source leaves SCROUT to the OEM, so preserve all
+; caller state except flags. This implementation directly modifies AX/BX/CX/DX;
+; SI/DI/BP/DS/ES/SS are either untouched here or preserved by called helpers.
 SCROUT:
     push ax
     push bx
@@ -915,7 +922,7 @@ console_draw_at_cursor:
     push cx
     push dx
     call console_cell_xy
-    call dw_puts_cs
+    call dw_puts_cs_raw
     pop dx
     pop cx
     ret

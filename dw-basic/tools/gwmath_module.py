@@ -34,6 +34,9 @@ def main() -> None:
         tmp.write(combined)
     try:
         masm2nasm.convert_file(tmp_path, args.output)
+        lines = args.output.read_text(errors="replace").splitlines()
+        lines[0] = "; Auto-converted mechanically from combined math1.asm + math2.asm"
+        args.output.write_text("\n".join(lines) + "\n")
     finally:
         tmp_path.unlink(missing_ok=True)
 

@@ -12,6 +12,10 @@ global KEYINP
 global SCRINP
 global SCROLL
 global SCROUT
+global CSRDSP
+global dw_cursor_init
+global dw_cursor_pre_puts
+global dw_cursor_post_puts
 
 DW_KEY_RIGHT equ 0x10
 DW_KEY_LEFT equ 0x11
@@ -27,10 +31,134 @@ MSU_DOWN equ 31
 MSU_INSERT equ 18
 MSU_DELETE equ 127
 
+%define DWAPI_CURSOR_AWARE 1
 %include "dwapi.asm"
 
 CLRSCN:
     jmp console_clear
+
+dw_cursor_init:
+    mov byte [console_cursor_visible], 0
+    mov byte [console_cursor_col], 0
+    mov byte [console_cursor_row], 0
+    mov byte [console_cursor_logical_col], 0
+    mov byte [console_cursor_logical_row], 0
+    mov byte [console_cursor_saved_char], " "
+    mov byte [dw_cursor_puts_depth], 0
+    mov byte [dw_cursor_restore], 0
+    mov byte [dw_cursor_requested_type], 0
+    ret
+
+; CSRDSP is passed AL=cursor type and DH/DL=1-based column/row. SETCSR supplies
+; AL from CSRTYP; callers that use SETCSR are responsible for keeping DX as the
+; cursor display position.
+CSRDSP:
+    pushf
+    push ax
+    mov [dw_cursor_requested_type], al
+    push dx
+    mov al, [console_col]
+    push ax
+    mov al, [console_row]
+    push ax
+
+    call console_hide_cursor
+
+    mov al, dh
+    cmp al, 1
+    jae .column_1_based
+    mov al, 1
+.column_1_based:
+    dec al
+    cmp al, CONSOLE_COLS
+    jbe .column_ok
+    mov al, CONSOLE_COLS
+.column_ok:
+    mov [console_col], al
+
+    mov al, dl
+    cmp al, 1
+    jae .row_1_based
+    mov al, 1
+.row_1_based:
+    dec al
+    cmp al, CONSOLE_ROWS - 1
+    jbe .row_ok
+    mov al, CONSOLE_ROWS - 1
+.row_ok:
+    mov [console_row], al
+
+    cmp byte [dw_cursor_requested_type], 0
+    je .done
+    call console_show_cursor
+
+.done:
+    pop ax
+    mov [console_row], al
+    pop ax
+    mov [console_col], al
+    pop dx
+    pop ax
+    popf
+    ret
+
+dw_cursor_pre_puts:
+    pushf
+    push ax
+
+    cmp byte [dw_cursor_puts_depth], 0
+    je .outer
+    inc byte [dw_cursor_puts_depth]
+    jmp .done
+
+.outer:
+    inc byte [dw_cursor_puts_depth]
+    mov al, [console_cursor_visible]
+    mov [dw_cursor_restore], al
+    or al, al
+    jz .done
+    call console_hide_cursor
+
+.done:
+    pop ax
+    popf
+    ret
+
+dw_cursor_post_puts:
+    pushf
+    push ax
+
+    cmp byte [dw_cursor_puts_depth], 0
+    je .done
+    cmp byte [dw_cursor_puts_depth], 1
+    je .outer
+    dec byte [dw_cursor_puts_depth]
+    jmp .done
+
+.outer:
+    cmp byte [dw_cursor_restore], 0
+    je .clear
+    mov al, [console_col]
+    push ax
+    mov al, [console_row]
+    push ax
+    mov al, [console_cursor_logical_col]
+    mov [console_col], al
+    mov al, [console_cursor_logical_row]
+    mov [console_row], al
+    call console_show_cursor
+    pop ax
+    mov [console_row], al
+    pop ax
+    mov [console_col], al
+.clear:
+    mov byte [dw_cursor_restore], 0
+    mov byte [dw_cursor_puts_depth], 0
+
+.done:
+    pop ax
+    popf
+    ret
 
 ; KEYINP is the GW-BASIC OEM poll primitive. It must return with ZF set when no
 ; key is ready. Normal one-byte keys return CF clear in AL. MS Universal editor
@@ -127,3 +255,10 @@ keyinp_map:
 
 %define DWCONSOLE_NO_LOCAL_SETCSR 1
 %include "dwconsole.asm"
+
+dw_cursor_puts_depth:
+    db 0
+dw_cursor_restore:
+    db 0
+dw_cursor_requested_type:
+    db 0

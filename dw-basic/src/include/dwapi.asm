@@ -15,31 +15,56 @@
 DW_VEC_PUTS equ 0x0204
 DW_VEC_GETKEY equ 0x0230
 
+%ifdef DWAPI_CURSOR_AWARE
+extern dw_cursor_pre_puts
+extern dw_cursor_post_puts
+%endif
+
 dw_puts_cs:
+%ifdef DWAPI_CURSOR_AWARE
+    pushf
+    push ax
+    call dw_cursor_pre_puts
+    pop ax
+    popf
+    call dw_puts_cs_raw
+    pushf
+    push ax
+    call dw_cursor_post_puts
+    pop ax
+    popf
+    ret
+%else
+    jmp dw_puts_cs_raw
+%endif
+
+dw_puts_cs_raw:
+    ; DC98:0E81 uses AX:BX as the string far pointer, writes its command stream
+    ; through DS:72E5, and loads ES while walking the source string. Preserve
+    ; the caller-visible inputs and segment registers; the helper preserves
+    ; CX/DX/SI/DI/BP itself, and SS is not modified.
     push ax
     push bx
-    push cx
-    push dx
-    push si
     push ds
-    mov si, ax
+    push es
+    push ax
     xor ax, ax
     mov ds, ax
-    mov ax, si
+    pop ax
     mov bx, cs
     call far [DW_VEC_PUTS]
+    pop es
     pop ds
-    pop si
-    pop dx
-    pop cx
     pop bx
     pop ax
     ret
 
 dw_getkey:
     push ds
+    push es
     xor ax, ax
     mov ds, ax
     call far [DW_VEC_GETKEY]
+    pop es
     pop ds
     ret

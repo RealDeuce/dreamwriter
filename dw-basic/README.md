@@ -36,6 +36,51 @@ dw-basic/build/EROMCARD.X
 /tmp/dw-card-1m-dw-basic.bin
 ```
 
+Build the mechanically converted GW-BASIC object set and link it with the
+vendored flatlink copy:
+
+```sh
+gmake -C dw-basic gw-basic-bin
+```
+
+That writes a zero-origin flat image and map:
+
+```text
+dw-basic/build/gw-basic.bin
+dw-basic/build/gw-basic.map
+```
+
+This is a linker milestone, not yet the ROM CARD payload. The current linked
+image resolves the converted interpreter modules and DreamWriter OEM hooks, but
+still needs a loader/runtime wrapper before it can be launched by the firmware.
+
+Build the first GW-BASIC ROM CARD payload:
+
+```sh
+gmake -C dw-basic basic-payload
+```
+
+That writes:
+
+```text
+dw-basic/build/EROMCARD-GW.X
+dw-basic/build/GWBASIC.OVR
+```
+
+Install that payload into a formatted SRAM image:
+
+```sh
+gmake -C dw-basic basic-card
+```
+
+The BASIC card image installs a small `EROMCARD.X` first-stage loader plus
+`GWBASIC.OVR`. `flatlink -offset 2048` gives the overlay addresses starting at
+`0x0800`; the overlay file itself starts with the first byte to load there. The
+first-stage loader opens `I:GWBASIC.OVR`, reads it to `CS:0800`, checks the ROM
+CARD loader's incoming `AX` work-memory limit, then jumps into GW-BASIC. By
+default it requires the linked static image end plus 4096 bytes of free BASIC
+space; override with `GW_BASIC_MIN_FREE=...`.
+
 One MAME command line for the generated card image:
 
 ```sh

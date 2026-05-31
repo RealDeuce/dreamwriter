@@ -76,7 +76,7 @@ OPEN:	CALL	FRMEVL ;read the file mode or filename
 	MOV	DH,MD_RND ;must be random
 	CMP	AL,"R"
 	JNZ	ERBFM0 ;if not, no match so "bad file mode"
-HAVMOD:	MOV	byte [FILMOD],DH ;set file mode
+HAVMOD:	MOV byte [FILMOD], DH ;set file mode
 	POP	BX ;get back the text pointer
 	CALL	SYNCHR
 db 0o54 ;skip comma before file number
@@ -130,7 +130,7 @@ db "T"
 	MOV	DH,MD_SQO
 	JMP	GOTMOD
 GOTMD1:	CALL	CHRGTR
-GOTMOD:	MOV	byte [FILMOD],DH ;set file mode
+GOTMOD:	MOV byte [FILMOD], DH ;set file mode
 	CALL	SYNCHR
 db "A"
 	CALL	SYNCHR
@@ -175,7 +175,7 @@ PRLENX:	RET
 ;
 PRLENC:
 	MOV	CX,0o0 ;indicates reclen parm not included
-	MOV	AL,byte [FILMOD] ;[AL]=requested file mode
+	MOV AL, byte [FILMOD] ;[AL]=requested file mode
 	CMP	AL,MD_RND
 	JNZ	NOLEN ;branch if file mode is not RANDOM
 	DEC	BX ;decrement text pointer
@@ -288,16 +288,16 @@ BSAVE:	CALL	BPARMS ;parse parms
 	CALL	SCDBIN ;set file-code to binary
 	MOV	AL,BSVFID ;output binary file ID
 	CALL	OUTDO ;output to file
-	MOV	AX,word [SAVSEG] ;DX=Segment from DEF SEG statement
+	MOV AX, word [SAVSEG] ;DX=Segment from DEF SEG statement
 	CALL	OUT16 ;write segment adr to file
 	POP	AX ;[AX]=start-adr
 	PUSH	AX
 	CALL	OUT16 ;output start adr
-	MOV	AX,word [SAVLEN] ;[DX]=number of bytes
+	MOV AX, word [SAVLEN] ;[DX]=number of bytes
 	MOV	CX,AX ;[CX]=length
 	CALL	OUT16 ;output end adr + 1
 	POP	BX ;[BX]=start-adr
-	MOV	DX,word [SAVSEG] ;DX=Segment adr
+	MOV DX, word [SAVSEG] ;DX=Segment adr
 	CALL	OUTBLK ;output binary
 	JMP	LODEND ;exit
 SNERR2:	JMP	SNERR
@@ -328,7 +328,7 @@ BLODP:	DEC	AL ;AL=1: no start-adr parm, -1: start-adr parm
 	POP	AX ;AL=1: no start-adr parm, -1: start-adr parm
 	DEC	AL
 	JZ	DEFSAD ;branch if no start-adr parm given
-	MOV	DX,word [SAVSEG] ;[DX]=segment parm
+	MOV DX, word [SAVSEG] ;[DX]=segment parm
 	MOV	BX,CX ;[BX]=start-adr parm
 DEFSAD:	CALL	INP16 ;[AX]=file length
 	MOV	CX,AX ;[CX]=file length
@@ -371,7 +371,7 @@ BPARM3:
 db ","
 	CALL	ADRGET ;[DX]=number of bytes for bsave (0..65535)
 	XCHG	BX,DX
-	MOV	word [SAVLEN],BX ;Save end ADDRESS+1(start+count)
+	MOV word [SAVLEN], BX ;Save end ADDRESS+1(start+count)
 	XCHG	BX,DX ;[BX]=text pointer
 	DEC	BX
 	CALL	CHRGTR
@@ -393,7 +393,7 @@ JPRINU:	JMP	PRINUS ;Print Using
 PRINTX:	CALL	CRDO ;output terminating CR
 PRNTX1:	POP	CX ;discard line width, last comma column
 	JMP	FINPRT ;close file#0, reset PTRFIL to keyboard
-LPRINT:	MOV	word [PTRFIL],-0o1 ;future output will go to Line Printer
+LPRINT:	MOV word [PTRFIL], -0o1 ;future output will go to Line Printer
 	JMP	PRINT1
 PRINT:
 	MOV	CL,MD_SQO ;setup output file
@@ -436,7 +436,7 @@ PRTS:	POP	DX ;get rid of old text pointer
 	POP	CX ;restore [CH]=width, [CL]=last comma column
 	PUSH	CX
 	PUSH	BX
-	MOV	BX,word [FACLO] ;[BX]=address of string descriptor
+	MOV BX, word [FACLO] ;[BX]=address of string descriptor
 	JNZ	INCLEN ;BRIF not comma terminated(print the space too)
 	CALL	PTRGPS ;[AL]=file's current position
 	ADD	AL,byte [BX+0o0] ;add length of string we will output
@@ -461,7 +461,7 @@ STRDON:	POP	BX
 	POP	CX
 	PUSH	CX ;refresh [CH]=width, [CL]=last comma column
 	PUSH	BX
-	MOV	BX,word [FACLO] ;BX points to string descriptor
+	MOV BX, word [FACLO] ;BX points to string descriptor
 	INC	CH
 	JZ	LINCH2 ;branch if infinite (255) line width
 	DEC	CH ;restore [CH]=device width
@@ -663,7 +663,7 @@ GDFILM:
 	CALL	SYNCHR
 db 0o54 ;GO PAST THE COMMA
 FILSET:	MOV	DX,CX ;SETUP PTRFIL
-	MOV	word [PTRFIL],CX
+	MOV word [PTRFIL], CX
 	RET
 ERBFM3:	JMP	DERBFM
 ERFNO3:	JMP	DERFNO
@@ -694,7 +694,7 @@ GETPTR:	CALL	FDBPTR ;SI points to File Data Block
 ; If device is keyboard, control transfers to GONE with AX used.
 ;
 global DIRDO
-DIRDO:	MOV	AX,word [PTRFIL]
+DIRDO:	MOV AX, word [PTRFIL]
 	OR	AX,AX
 	JNZ	ERFDR ;if device not keyboard then
 ;   error(direct statement in file)
@@ -728,9 +728,9 @@ extern FRQINT
 ;
 global PRGFIL
 extern TEMP
-PRGFIL:	MOV	byte [FILMOD],DH ;save file mode (MD.SQI / MD.SQO)
+PRGFIL:	MOV byte [FILMOD], DH ;save file mode (MD.SQI / MD.SQO)
 	CALL	NAMSCN ;scan filename
-	MOV	word [TEMP],BX ;PRGFIN restores text pointer when done
+	MOV word [TEMP], BX ;PRGFIN restores text pointer when done
 	JB	PRGFIX ;Exit - "." found in name
 	CALL	NAMBAS ;Add ".BAS" extension to disk file names
 PRGFIX:	JMP	NULOPN ;open file #0
@@ -751,7 +751,7 @@ NAMBAX:	RET
 ; Exit  - [PTRFIL] points to files FDB (directing all future I/O to file)
 ;
 global NULOPM
-NULOPM:	MOV	byte [FILMOD],AL ;FILMOD=file mode
+NULOPM:	MOV byte [FILMOD], AL ;FILMOD=file mode
 NULOPN:	XOR	AL,AL ;[AL]=file number
 	XOR	CX,CX ;random record length = 0
 ;fall into OPNFIL
@@ -776,7 +776,7 @@ OPNFIL:	PUSHF
 	MOV	BH,0o0 ;[BX]=file number
 	CALL	FDBPTR ;see if file is already open
 	JNZ	ERFAO1 ;error if already open
-	MOV	AL,byte [FILDEV] ;[AL]=device id
+	MOV AL, byte [FILDEV] ;[AL]=device id
 	CALL	CDEVID ;[DI]=device dispatch table offset (AL)
 	MOV	AH,G_OPN ;open function code (AL is still DEVICE ID)
 	CALL	TBLDSP ;call device-dependent open routine
@@ -797,8 +797,8 @@ ERFAO1:	JMP	DERFAO ;file already opened error
 global CLSALL
 CLSALL:	PUSH	AX
 	PUSH	SI
-	MOV	SI,word [FILTAB] ;Get address of next file block
-CLSAL1:	CMP	SI,word [STKLOW]
+	MOV SI, word [FILTAB] ;Get address of next file block
+CLSAL1:	CMP SI, word [STKLOW]
 	JZ	CLSALX ;Branch if finished
 	PUSH	word [F_NEXT+SI] ;save pointer to next entry in chain
 	MOV	AL,byte [F_NUM+SI] ;[AL]=file number
@@ -812,7 +812,7 @@ CLSALX:	POP	SI
 ; Exit  - Flags, AX, SI used, all other registers are preserved
 ;
 global CLSFIL
-CLSFIL:	MOV	AH,byte [NLONLY]
+CLSFIL:	MOV AH, byte [NLONLY]
 	TEST	AH,0o200 ;see if Chain All / Load, R in progress
 	JNZ	RET22 ;branch if Dont-Close-Any-Files flag set
 	TEST	AH,0o1 ;see if Load/Merge/Chain is in progress
@@ -824,11 +824,11 @@ CLSFL1:	CALL	FDBPTR ;[SI] points to FDB [AL]
 	PUSH	BX
 	PUSH	CX
 	PUSH	DX
-	MOV	word [FREFDB],SI ;So FINPRT will force close file if low-level
+	MOV word [FREFDB], SI ;So FINPRT will force close file if low-level
 ;close routine gets I/O error
 	MOV	AH,G_CLS
 	CALL	SIDSP ;close FDB pointed to by [SI]
-	MOV	word [FREFDB],0o0
+	MOV word [FREFDB], 0o0
 	CALL	FFREE ;Deallocate FDB and remove from FDB Chain
 	POP	DX
 	POP	CX
@@ -859,7 +859,7 @@ FL0EOF:	CMP	byte [F_CODE+SI],FC_BIN
 LDREOF:
 extern CHNFLG
 extern CHNRET
-	CMP	byte [CHNFLG],0o0 ;chain in progress?
+	CMP byte [CHNFLG], 0o0 ;chain in progress?
 	JE	NOTCHN ;branch if not chaining
 	JMP	CHNRET ;perform variable block transfer, etc.
 ; close all files
@@ -867,14 +867,14 @@ NOTCHN:
 	PUSH	BX ;save all registers
 	PUSH	CX
 	PUSH	DX
-	MOV	AL,byte [NLONLY] ;get load flags
+	MOV AL, byte [NLONLY] ;get load flags
 	AND	AL,0o200 ;leave others open, null gets closed
-	MOV	byte [NLONLY],AL ;allow other files to be closed
+	MOV byte [NLONLY], AL ;allow other files to be closed
 	CALL	PRGFIN ;close the file
 	POP	DX
 	POP	CX
 	POP	BX
-	MOV	AL,byte [RUNFLG] ;run it or not?
+	MOV AL, byte [RUNFLG] ;run it or not?
 	OR	AL,AL
 	JZ	NORUNC ;dont run program
 extern RUNC
@@ -901,7 +901,7 @@ INCHRX:	POP	SI
 ;
 global INDSKC ;Referenced by DSKCOM
 INDSKC:
-INCHRE:	MOV	SI,word [PTRFIL] ;SI points to current FDB
+INCHRE:	MOV SI, word [PTRFIL] ;SI points to current FDB
 ;fall into INCHSI
 ;INCHSI - get next byte from file SI (CTL Z = end-of-file)
 ; Exit  - Carry set if EOF, else [AL]=byte.
@@ -996,7 +996,7 @@ INP16X:	POP	BX
 global BAKCHR
 global BCHRSI
 BAKCHR:	PUSH	SI
-	MOV	SI,word [PTRFIL]
+	MOV SI, word [PTRFIL]
 	CALL	BCHRSI
 	POP	SI
 	RET
@@ -1019,8 +1019,8 @@ BINSAV:	CALL	SCCPTR ;GET RID OF POINTERS BEFORE SAVING
 	CALL	SCDBIN ;Set attribute CODE to BINARY (not ASCII)
 	MOV	AL,255 ;ALWAYS START WITH 255
 BINPSV:	CALL	FILOU3 ;SEND TO FILE
-	MOV	CX,word [VARTAB] ;GET STOP POINT
-	MOV	BX,word [TXTTAB] ;GET START POINT
+	MOV CX, word [VARTAB] ;GET STOP POINT
+	MOV BX, word [TXTTAB] ;GET START POINT
 	SUB	CX,BX ;Calculate bytes to SAVE
 	JBE	BINSVX ;Nothing to SAVE
 	MOV	DX,DS ;Get Segment for SAVE
@@ -1079,7 +1079,7 @@ RET27:	RET
 ;         [DX] = segment adr
 ; Exit  - [BX] = End + 1
 ;
-OUTBLK:	MOV	SI,word [PTRFIL]
+OUTBLK:	MOV SI, word [PTRFIL]
 	MOV	AH,G_BOT ;Block output function
 	CALL	PTRDSP
 	RET
@@ -1092,7 +1092,7 @@ OUTBLK:	MOV	SI,word [PTRFIL]
 ;         SI, CX, AX used.
 ;
 extern DFSTLD
-INPBLK:	MOV	SI,word [PTRFIL]
+INPBLK:	MOV SI, word [PTRFIL]
 	MOV	AH,G_BIN ;block input function
 	CALL	PTRDSP ;[AL]=next byte from file PTRFIL
 	RET
@@ -1105,7 +1105,7 @@ INPBLK:	MOV	SI,word [PTRFIL]
 global FSTLOD
 extern OUTLOD
 FSTLOD:
-	MOV	CX,word [FRETOP] ;Bottom of string space
+	MOV CX, word [FRETOP] ;Bottom of string space
 	SUB	CX,86 ;leave a little breathing room
 	SUB	CX,BX ;[CX]=maximum legal size of program
 	CALL	SCDBIN ;set CODE attribute to Binary
@@ -1146,7 +1146,7 @@ PTRWDL:	SUB	AH,14 ;T.B.S. eventually, use G.GCW
 ;
 global PTRWID
 PTRWID:	PUSH	SI ;save caller's SI
-	MOV	SI,word [PTRFIL]
+	MOV SI, word [PTRFIL]
 	INC	SI
 	JZ	PTRWD1 ;if LPT Pseudo FDB, use Device width
 	DEC	SI
@@ -1271,7 +1271,7 @@ FCERR9:	JMP	FCERR ;Function Call Error
 ;
 global PTRDSP
 PTRDSP:	PUSH	SI
-	MOV	SI,word [PTRFIL]
+	MOV SI, word [PTRFIL]
 	CALL	SIDSP
 	POP	SI
 	RET
@@ -1317,7 +1317,7 @@ SIDSP2:	POPF
 TBLDSP:	PUSH	DI
 	PUSHF
 	PUSH	AX
-	MOV	AX,word [DEVPTR] ;AX points to 1st entry in dispatch table
+	MOV AX, word [DEVPTR] ;AX points to 1st entry in dispatch table
 	ADD	DI,AX ;DI points to dispatch table pointer for device
 	MOV	DI,word [CS:DI+0o0] ;DI points to dispatch table for device
 	OR	DI,DI ;If entry is 0, then
@@ -1328,7 +1328,7 @@ TBLDSP:	PUSH	DI
 	CBW ;[AX]=function code
 	ADD	DI,AX ;Add function code offset to dispatch
 	MOV	AX,word [CS:DI+0o0] ;Get address of routine
-	MOV	word [IOJUMP],AX
+	MOV word [IOJUMP], AX
 	POP	AX
 	POPF
 	POP	DI
@@ -1381,7 +1381,7 @@ NAMSC1:	PUSH	BX ;save text pointer
 	MOV	CH,0o0 ;[CX]=length of string
 	MOV	SI,word [BX+0o1] ;SI points to start of string
 	CALL	PARDEV ;(AL) = device #
-	MOV	byte [FILDEV],AL ;Save device #
+	MOV byte [FILDEV], AL ;Save device #
 	OR	AL,AL
 	JS	NOTDSK ;branch if special device
 	XOR	AL,AL ;(AL) = 0 for disks
@@ -1480,7 +1480,7 @@ DEVNM:	POP	DI ;Restore old string pointer
 	DEC	CX ;Count off :
 	CMP	DX,0o1
 	JE	DSKNAM ;Length = 1 - must be disk name
-	MOV	DI,word [DEVTBL]
+	MOV DI, word [DEVTBL]
 	DEC	DI
 DEVSRC:	PUSH	SI
 	PUSH	DX
@@ -1554,16 +1554,16 @@ extern GARBA2
 global INIFDB
 INIFDB:	PUSH	CX
 	PUSH	DI
-	TEST	byte [FILMOD],AH ;Check for valid file mode
+	TEST byte [FILMOD], AH ;Check for valid file mode
 	JZ	ERBFM4 ;  Bad file mode
 	ADD	CX,FDBSIZ ;(CX) = size of block to allocate
 	CALL	FALLOC ;SI points to Allocated block
-	MOV	word [PTRFIL],SI
+	MOV word [PTRFIL], SI
 	MOV	byte [F_NUM+SI],BL ;Set file number
 	MOV	byte [F_DEV+SI],AL ;Set file device
 	MOV	byte [F_FLGS+SI],0o0
 	MOV	byte [F_CODE+SI],FC_ASC ;default file-code to ASCII
-	MOV	CL,byte [FILMOD]
+	MOV CL, byte [FILMOD]
 	MOV	byte [F_MODE+SI],CL ;Set file mode
 	MOV	byte [F_WID+SI],DL ;Set file width
 	MOV	byte [F_POS+SI],DH ;Set file position
@@ -1577,7 +1577,7 @@ ERBFM4:	JMP	DERBFM ;Bad file mode
 ;
 global SCDASC
 SCDASC:	PUSH	SI
-	MOV	SI,word [PTRFIL]
+	MOV SI, word [PTRFIL]
 	MOV	byte [F_CODE+SI],FC_ASC
 	POP	SI
 	RET
@@ -1586,7 +1586,7 @@ SCDASC:	PUSH	SI
 ;
 global SCDBIN
 SCDBIN:	PUSH	SI
-	MOV	SI,word [PTRFIL]
+	MOV SI, word [PTRFIL]
 	MOV	byte [F_CODE+SI],FC_BIN
 	POP	SI
 	RET
@@ -1606,8 +1606,8 @@ FACFPT:	CALL	CONINT ;[AL] = file number
 ;         else FLAGS.Z is true
 ;         All other registers are preserved
 ;
-FDBPTR:	MOV	SI,word [FILTAB] ;[SI] points to 1st file-data-block
-GPTRL:	CMP	SI,word [STKLOW] ;compare with nil FDB pointer
+FDBPTR:	MOV SI, word [FILTAB] ;[SI] points to 1st file-data-block
+GPTRL:	CMP SI, word [STKLOW] ;compare with nil FDB pointer
 	JZ	GPTRX ;branch if at end of FDB chain
 	CMP	AL,byte [F_NUM+SI]
 	JZ	GPTRF ;branch if found FDB
@@ -1635,8 +1635,8 @@ FALLOC:	PUSH	AX
 	PUSHF
 	MOV	AX,CX ;[AX]=size of new FDB
 	MOV	DL,0o1 ;Indicates 1st attempt to find space
-FALC1:	MOV	BX,word [FRETOP] ;BX points to top of free string space
-	SUB	BX,word [STREND] ;BX=number of bytes free - 1
+FALC1:	MOV BX, word [FRETOP] ;BX points to top of free string space
+	SUB BX, word [STREND] ;BX=number of bytes free - 1
 	CMP	AX,BX ;compare with requested amount
 	JB	FALCOK ;branch if its available
 	DEC	DL
@@ -1650,11 +1650,11 @@ FAPAS1:	PUSH	AX
 	POP	AX
 	JMP	FALC1 ;now that its compressed, try again
 FALCOK:	NEG	AX ;indicates moving strings down
-	MOV	SI,word [FILTAB] ;SI points to lowest FDB in chain
+	MOV SI, word [FILTAB] ;SI points to lowest FDB in chain
 	PUSH	SI ;save for link
 	CALL	XFRSTR ;move string space
 	POP	BX
-	MOV	SI,word [FILTAB] ;SI points to new FDB
+	MOV SI, word [FILTAB] ;SI points to new FDB
 	MOV	word [F_NEXT+SI],BX ;link FDB into chain
 global PDCBAX
 global PCBAX
@@ -1682,7 +1682,7 @@ FFREE:	PUSH	AX
 	PUSHF
 	MOV	AX,word [F_NEXT+SI] ;AX points to next FDB in chain
 	SUB	AX,SI ;AX = size of FDB being freed
-	MOV	BX,word [FILTAB] ;BX points to 1st FDB in chain
+	MOV BX, word [FILTAB] ;BX points to 1st FDB in chain
 FFNDL:	CMP	BX,SI ;see if this is the one being freed
 	JE	FFOUND ;branch if it is
 	JB	STILOK ;branch if still less than expected
@@ -1724,7 +1724,7 @@ XFRSTR:	PUSH	SI
 	MOV	DX,AX ;DX=byte-count adjustment for block move
 	ADD	DI,AX ;DI points to top of dest of block move
 	MOV	CX,SI
-	SUB	CX,word [FRETOP] ;CX = number of bytes to transfer
+	SUB CX, word [FRETOP] ;CX = number of bytes to transfer
 	JZ	XFRSTX ;return if string space is empty
 	PUSH	SI
 	PUSH	DI
@@ -1745,8 +1745,8 @@ XFRSUP:
 ; DI points to top of destination of block move
 ; DX = byte count adjustment for block move
 ;
-	MOV	BX,word [VARTAB] ;Look at simple strings
-CSVAR:	CMP	BX,word [ARYTAB] ;Done if we have reached array table
+	MOV BX, word [VARTAB] ;Look at simple strings
+CSVAR:	CMP BX, word [ARYTAB] ;Done if we have reached array table
 	JZ	CAYVAR ;Yes
 	CALL	SKPNAM ;Skip name, returns Z if was a string
 	JNZ	CSKPVA ;Skip this var, not string
@@ -1759,7 +1759,7 @@ CSKPVA:
 ;Update all string descriptors in ARYTAB
 ;
 CAYVA2:	MOV	BX,AX ;BX points to next string descriptor
-CAYVAR:	CMP	BX,word [STREND] ;New limit of search
+CAYVAR:	CMP BX, word [STREND] ;New limit of search
 	JZ	XFRSTX ;branch if done searching arrays
 	CALL	SKPNAM ;Skip over name
 	PUSHF ;save string-name indicator
@@ -1781,16 +1781,16 @@ CAYSTR:	POP	AX ;AX points to end of array
 	PUSH	AX
 	CALL	UPDSTD ;Update string descriptor
 	JMP	CAYSTR
-XFRSTX:	MOV	CX,word [PTRFIL]
-	CMP	CX,word [FRETOP]
+XFRSTX:	MOV CX, word [PTRFIL]
+	CMP CX, word [FRETOP]
 	JB	XFSTX1 ;brif PTRFIL pointed below moved block
 	CMP	CX,SI
 	JAE	XFSTX1 ;brif PTRFIL pointed above moved block
-	ADD	word [PTRFIL],DX ;Adjust PTRFIL for block move
-XFSTX1:	ADD	word [FRETOP],DX ;Adjust FRETOP for block move
-	ADD	word [SAVFRE],DX ;Adjust SAVFRE for block move
-	ADD	word [FILTAB],DX ;Adjust FILTAB for block move
-	ADD	word [MEMSIZ],DX ;Adjust MEMSIZ for block move
+	ADD word [PTRFIL], DX ;Adjust PTRFIL for block move
+XFSTX1:	ADD word [FRETOP], DX ;Adjust FRETOP for block move
+	ADD word [SAVFRE], DX ;Adjust SAVFRE for block move
+	ADD word [FILTAB], DX ;Adjust FILTAB for block move
+	ADD word [MEMSIZ], DX ;Adjust MEMSIZ for block move
 	POP	DI
 	POP	SI
 	RET
@@ -1806,7 +1806,7 @@ XFSTX1:	ADD	word [FRETOP],DX ;Adjust FRETOP for block move
 ;
 UPDSTD:
 	MOV	CX,word [BX+0o1] ;CX points to string data
-	CMP	CX,word [FRETOP]
+	CMP CX, word [FRETOP]
 	JBE	UPDSTX ;brif string data is below string space
 	CMP	CX,SI
 	JBE	UPDSTU ;brif string data was block moved
@@ -1901,13 +1901,13 @@ global GIOTRM
 GIOINI:
 	CALL	MSISET ;Init MSDOS interrupts &H23 & &H24
 	XOR	AX,AX
-	MOV	word [STKLOW],AX
-	MOV	word [FILTAB],0o0 ;so FDBPTR will work during initialization
-	MOV	byte [NLONLY],AL
-	MOV	BX,word [DEVINI] ;DI points to array of init routines
+	MOV word [STKLOW], AX
+	MOV word [FILTAB], 0o0 ;so FDBPTR will work during initialization
+	MOV byte [NLONLY], AL
+	MOV BX, word [DEVINI] ;DI points to array of init routines
 	CALL	DOALDV
 	JMP	FINPRT ;reset PTRFIL to Keyboard
-GIOTRM:	MOV	BX,word [DEVTRM] ;DI points to array of terminate routines
+GIOTRM:	MOV BX, word [DEVTRM] ;DI points to array of terminate routines
 	CALL	DOALDV
 	CALL	MSIRST ;Replace MSDOS int vectors &H23 & &H24
 	RET
@@ -1970,22 +1970,22 @@ extern CSRY
 extern CSRX
 extern CSRTYP
 	PUSH	DX
-	MOV	DL,byte [CSRY]
-	MOV	DH,byte [CSRX] ;DX=current posn
-	MOV	byte [CSRTYP],3 ;Set to user cursor
+	MOV DL, byte [CSRY]
+	MOV DH, byte [CSRX] ;DX=current posn
+	MOV byte [CSRTYP], 3 ;Set to user cursor
 	CALL	SETCSR ;Display the cursor
 	POP	DX
-	MOV	SI,word [FREFDB]
+	MOV SI, word [FREFDB]
 	OR	SI,SI
 	JZ	NFRFDB ;branch if no FDB needs to be released
 	CALL	FFREE
 NFRFDB:	XOR	AX,AX
-	MOV	word [FREFDB],AX ;reset FREE-FDB flag
+	MOV word [FREFDB], AX ;reset FREE-FDB flag
 	CALL	CLSFIL ;close file #0 (if NLONLY=0)
 	XOR	AX,AX
-	TEST	byte [NLONLY],0o1
+	TEST byte [NLONLY], 0o1
 	JNZ	RET45 ;don't clear PTRFIL if loading program
-	MOV	word [PTRFIL],AX ;future I/O will use Keyboard/CRT
+	MOV word [PTRFIL], AX ;future I/O will use Keyboard/CRT
 RET45:	RET
 ; SUBTTL  MSDOS   Abort/Initialization/Termination Processing
 extern DINTAD
@@ -2014,42 +2014,19 @@ DSKERX:	JMP	ERROR ;Go report the error and return
 ;Extra stuff on stack is removed by ERROR
 ;MSCTLC - Processing for MSDOS interrupt &H23
 ;
-MSCTLC:	MOV	byte [MSDCCF],0o377 ;Record control-C event for POLKEY
+MSCTLC:	MOV byte [MSDCCF], 0o377 ;Record control-C event for POLKEY
 	IRET
 ;MSISET - Set MSDOS termination and Ctl-C processing addresses.
 ;         The current addresses are saved for restoration upon termination
 ;         All registers preserved.
 ;
-MSISET:	PUSH	AX
-	PUSH	DX
-	PUSH	ES
-	MOV	AX,36 ;MSDOS fatal error interrupt
-	MOV	BX,DINTAD ;Get save location for fatal error
-	CALL	SAVVEC
-	DEC	AX ;MSDOS Ctl-C interrupt
-	MOV	BX,CTLCAD ;Get save location
-	CALL	SAVVEC
-	PUSH	CS
-	POP	ES ;BASIC code segment to ES
-	MOV	DX,MSCTLC ;BASIC Ctl-C handler address
-	CALL	SETVEC ;BASIC Ctl-C handler vector set
-	INC	AX ;MSDOS fatal error interrupt
-	MOV	DX,ERRC_DSKERR
-	CALL	SETVEC ;BASIC fatal error handler vector set
-	POP	ES
-	POP	DX
-	POP	AX
+MSISET:
+; ROM CARD build has no DOS vector API. The original routine installs Ctrl-C
+; and critical-error vectors through INT 21h, which is not a valid contract
+; here. Preserve the caller-visible all-registers-preserved behavior by
+; returning directly.
 	RET
-MSIRST:	PUSH	AX
-	PUSH	ES
-	MOV	AX,36 ;MSDOS fatal error interrupt
-	LES DX, [DINTAD] ;Get MSDOS fatal error handler add/par
-	CALL	SETVEC
-	DEC	AX ;MSDOS Ctl-C interrupt
-	LES DX, [CTLCAD] ;Get MSDOS Ctl-C handler add/par
-	CALL	SETVEC
-	POP	ES
-	POP	AX
+MSIRST:
 	RET
 ;SAVVEC - Get and store an interrupt vector
 ;ENTRY  - AX = interrupt

@@ -79,27 +79,25 @@ INIT:
 ; of CODESG for this to work.  No error will be generated, so be careful.
 ;
 extern BEGDSG ;Beg. of the data segment, offset from CS
-db 0o272
-dw BEGDSG ;MOVI DX,BEGDSP
-db 0o261, 0o4 ;MOVI CL,4   Divide by 16 to ...
-db 0o323, 0o352 ;SHR  DX,CL  get paragraph address
-db 0o214, 0o311 ;MOV  CX,CS  add in code segment
-db 0o3, 0o321 ;ADD  DX,CS
-db 0o264, 0o46 ;MOVBI AH,38 SPECIAL FUNCTION TO CALC END
-;            OF CS AND RETURN START OF DS
-db 0o315, 0o41 ;INT  33     CALL SCP DOS
-db 0o214, 0o330 ;MOV  AX,DS  SAVE DS FOR EXIT VECTOR
-db 0o216, 0o332 ;MOV  DS,DX  SET UP SEG REGS
-db 0o216, 0o302 ;MOV  ES,DX
+extern DW_LOADER_LIMIT
+; Flat ROM CARD build: code and data labels are linked in one segment.
+; Keep DS/ES/SS in the loaded segment instead of computing an EXE-style DSEG.
+push cs
+pop dx
+mov ax, ds ;SAVE DS FOR EXIT VECTOR
+mov ds, dx
+mov es, dx
 ;Initialize the jump vector for exit to MSDOS.  MSDOS 2.0 requires that
 ; exit is made through the segment prefix table which is located at DS:0.
 ; For .EXE files, DS is not the same as CS at program initiation time (NOW).
 extern CPMEXT
 db 0o307
+db 0o6
 dw CPMEXT ;MOVI CPMEXT,^D0
 db 0o0, 0o0 ;            INS86 has 4 params
 ;            & some may not be words
 db 0o220
+db 0o243
 dw CPMEXT+2 ;NOP         NOP - pad to item 3 of INS86
 ;MOV  CPMEXT+2,AX
 	CLI ;Setting the stack segment and stack
@@ -107,12 +105,13 @@ dw CPMEXT+2 ;NOP         NOP - pad to item 3 of INS86
 ;operation.
 db 0o216, 0o322 ;MOV SS,DX
 	MOV	BX,BUF+128 ;Use BUF for a temporary stack.
-	MOV	[MEMSIZ],BX
+	MOV [MEMSIZ], BX
 	MOV	SP,BX
+	STI
 	XOR	AL,AL ;INITIALIZE PROTECT FLAG
-	MOV	byte [PROFLG],AL
-	MOV	byte [MSWFLG],AL ;Init /M: flag
-	MOV	byte [CSWFLG],AL ;Init /C: flag
+	MOV byte [PROFLG], AL
+	MOV byte [MSWFLG], AL ;Init /M: flag
+	MOV byte [CSWFLG], AL ;Init /C: flag
 extern CNSLEN
 extern CONSTR
 extern ENDBUF
@@ -139,8 +138,8 @@ extern SNDRST
 	CALL	SNDRST ;reset sound queue, disable speaker
 extern GIOINI
 	CALL	GIOINI
-	MOV	BX,MEMSIZ
-	MOV	[TOPMEM],BX
+	MOV BX, [MEMSIZ]
+	MOV [TOPMEM], BX
 	MOV	BX,KBUF-1 ;INITIALIZE KBUF-1 WITH A COLON
 	MOV	byte [BX],":" ;DIRECT INPUTS RESTART OK.
 	CALL	STKINI ;REALLY SET UP INIT'S TEMPORARY STACK
@@ -148,23 +147,23 @@ extern GIOINI
 ;       Check CP/M Version Number
 extern CPMREA
 	MOV	BX,34*256+33+0 ;2.x Read / Write
-CPMVR1:	MOV	[CPMREA],BX ;Save Read/Write Codes
+CPMVR1:	MOV [CPMREA], BX ;Save Read/Write Codes
 extern CNTOFL
 	XOR	AL,AL
-	MOV	byte [CNTOFL],AL
+	MOV byte [CNTOFL], AL
 extern ENDBUF
-	MOV	byte [ENDBUF],AL ;MAKE SURE OVERRUNS STOP
+	MOV byte [ENDBUF], AL ;MAKE SURE OVERRUNS STOP
 extern DSEGZ
-	MOV	byte [DSEGZ],AL ;(DS) LOCATED ZERO
-	MOV	byte [CHNFLG],AL ;MAKE SURE CHAINS AND MERGES
-	MOV	byte [MRGFLG],AL ;DONT TRY TO HAPPEN
-	MOV	byte [ERRFLG],AL ;DON'T ALLOW EDIT TO BE CALLED ON ERRORS
+	MOV byte [DSEGZ], AL ;(DS) LOCATED ZERO
+	MOV byte [CHNFLG], AL ;MAKE SURE CHAINS AND MERGES
+	MOV byte [MRGFLG], AL ;DONT TRY TO HAPPEN
+	MOV byte [ERRFLG], AL ;DON'T ALLOW EDIT TO BE CALLED ON ERRORS
 extern TEMPST
 extern TEMPPT
 	MOV	BX,TEMPST
-	MOV	[TEMPPT],BX
+	MOV [TEMPPT], BX
 	MOV	BX,PRMSTK ;INITIALIZE PARAMETER BLOCK CHAIN
-	MOV	[PRMPRV],BX
+	MOV [PRMPRV], BX
 ; SUBTTL Read Operating System Parameters (memsiz etc.)
 ; THE FOLLOWING CODE SCANS A CP/M COMMAND LINE FOR BASIC.
 ; THE FOLLOWING SWITCHES ARE RECOGNIZED:
@@ -175,21 +174,19 @@ extern TEMPPT
 ;       /C:<COM INPUT QUEUE SIZE>
 ;
 extern CPMMEM
-	MOV	BX,CPMMEM ;Load bytes free within segment
-;For DYNCOM, CPMMEM holds the last segment addr of the system(i.e. CPMMEM=2)
-extern SEGOFF
-	CALL	SEGOFF ;Return byte offset of segment from current DS
+	MOV	BX,word [DW_LOADER_LIMIT] ;ROM CARD approved work-area byte limit
 	MOV	[MEMSIZ],BX ;USE AS DEFAULT
 	MOV	[MAXMEM],BX ;set MAX DS size for CLEAR statement
 extern DSEGZ
 	MOV	BX,DSEGZ ;IN THE DATA SEGMENT
-	MOV	[TEMP8],BX ;SO IF RE-INITAILIZE OK
+	MOV [TEMP8], BX ;SO IF RE-INITAILIZE OK
 extern CPMWRM
 TBUFF equ CPMWRM+128 ;WHERE CP/M COMMAND BUFFER IS LOCATED
+	MOV	byte [TBUFF],0 ;ROM CARD launch has no CP/M/DOS command tail
 	MOV	BX,TBUFF ;POINT TO FIRST CHAR OF COMMAND BUFFER
 	MOV	AL,byte [BX] ;WHICH CONTAINS # OF CHARS IN COMMAND
 	OR	AL,AL ;IS THERE A COMMAND?
-	MOV	[TEMP8],BX ;SAVE POINTER TO THIS ZERO
+	MOV [TEMP8], BX ;SAVE POINTER TO THIS ZERO
 	JNZ	??L000
 	JMP	DONCMD ;NOTHING IN COMMAND BUFFER
 ??L000:
@@ -204,7 +201,7 @@ TBFLP:	MOV	AL,byte [BX] ;GET CHAR FROM BUFFER
 	JNZ	TBFLP ;KEEP MOVING CHARS
 	DEC	BX ;BACK UP POINTER
 ENDCMD:	MOV	byte [BX],0 ;STORE TERMINATOR FOR CHRGET (0)
-	MOV	[TEMP8],BX ;SAVE POINTER TO NEW ZERO (OLD DESTROYED)
+	MOV [TEMP8], BX ;SAVE POINTER TO NEW ZERO (OLD DESTROYED)
 	MOV	BX,TBUFF-1 ;POINT TO CHAR BEFORE BUFFER
 	CALL	CHRGTR ;IGNORE LEADING SPACES
 	OR	AL,AL
@@ -215,7 +212,7 @@ ENDCMD:	MOV	byte [BX],0 ;STORE TERMINATOR FOR CHRGET (0)
 	JZ	FNDSLH ;YES
 	DEC	BX ;BACK UP POINTER
 	MOV	byte [BX],34 ;STORE DOUBLE QUOTE
-	MOV	[TEMP8],BX ;SAVE POINTER TO START OF FILE NAME
+	MOV [TEMP8], BX ;SAVE POINTER TO START OF FILE NAME
 	INC	BX ;BUMP POINTER
 ISSLH:	CMP	AL,SWTCHR ;OPTION?
 	JZ	FNDSLH ;YES
@@ -239,9 +236,9 @@ SCANS1:
 	JMP	SNERR ;Branch if couldn't recognize option
 ??L002:
 	CALL	GETVAL ;[DX]=requested MEMSIZ
-	MOV	[MSWSIZ],DX ;Record memory request
+	MOV [MSWSIZ], DX ;Record memory request
 	MOV	AL,0o377
-	MOV	byte [MSWFLG],AL ;Set /M: option flag
+	MOV byte [MSWFLG], AL ;Set /M: option flag
 FOK:	DEC	BX ;RESCAN LAST CHAR
 	CALL	CHRGTR ;BY CALLING CHRGET
 	JZ	DONCMD ;END OF COMMAND
@@ -249,9 +246,9 @@ FOK:	DEC	BX ;RESCAN LAST CHAR
 db SWTCHR ;SLASH SHOULD FOLLOW
 	JMP	SCANS1 ;SCAN NEXT SWITCH
 WASC:	MOV	AL,0o377
-	MOV	byte [CSWFLG],AL ;Set /C: option flag
+	MOV byte [CSWFLG], AL ;Set /C: option flag
 	CALL	GETVAL ;Get COM request to D,E
-	MOV	[CSWSIZ],DX ;Record for future memory map calc.
+	MOV [CSWSIZ], DX ;Record for future memory map calc.
 	JMP	FOK
 WASS: ;GIO has dynamic record size
 WASF: ;GIO has dynamic number of files
@@ -264,13 +261,13 @@ db ":" ;MAKE SURE COLON FOLLOWS
 extern TEMP8 ;POINTER TO BASIC LOAD FILE
 ERRCMD:
 DONCMD:
-	CALL	MAPCLC ;Calc. (but don't set) the new mem. map
+	; Flat ROM CARD build keeps the startup data map in place.
 ;Now copy the command line file name (if there is one) to BUF
 ;Move required since DS: segment header will be overwritten when the
 ;DS: is coppied to the new DS: location.
-	MOV	BX,TEMP8 ;Load address of command line file name
+	MOV BX, [TEMP8] ;Load address of command line file name
 	MOV	DX,BUF ;Destination address
-	MOV	[TEMP8],DX ;New command line buffer address
+	MOV [TEMP8], DX ;New command line buffer address
 NXTBYT:	MOV	AL,byte [BX] ;File name character
 	XCHG	BX,DX
 	MOV	byte [BX],AL ;Store at BUF
@@ -287,11 +284,11 @@ NXTBYT:	MOV	AL,byte [BX] ;File name character
 ; initialized, this is done by nodsks, first closing all files.
 ; the number of files is the file pointer table
 ;
-	MOV	BX,MEMSIZ ;get size of memory
+	MOV BX, [MEMSIZ] ;get size of memory
 	DEC	BX ;always leave top byte unused because
 ;val(string) makes byte in memory
 ;beyond last char of string=0
-	MOV	[MEMSIZ],BX ;save in real memory size
+	MOV [MEMSIZ], BX ;save in real memory size
 	DEC	BX ;one lower is stktop
 	PUSH	BX ;save it on stack
 ; SUBTTL INIT TXTAB, STKTOP, VARTAB, MEMSIZ, FRETOP, STREND
@@ -319,7 +316,7 @@ NXTBYT:	MOV	AL,byte [BX] ;File name character
 ; At this point, MEMSIZ-1 is on stack, [HL]=TXTTAB-1
 ;
 	MOV	BX,LSTVAR ;LSTVAR resides in last linked module with DS:
-	MOV	[TXTTAB],BX ;save bottom of memory
+	MOV [TXTTAB], BX ;save bottom of memory
 	POP	DX ;GET CURRENT MEMSIZ
 	MOV	AL,DL ;WANT AN EVEN STACK PTR. FOR 8086
 	AND	AL,254 ;SO WE'LL CLEAR LOW BIT
@@ -348,54 +345,59 @@ SMLSTK:	MOV	AL,DL ;SUBTRACT STACK SIZE FROM TOP MEM
 	JAE	??L004
 	JMP	OMERRR
 ??L004:
-	MOV	[STKLOW],BX ;Save lowest legal value for [SP]
-	MOV	[FILTAB],BX ;Initially there are no FDB's
+	MOV [STKLOW], BX ;Save lowest legal value for [SP]
+	MOV [FILTAB], BX ;Initially there are no FDB's
 	DEC	BX
 	MOV	byte [BX],0 ;String space should be terminated by 0 for VAL
 	DEC	BX
-	MOV	[MEMSIZ],BX ;Save highest byte to be used by strings
+	MOV [MEMSIZ], BX ;Save highest byte to be used by strings
 	XCHG	BX,DX
-	MOV	[TOPMEM],BX
-	MOV	[FRETOP],BX ;REASON USES THIS...
+	MOV [TOPMEM], BX
+	MOV [FRETOP], BX ;REASON USES THIS...
 	MOV	SP,BX ;SET UP NEW STACK
-	MOV	[SAVSTK],BX
-	MOV	BX,TXTTAB
+	MOV [SAVSTK], BX
+	MOV BX, [TXTTAB]
 	XCHG	BX,DX
 	CALL	REASON
 extern FREFLG ;Print free bytes flag
 	XOR	AL,AL
-	MOV	byte [FREFLG],AL ;Clear to print free bytes message
+	MOV byte [FREFLG], AL ;Clear to print free bytes message
 extern GETHED ;OEM heading retrieval routine
 extern KEYSW ;Function key on flag
 	MOV	AL,255 ;if heading is printed, display Fn keys also
-	MOV	byte [KEYSW],AL
+	MOV byte [KEYSW], AL
 	CALL	GETHED ;Get OEM specific portion of the heading
 	JNZ	PRNTIT ;Always print the heading option
 	PUSH	BX ;Print heading if no program option
-	MOV	BX,TEMP8 ;Get pointer to file or 0
+	MOV BX, [TEMP8] ;Get pointer to file or 0
 	MOV	AL,byte [BX] ;Test for file on command line
 	POP	BX ;Retrieve OEM heading pointer
 	OR	AL,AL
 	JZ	PRNTIT ;No program - go print heading
-	MOV	byte [FREFLG],AL ;Set to inhibit free bytes message
+	MOV byte [FREFLG], AL ;Set to inhibit free bytes message
 	XOR	AL,AL ;Turn keys off if there is a program
-	MOV	byte [KEYSW],AL ; otherwise allow OEM default
+	MOV byte [KEYSW], AL ; otherwise allow OEM default
 	JMP	PRNTND ;Skip heading
-PRNTIT:	CALL	STROUT ;Print it
+PRNTIT:
+	CALL	STROUT ;Print it
+extern DW_DEBUG_PRE_STROUT_HEDING
+	CALL	DW_DEBUG_PRE_STROUT_HEDING
 	MOV	BX,HEDING ;GET HEADING ("BASIC VERSION...")
 	CALL	STROUT ;PRINT IT
+extern DW_DEBUG_POST_STROUT_HEDING
+	CALL	DW_DEBUG_POST_STROUT_HEDING
 PRNTND:
 extern SKEYON
-	MOV	AL,byte [KEYSW] ;Get function key display switch
+	MOV AL, byte [KEYSW] ;Get function key display switch
 	OR	AL,AL ;Keys need to be turned on?
 	JNZ	??L005
 	JMP	KEYSOF ;Leave keys off
 ??L005:
 	XOR	AL,AL
-	MOV	byte [KEYSW],AL ;Show current status of keys
+	MOV byte [KEYSW], AL ;Show current status of keys
 	CALL	SKEYON ;Set function key display on
 KEYSOF:	MOV	AL,0o377
-	MOV	byte [INITFG],AL ;Set the initialization complete flag
+	MOV byte [INITFG], AL ;Set the initialization complete flag
 ;indicating errors no longer result in an exit
 ;to the OS
 	JMP	INITSA

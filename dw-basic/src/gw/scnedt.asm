@@ -113,9 +113,9 @@ global SINLIN
 SINLIN:	OR	AL,AL ; Indicate INPUT statement line input
 INLIN0:
 	SBB	AL,AL ; If INPUT statement AL=0, else AL=-1
-	MOV	byte [F_EDPG],AL ; Save flag
-	MOV	AL,byte [F_EDIT] ; Get old value of F.EDIT(in case of EDIT statement)
-	MOV	byte [F_EDIT],0o377 ; Indicate executing INLIN
+	MOV byte [F_EDPG], AL ; Save flag
+	MOV AL, byte [F_EDIT] ; Get old value of F.EDIT(in case of EDIT statement)
+	MOV byte [F_EDIT], 0o377 ; Indicate executing INLIN
 	CALL	SCNMRK ; Set up for edit
 ;   If AL=1 then move cursor to start of logical
 ;       line which preceeds current.
@@ -174,17 +174,17 @@ INLOP3:	CALL	OUTDO ; Output a char
 ;
 SCNSEM:	CMP	AL,";"
 	JNZ	SCNSMR ; BRIF not semicolon, return
-	MOV	byte [SEMFLG],AL
+	MOV byte [SEMFLG], AL
 	JMP	CHRGTR ; Skip semicolon and return
 SCNSMR:	RET
 ; SUBTTL  Exit, return current logical line
 ;READ LOGICAL LINE INTO BUF
 INLRET:	MOV	BX,BUF ; Put data into BUF
 	MOV	CX,255 ; CX=Max number of bytes to move
-	TEST	byte [F_EDPG],0o377 ; Set zero flag if program statement input
+	TEST byte [F_EDPG], 0o377 ; Set zero flag if program statement input
 	PUSHF
-	MOV	DL,byte [CSRY] ; (DH,DL) = (CSRX,CSRY)
-	MOV	DH,byte [CSRX]
+	MOV DL, byte [CSRY] ; (DH,DL) = (CSRX,CSRY)
+	MOV DH, byte [CSRX]
 	CALL	SCNRDL ; Read the logical line into BUF
 ; BX=address of last char in BUF plus one
 ;IF PROGRAM_STATEMENT_INPUT BEGIN
@@ -217,11 +217,11 @@ INLOT3:	MOV	BX,DI
 	INC	BX
 INCRTX:	MOV	byte [BX+0o0],0o0 ; Terminate BUF
 ;** UPDATE CURSOR POSN, RETURN
-	TEST	byte [SEMFLG],0o377
+	TEST byte [SEMFLG], 0o377
 	JNZ	INCRTF ; BRIF if INPUT<semicolon> statement
 	MOV	AX,CHRAPP
 	CALL	OUTDO ; Move to end of logical
-	MOV	byte [F_EDIT],0o0
+	MOV byte [F_EDIT], 0o0
 	CALL	CRDO ; Move to first posn beyond this logical
 INCRTF:	MOV	BX,BUF-0o1 ; Return BUF - 1
 	PUSHF
@@ -234,25 +234,25 @@ INCRTF:	MOV	BX,BUF-0o1 ; Return BUF - 1
 EDTBRK:
 extern SETCSR
 extern CSRTYP
-	MOV	byte [CSRTYP],0 ; Indicate cursor off
+	MOV byte [CSRTYP], 0 ; Indicate cursor off
 	CALL	SETCSR
 	CALL	CLRFLG ; Clear editor flags
 	PUSH	AX
 	MOV	AL,CHRAPP
-	MOV	byte [F_EDIT],AL
+	MOV byte [F_EDIT], AL
 	CALL	OUTDO ; Move cursor to end of logical line
-	MOV	byte [F_EDIT],0o0 ; Reset edit mode
+	MOV byte [F_EDIT], 0o0 ; Reset edit mode
 	CALL	CRDO ; Move cursor to next physical line
 	POP	AX
-	MOV	byte [AUTFLG],0o0 ; Reset AUTO mode
+	MOV byte [AUTFLG], 0o0 ; Reset AUTO mode
 	RET
 ;** END SUBROUTINE EDTBRK
 ;SUBROUTINE CLRFLG              ; Routine which clears flags
 ;**
-CLRFLG:	MOV	byte [F_EDIT],0o0 ; No longer in INLIN
-	MOV	byte [F_EDPG],0o0 ; Not program edit
-	MOV	byte [F_INST],0o0 ; Not insert mode
-	MOV	byte [SEMFLG],0o0 ; Not INPUT; statement
+CLRFLG:	MOV byte [F_EDIT], 0o0 ; No longer in INLIN
+	MOV byte [F_EDPG], 0o0 ; Not program edit
+	MOV byte [F_INST], 0o0 ; Not insert mode
+	MOV byte [SEMFLG], 0o0 ; Not INPUT; statement
 	RET
 ;** END SUBROUTINE CLRFLG
 ; SUBTTL  EDIT code
@@ -274,7 +274,7 @@ global EDIT
 EDIT:	CALL	LINSPC ; LINE NUMBER IN DE
 	JNZ	EFCERR ; STATEMENT MUST HAVE ENDED
 EREDIT:	POP	BX ; REMOVE NEWSTT(OR CALL FROM MAIN)RETURN
-	MOV	word [DOT],DX
+	MOV word [DOT], DX
 	CALL	FNDLIN ; FIND LINE
 	JNB	EUSERR ; LINE DOES NOT EXIST
 	MOV	BX,CX ; CX=LINE PTR
@@ -284,7 +284,7 @@ ERED2:	INC	BX
 	INC	BX
 	INC	BX
 ERED3:	PUSH	BX
-	MOV	byte [F_EDIT],0o1 ; SET FLAG INDICATING IN EDIT MODE
+	MOV byte [F_EDIT], 0o1 ; SET FLAG INDICATING IN EDIT MODE
 ; (FORCES OPEN LINES DURING LIST)
 ; (AND TELLS INLIN TO START AT BEGIN OF LOGICAL)
 	XCHG	BX,DX
@@ -296,30 +296,30 @@ ERED4:	CALL	LINPRT ; PRINT THE LINE NUMBER
 	CALL	OUTDO ; NO, PUT SPACE OUT
 ;ENTRY FOR EDIT ON KBUF IS HERE
 ERED5:
-	MOV	byte [F_EDIT],0o1 ; SET FLAG INDICATING IN EDIT MODE
+	MOV byte [F_EDIT], 0o1 ; SET FLAG INDICATING IN EDIT MODE
 ; (FORCES OPEN LINES DURING LIST)
 ; (AND TELLS INLIN TO START AT BEGIN OF LOGICAL)
 	CALL	BUFLIN ; PUT LINE IN BUF AND SET UP HLPBFA
 	MOV	BX,BUF
 	CALL	LISPRT ; PRINT THE LINE AND SET UP HLPCSR
-	MOV	BL,byte [CSRY]
-	MOV	BH,byte [CSRX]
+	MOV BL, byte [CSRY]
+	MOV BH, byte [CSRX]
 	JMP	MAIN
 EFCERR:	JMP	FCERR ; Indirect jump to FCERR
 EUSERR:	JMP	USERR ; Indirect jump to USERR
 ;Help key edit
 ;
-INLHLP:	TEST	byte [F_EDPG],0o377
+INLHLP:	TEST byte [F_EDPG], 0o377
 	JNZ	INLHL0 ; BRIF do help edit on program statement
 ;Help during input statement
 	JMP	INLOP3 ; Just output char
 ;DO EDIT ON DOT
 INLHL0:	POP	AX ; Remove call to this routine
 ;See if edit on error line number
-	MOV	DX,word [ERRLIN]
+	MOV DX, word [ERRLIN]
 	CALL	ERRED2 ; If exists,do edit on error line number
 ;See if edit on current line number
-	MOV	DX,word [CURLIN]
+	MOV DX, word [CURLIN]
 	CALL	ERRED2 ; If exists,do edit on current line number
 ;ERRLIN AND CURLIN ARE DIRECT, DO EDIT ON KBUF
 extern KBUF
@@ -336,8 +336,8 @@ extern DEPTR
 ;AUTOMATIC EDIT FOR ERRORS
 ;
 global ERREDT
-ERREDT:	MOV	byte [ERRFLG],AL ; Reset the flag to call edit
-	MOV	DX,word [ERRLIN] ; Get the line number
+ERREDT:	MOV byte [ERRFLG], AL ; Reset the flag to call edit
+	MOV DX, word [ERRLIN] ; Get the line number
 ERRED2:	CMP	DX,0o177777 ; See if it was direct
 	JZ	ERRED3 ; Go back if direct
 	OR	DX,DX

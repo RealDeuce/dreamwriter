@@ -108,8 +108,8 @@ LOCATE:	CALL	SCNINT ;Get optional Y parameter
 YLCPRM:	MOV	DL,AL
 	OR	AL,AL ;Test for LOCATE 0
 	JZ	GOFCER
-	SUB	DL,byte [KEYSW] ;Increment if PF-keys are displayed
-	CMP	DL,byte [LINCNT] ;Check for parameter range
+	SUB DL, byte [KEYSW] ;Increment if PF-keys are displayed
+	CMP DL, byte [LINCNT] ;Check for parameter range
 	JA	GOFCER
 	PUSH	AX ;Save new Y location
 	CALL	SCNINT ;Get optional X parameter
@@ -118,7 +118,7 @@ YLCPRM:	MOV	DL,AL
 	MOV	AL,DH ;Default to current cursor position
 XLCPRM:	MOV	DL,AL
 	DEC	DL ;Dissallow LOCATE ,0
-	CMP	DL,byte [LINLEN] ;Check for parameter range
+	CMP DL, byte [LINLEN] ;Check for parameter range
 	JAE	GOFCER
 	PUSH	AX ;Save new X
 	CALL	SCNINT ;Cursor on/off - 0=off else on
@@ -169,20 +169,20 @@ GOFCER:	JMP	FCERR
 ;
 GWWID:	CALL	SCNINT ;Get X dimension
 	JNB	XPRAM ;X param found
-	MOV	AL,byte [LINLEN] ;Use current as default
+	MOV AL, byte [LINLEN] ;Use current as default
 XPRAM:	PUSH	AX ;Save for RET to WIDTH
 	PUSH	AX ;Save for GWWID use
 	CALL	SCNINT ;Get Y dimension
 	JNB	YPRAM ;Y param found
-	MOV	AL,byte [LINCNT] ;Use current as default
+	MOV AL, byte [LINCNT] ;Use current as default
 YPRAM:	PUSH	AX
 	CALL	EOSCHK ;Must be at end of statement
 	POP	AX
-	CMP	AL,byte [LINCNT] ;Set CC's for Y dimension change
+	CMP AL, byte [LINCNT] ;Set CC's for Y dimension change
 	LAHF
 	MOV	CX,AX
 	POP	AX
-	CMP	AL,byte [LINLEN] ;Set CC's for X dimension change
+	CMP AL, byte [LINLEN] ;Set CC's for X dimension change
 	LAHF
 	AND	AH,CH ;Set CC's for X OR Y change
 	SAHF
@@ -244,11 +244,11 @@ GETLIN:	CALL	GTLINE
 ;Exit  - [AL] = line number
 ;Uses  - AH
 ;
-GTLINE:	MOV	AL,byte [CSRY] ;BX = cursor line number
-	MOV	AH,byte [CSRX]
-	CMP	AH,byte [LINLEN]
+GTLINE:	MOV AL, byte [CSRY] ;BX = cursor line number
+	MOV AH, byte [CSRX]
+	CMP AH, byte [LINLEN]
 	JBE	GETLN0 ;BRIF will not wrap before next char is output
-	MOV	AH,byte [LINCNT] ;AL=last valid line number
+	MOV AH, byte [LINCNT] ;AL=last valid line number
 	DEC	AH ;Scroll always occurs on line [LINCNT]-1
 	CMP	AL,AH
 	JAE	GETLN0 ;BRIF wrap will cause scroll
@@ -264,14 +264,14 @@ db OPAREN ;Check for "("
 	CALL	SCNINT ;Get Y parameter
 	JB	FCERGO ;Parameter not present
 	DEC	AL
-	CMP	AL,byte [LINCNT] ;Check range [1,LINCNT]
+	CMP AL, byte [LINCNT] ;Check range [1,LINCNT]
 	JAE	FCERGO ;Out of range
 	INC	AL
 	PUSH	AX ;Y param.
 	CALL	SCNINT ;Check for X param
 	JB	FCERGO ;Error - no X param
 	DEC	AL
-	CMP	AL,byte [LINLEN] ;Check range [1,LINLEN]
+	CMP AL, byte [LINLEN] ;Check range [1,LINLEN]
 	JAE	FCERGO ;Out of range
 	INC	AL
 	PUSH	AX ;X param.
@@ -436,10 +436,10 @@ extern MAXUPD
 extern SETC
 ;LINLP3: Inner loop of line code.
 LINLP3:	CALL	SETC ;SET CURRENT POINT
-	ADD	DX,word [MINDEL] ;ADD SMALL DELTA TO SUM
-	CMP	DX,word [MAXDEL] ;TIME TO UPDATE MINOR?
+	ADD DX, word [MINDEL] ;ADD SMALL DELTA TO SUM
+	CMP DX, word [MAXDEL] ;TIME TO UPDATE MINOR?
 	JB	LINLOP ;NO, UPDATE MAJOR AND CONTINUE
-	SUB	DX,word [MAXDEL] ;UPDATE SUM FOR NEXT POINT
+	SUB DX, word [MAXDEL] ;UPDATE SUM FOR NEXT POINT
 	CALL	 word [MINUPD+1] ;ADVANCE MINOR AXIS
 LINLOP:	CALL	 word [MAXUPD+1] ;UPDATE MAJOR AXIS
 	LOOP	LINLP3 ;CONTINUE UNTIL COUNT EXHAUSTED
@@ -472,11 +472,11 @@ db ")" ;EAT RIGHT PAREN
 VARRT2:
 	PUSH	BX ;Save text pntr
 	PUSH	DX ;Save Var addr
-	MOV	AL,byte [VALTYP]
+	MOV AL, byte [VALTYP]
 	PUSH	AX ;Save type
 	MOV	AL,3
 	CALL	STRINI ;Get a 3 byte string
-	MOV	BX,word [DSCPTR] ;Descriptor in [BX]
+	MOV BX, word [DSCPTR] ;Descriptor in [BX]
 	POP	word [BX+0] ;Store Type in Byte 1
 	INC	BX
 	POP	word [BX+0] ;Store addr in Bytes 2-3.
@@ -566,11 +566,11 @@ PLYLEN:	JNB	PLGOFC ;ERROR IF NO ARG
 	JNB	PLGOFC ;FC ERROR IF TOO BIG
 	OR	DL,DL ;DON'T ALLOW ZERO
 	JZ	PLGOFC ;FC ERROR IF ZERO
-	MOV	byte [NOTELN],DL ;STORE NOTE LENGTH
+	MOV byte [NOTELN], DL ;STORE NOTE LENGTH
 	RET
 PTEMPO:	CMP	DL,32 ;ALLOW ONLY 32 - 255
 	JB	PLGOFC ;FC ERROR IF TOO SMALL
-	MOV	byte [BEATS],DL ;Store Beats per minute
+	MOV byte [BEATS], DL ;Store Beats per minute
 	RET
 NCFCER:
 PPAUSE:	JNB	PLGOFC ;ERROR IF NO ARG
@@ -583,7 +583,7 @@ PPAUSE:	JNB	PLGOFC ;ERROR IF NO ARG
 POCTAV:	JNB	PLGOFC ;ERROR IF NO ARG
 	CMP	DL,7 ;ALLOW ONLY OCTAVES 0..6
 	JNB	PLGOFC ;FC ERROR IF TO BIG
-	MOV	byte [OCTAVE],DL
+	MOV byte [OCTAVE], DL
 PLYRET:	RET
 PLYNUM:	JNB	PLGOFC ;ERROR IF NO ARG
 	MOV	AL,DL ;GET NOTE NUMBER INTO [AL]
@@ -626,12 +626,12 @@ PLYSHP:	MOV	AL,CL ;INTO [AL] FOR XLAT
 ; NOTE 0 IS PAUSE, 2,4,6,8..10,12 ARE A-G AND FRIENDS.
 ;
 PLYNO3:
-	MOV	DH,byte [OCTAVE] ;GET OCTAVE INTO [DH] FOR LATER MATH
+	MOV DH, byte [OCTAVE] ;GET OCTAVE INTO [DH] FOR LATER MATH
 PLYNU3:
 	PUSH	AX ;Save Note
 	PUSH	DX ;Save Octave
-	MOV	AL,byte [NOTELN]
-	MOV	byte [NOTE1L],AL ;One note duration = Note length
+	MOV AL, byte [NOTELN]
+	MOV byte [NOTE1L], AL ;One note duration = Note length
 	CALL	FETCHR
 	JZ	PLYNU4 ;Brif end of string
 	CALL	VALSC2 ;See if possible number
@@ -639,7 +639,7 @@ PLYNU3:
 	JNB	PLGOFC ; then error
 	OR	DL,DL ;Any Length?
 	JZ	PLYNU4 ;Brif not, just do note
-	MOV	byte [NOTE1L],DL ;Store duration for this note
+	MOV byte [NOTE1L], DL ;Store duration for this note
 PLYNU4:
 	POP	DX ;Get Octave
 	POP	AX ;Restore Note
@@ -654,9 +654,9 @@ PLYNU4:
 	ADC	BX,0 ;ADD IN CARRY TO ROUND UP
 PLYNO4:
 	MOV	CX,BX ;FREQUENCY INTO [CX] FOR DONOTE
-	MOV	DL,byte [NOTE1L] ;Get this note's length
+	MOV DL, byte [NOTE1L] ;Get this note's length
 PPAUS2:
-	MOV	AL,byte [BEATS] ;GET BEATS PER UNIT TIME
+	MOV AL, byte [BEATS] ;GET BEATS PER UNIT TIME
 	MUL	DL ;CALC NOTE LENGTH * BEATS
 	PUSH	CX ;SAVE [CX] WHILE WE DIVIDE
 	MOV	CX,AX ;CALC TIME CONST/(BEATS * NOTE LENGTH)
@@ -688,11 +688,11 @@ PLYDOX:
 	POP	CX ;Get freq
 	OR	CX,CX
 	JZ	PLYNO9 ;Brif Pause
-	CMP	byte [MSCALE],1
+	CMP byte [MSCALE], 1
 	JZ	PLYNO9 ;Brif Legatto
 	PUSH	AX ;Save Duration
 	PUSH	CX ;Save Frequency
-	MOV	CL,byte [MSCALE] ;Using scale for shift count
+	MOV CL, byte [MSCALE] ;Using scale for shift count
 	MOV	BX,3 ;Stecatto multiplier
 	CMP	CL,2
 	JZ	PLYNO6 ;Brif Stecatto
@@ -707,7 +707,7 @@ PLYNO7:
 	POP	CX ;Get Freq
 	CALL	PLYNO9 ;Send note
 	POP	AX ;Original duration
-	MOV	CL,byte [MSCALE]
+	MOV CL, byte [MSCALE]
 	SHR	AX,CL ;pause after note is 1/8 or 1/4
 	XOR	CX,CX ;Freq = 0 for pause
 	OR	AX,AX ;Pause = 0?
@@ -738,10 +738,10 @@ PLYMET:
 	CMP	AL,"B"
 	JNZ	PLYMER ;Brif not Background Music
 PLYMOD:
-	MOV	byte [MMODE],CL ;Store Music Mode (0=FG, 1=BG)
+	MOV byte [MMODE], CL ;Store Music Mode (0=FG, 1=BG)
 	RET
 PLYDUR:
-	MOV	byte [MSCALE],CL ;Store Duration Scaling factor
+	MOV byte [MSCALE], CL ;Store Duration Scaling factor
 	RET
 ;SNDINI is called to set OCTAVE, BEATS, NOTELN, NOTE1L, MSCALE, and MMODE
 ;to appropriate initial settings.  SNDINI is called at CLEARC and during
@@ -756,12 +756,12 @@ extern OCTAVE
 extern MSCALE
 extern MMODE
 global SNDINI
-SNDINI:	MOV	byte [BEATS],120
-	MOV	byte [MSCALE],3
-	MOV	byte [MMODE],0
-	MOV	byte [NOTELN],4
-	MOV	byte [NOTE1L],4
-	MOV	byte [OCTAVE],4
+SNDINI:	MOV byte [BEATS], 120
+	MOV byte [MSCALE], 3
+	MOV byte [MMODE], 0
+	MOV byte [NOTELN], 4
+	MOV byte [NOTE1L], 4
+	MOV byte [OCTAVE], 4
 	CALL	SNDRST ;Turn off sound
 	RET
 ;SNDRST is called to reset background music.  It is called during
@@ -797,7 +797,7 @@ BEEPS:	MOV	CX,800 ; 800 Hz
 	MOV	DX,100 ; .. for 1/4 second.
 	XOR	AL,AL ;[AL]=Music Mode (0=Forground)
 	JMP	JDNOTE
-DOSND:	MOV	AL,byte [MMODE] ;[AL]=Music Mode (0=Forground, 1=background)
+DOSND:	MOV AL, byte [MMODE] ;[AL]=Music Mode (0=Forground, 1=background)
 JDNOTE:	CALL	DONOTE ;start new sound.
 	JNB	DNOTOK ;No errors detected by DONOTE
 	JMP	FCERR ;Function call error detected
@@ -912,7 +912,7 @@ extern CURLIN
 ;
 CHKINT:
 extern MSDCCF ;MSDOS Ctl-C flag
-	TEST	byte [MSDCCF],255 ;Test for MSDOS-received Ctl-C
+	TEST byte [MSDCCF], 255 ;Test for MSDOS-received Ctl-C
 	JNZ	CHKIN1
 	CALL	POLLEV ;Test for occurance of trapable events
 	JZ	CHKINX ;Exit - no trapable event
@@ -1119,7 +1119,7 @@ SETGSB:	PUSH	SI
 EVTRP:	PUSH	DX
 	PUSH	CX
 	PUSH	BX
-	MOV	BX,word [CURLIN]
+	MOV BX, word [CURLIN]
 	INC	BX
 	JZ	NOT_ON ;branch if in direct mode (no event trapping)
 	CALL	EVADR ;[DX] points to event flag
@@ -1249,7 +1249,7 @@ KEY1:
 ;Move new softkey
  REP	MOVSB ;to Softkey table
 	MOV	byte [DI+0],CH ;Terminate entry with 0.
-	MOV	AL,byte [KEYSW] ;Are the key definitions being
+	MOV AL, byte [KEYSW] ;Are the key definitions being
 	OR	AL,AL ;displayed?
 	JZ	NODSPK ;No, don't call DSPKEY since it would
 ;erase the bottom line of the screen.
@@ -1270,10 +1270,10 @@ global SKEYON
 SKEYON:	MOV	AH,-1 ;Prepare to dec scroll limit
 	MOV	AL,0o377
 KEYOX: ;AH=scroll limit diff., AL=new KEYSW
-	CMP	AL,byte [KEYSW] ;State change?
-	MOV	byte [KEYSW],AL
+	CMP AL, byte [KEYSW] ;State change?
+	MOV byte [KEYSW], AL
 	JZ	KEYXX ;Brif same, do nothing
-	CMP	byte [KEYSW],255 ;Test if change to ON
+	CMP byte [KEYSW], 255 ;Test if change to ON
 	JNZ	KEYOX1 ;Change is to OFF - do not call FKYADV
 	CALL	FKYADV
 KEYOX1:
@@ -1334,13 +1334,13 @@ extern FKYFMT
 extern FKCNUM
 ;TKEYOF is called to turn function key display off
 ;
-TKEYOF:	MOV	byte [KEYSW],0 ;turn function key display switch off
+TKEYOF:	MOV byte [KEYSW], 0 ;turn function key display switch off
 ; KEYDSP -      Display Softkeys on last line of Screen.
 %assign REVNMS 1 ;Key Numbers are normal video, contents are rev-video
 KEYDSP:	PUSH	DX
 	MOV	DH,1 ;Set for col = 1
-	MOV	DL,byte [LINCNT] ;Set for last line
-	MOV	AL,byte [KEYSW]
+	MOV DL, byte [LINCNT] ;Set for last line
+	MOV AL, byte [KEYSW]
 	OR	AL,AL ;Key on or off?
 	JNZ	KEYDS0 ;Softkey display switch on
 	CALL	CLREOL ;Clear from (DH,DL) to EOL
@@ -1348,7 +1348,7 @@ KEYDSP:	PUSH	DX
 	RET
 KEYDS0:
 extern SETCSR
-	MOV	byte [CSRTYP],0 ;Set off mode cursor
+	MOV byte [CSRTYP], 0 ;Set off mode cursor
 	CALL	SETCSR ;Turn the cursor off
 	PUSH	BX
 KEYDS1:	CALL	GETFMT ;Get function key display format
@@ -1360,7 +1360,7 @@ KNXTST:	PUSH	AX ;Save Key disp no.
 	XCHG	AH,AL
 SINDIG:	CALL	KEYDCH ;Display last digit
 	PUSH	SI
-	MOV	CL,byte [FKCNUM] ;Count of chars per fun. key (set by GETFMT
+	MOV CL, byte [FKCNUM] ;Count of chars per fun. key (set by GETFMT
 	CALL	XFGBG ;Swap Forground & background colors
 KNXTCH: ;Write the next key character
 	PUSH	CX
@@ -1390,7 +1390,7 @@ KEYDS5:
 	JNZ	KNXTST ;Loop for next key string
 KEYDSX:	POP	BX ;Retrieve cursor position
 	POP	DX
-	MOV	byte [CSRTYP],3 ;Set user mode cursor
+	MOV byte [CSRTYP], 3 ;Set user mode cursor
 	CALL	SETCSR ;Turn on cursor
 	RET
 KEYDB:	XOR	AL,AL ;For Blank at end of Key field
@@ -1420,7 +1420,7 @@ GETFMT:	PUSH	BX
 	CALL	FKYFMT ;OEM routine
 	MOV	CX,word [BX+0] ;CH=key count, CL=Chrs/key
 	PUSH	CX
-	MOV	byte [FKCNUM],CL
+	MOV byte [FKCNUM], CL
 	MOV	SI,STRTAB ;SI=address of first fkey in table
 	MOV	AL,byte [BX+2]
 	CBW
@@ -1870,7 +1870,7 @@ MONTHS:	MOV	AL,byte [DAYSPM+SI-1]
 ;
 SETFEB:	CALL	CKLEAP ;[AX]=1 if [CX]=leap-year
 	ADD	AL,28 ;[AL]=29 if leap, 28 if not
-	MOV	byte [DAYSPM+1],AL ;DAYSPM(2)=28 or 29
+	MOV byte [DAYSPM+1], AL ;DAYSPM(2)=28 or 29
 	RET
 ;CKLEAP returns with [AX]=1 if [CX]+1978 is a leap year, else [AX]=0.
 ;
@@ -1901,7 +1901,7 @@ YEARSL:	CALL	CKLEAP ;[AX]=1 if CX is leap-year
 	ADD	BX,AX ;days=days+1 if leap-lear
 YEARS1:	ADD	BX,365 ;days=days+365
 	LOOPNZ	YEARSL
-YEARSX:	MOV	word [DATIME],BX ;DATIME=count of days since 1/1/1978
+YEARSX:	MOV word [DATIME], BX ;DATIME=count of days since 1/1/1978
 	CALL	SDTIME ;set current date/time from DATIME
 	POP	BX ;restore text pointer
 	RET
@@ -1909,7 +1909,7 @@ YEARSX:	MOV	word [DATIME],BX ;DATIME=count of days since 1/1/1978
 ; Exit - BX, AX are used.
 ;
 GETDAT:	CALL	GDTIME ;get current date/time into DATIME
-	MOV	DX,word [DATIME] ;[DX]=no of days since JAN 1,1978
+	MOV DX, word [DATIME] ;[DX]=no of days since JAN 1,1978
 	MOV	CX,0 ;years=0
 FNDYR:	CALL	CKLEAP ;[AX]=1 if leap-year
 	ADD	AX,365 ;[AX]=366 if leap-year

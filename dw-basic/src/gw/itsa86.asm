@@ -34,17 +34,24 @@ db 0o0
 ; SUBTTL  INITSA
 global INITSA
 INITSA:
+extern DW_DEBUG_INITSA_ENTRY
+	CALL	DW_DEBUG_INITSA_ENTRY
 	CALL	NODSKS
 	CALL	MAPINI ;Init the new memory map
-	MOV	BX,word [TXTTAB]
+	MOV BX, word [TXTTAB]
 	DEC	BX
 	MOV	word [BX+0o0],0
-	MOV	BX,word [TEMP8] ;POINT TO START OF COMMAND LINE
+	MOV BX, word [TEMP8] ;POINT TO START OF COMMAND LINE
 	MOV	AL,byte [BX+0o0] ;GET BYTE POINTED TO
 	OR	AL,AL ;IF ZERO, NO FILE SEEN
 	JZ	GREADY
+extern DW_DEBUG_INITSA_LRUN
+	CALL	DW_DEBUG_INITSA_LRUN
 	JMP	LRUN ;TRY TO RUN FILE
-GREADY:	JMP	READY
+GREADY:
+extern DW_DEBUG_INITSA_READY
+	CALL	DW_DEBUG_INITSA_READY
+	JMP	READY
 ;BASVAR - Retrieve or Modify BASIC Internal Data Locations
 ;This routine provides a method to retrieve or modify certain BASIC internal
 ;data locations.  This routine is provided as support for PEEK and
@@ -107,25 +114,28 @@ global MAPINI
 ;Exit   - DS: and stack moved.
 ;
 MAPINI:
+; Flat ROM CARD build: data is already in the linked load segment.
+	RET
+MAPINI_ORIGINAL:
 ;Move the stack to the end of the new memory map
 	POP	BX ;Return address
 	CLI ;disable external interrupts
 ; while changing memory map
 	MOV	AX,word [NEWDS]
 	MOV	SS,AX
-	MOV	SP,word [MSWSIZ] ;
+	MOV SP, word [MSWSIZ] ;
 	PUSH	BX ;Return address
 ;Move the data segment
 	MOV	ES,AX ;NEWDS
 	XOR	SI,SI
-	MOV	CX,word [TXTTAB] ;Amount of memory to move
+	MOV CX, word [TXTTAB] ;Amount of memory to move
 	SHR	CX,0o1 ;In words
 	CLD
 	MOV	BX,DS
 	CMP	AX,BX ;Test for direction of copy
 	JB	BLKCPY ;brif destination is below source
 	STD ;Copy up
-	MOV	SI,word [TXTTAB] ;starting from top
+	MOV SI, word [TXTTAB] ;starting from top
 BLKCPY:
 	MOV	DI,SI
  REP	MOVSW
@@ -134,32 +144,32 @@ BLKCPY:
 extern SEGINI
 	CALL	SEGINI
 	MOV	AX,DS
-	MOV	word [SAVSEG],AX ;For PEEK/POKE
+	MOV word [SAVSEG], AX ;For PEEK/POKE
 	STI ;enable external interrupts
 ;Insure zeros at TXTTAB
-	MOV	BX,word [TXTTAB]
+	MOV BX, word [TXTTAB]
 	MOV	word [BX+0o0],0
 	MOV	byte [BX+0o2],0 ;Three zeros necessary
 ;Call CLEARC to set up stack and finalize the memory map
-	MOV	AX,word [MSWSIZ]
+	MOV AX, word [MSWSIZ]
 ;Make sure that [TXTTAB]+<stack size>+32 does not overflow memory
-	MOV	BX,word [TOPMEM]
-	SUB	BX,word [STKLOW] ;BX=stack size
+	MOV BX, word [TOPMEM]
+	SUB BX, word [STKLOW] ;BX=stack size
 	JBE	GOMERR ;BRIF illegal stack(0 or less bytes)
 	NEG	BX
 	ADD	BX,AX ;BX=new stack bottom
 	JNB	GOMERR ;BRIF MSWSIZ is less than stack size
 	SUB	BX,32 ;Leave a little room for a program
 	JB	GOMERR ;BRIF no room left
-	CMP	BX,word [TXTTAB] ;Is new MAXMEM big enough?
+	CMP BX, word [TXTTAB] ;Is new MAXMEM big enough?
 	JBE	GOMERR ;BRIF new MAXMEM smaller than data area
 MAXRQ1:	MOV	BX,AX
-	SUB	BX,word [MAXMEM] ;Calc. seg. size difference
-	MOV	word [MAXMEM],AX ;Memory request
-	ADD	word [TOPMEM],BX
-	ADD	word [STKLOW],BX
-	ADD	word [FILTAB],BX
-	ADD	word [MEMSIZ],BX
+	SUB BX, word [MAXMEM] ;Calc. seg. size difference
+	MOV word [MAXMEM], AX ;Memory request
+	ADD word [TOPMEM], BX
+	ADD word [STKLOW], BX
+	ADD word [FILTAB], BX
+	ADD word [MEMSIZ], BX
 	POP	BX ;Return address (BX saved by CLEARC)
 	CALL	CLEARC
 	PUSH	BX ;Return address (BX saved by CLEARC)
@@ -168,10 +178,10 @@ MAXRQ1:	MOV	BX,AX
 	MOV	AH,38 ;Function ^H26
 	INT	33 ;MSDOS function request
 ;Print free bytes message
-	TEST	byte [FREFLG],255 ;BYTES FREE message flag
+	TEST byte [FREFLG], 255 ;BYTES FREE message flag
 	JNZ	MAPINX ;Exit - message not to be printed
-	MOV	BX,word [MEMSIZ]
-	SUB	BX,word [TXTTAB]
+	MOV BX, word [MEMSIZ]
+	SUB BX, word [TXTTAB]
 	DEC	BX
 	DEC	BX
 	CALL	LINPRT ;PRINT # OF BYTES FREE
@@ -193,6 +203,13 @@ CSEND:
 ;         MSWSIZ = Highest memory address (future MAXMEM)
 ;
 MAPCLC:
+; Flat ROM CARD build: keep current DS and the loader-provided memory limit.
+	MOV	AX,DS
+	MOV	word [NEWDS],AX
+	MOV	AX,word [MEMSIZ]
+	MOV	word [MSWSIZ],AX
+	RET
+MAPCLC_ORIGINAL:
 ;Validate/get COM buffer size
 	MOV	DX,CSEND ;Location of COM buffer (New end of CS:)
 	ADD	DX,15 ;Round to next higher paragraph
@@ -200,11 +217,11 @@ MAPCLC:
 	SHR	DX,CL
 	MOV	CX,CS
 	ADD	CX,DX ;Segment offset of COM buffer
-	MOV	DX,word [CSWSIZ] ;Segment size request
-	TEST	byte [CSWFLG],255 ;Was there a /C: opt - PSW.Z for SETCBF
+	MOV DX, word [CSWSIZ] ;Segment size request
+	TEST byte [CSWFLG], 255 ;Was there a /C: opt - PSW.Z for SETCBF
 	CALL	SETCBF ;Report buffer size/loc
 	JB	GOMERR ; & validate size
-	MOV	word [CSWSIZ],DX ;COM buffer size
+	MOV word [CSWSIZ], DX ;COM buffer size
 ;Calculate NEWDS (New DS:)
 ; DX  - COM buffer size
 ; NEWDS = (D+15/16) + DS:
@@ -215,7 +232,7 @@ MAPCLC:
 	SHR	DX,0o1
 	ADD	DX,CX ;Skip COM buffer
 	JO	GOMERR
-	MOV	word [NEWDS],DX
+	MOV word [NEWDS], DX
 ;Validate the /M option or calculate the maximum possible MAXMEM
 ;1. Calcualte maximum MAXMEM based on the NEWDS
 ;2. If there was no /M option then goto 4
@@ -231,13 +248,13 @@ MAPCLC:
 	MOV	BX,DX
 MAXREQ:	MOV	CL,4
 	SHL	BX,CL ;DX has valid maximum bytes
-	TEST	byte [MSWFLG],255
+	TEST byte [MSWFLG], 255
 	JZ	NOMOPT ;No memory option
-	MOV	DX,word [MSWSIZ] ;Get /M: size
+	MOV DX, word [MSWSIZ] ;Get /M: size
 	CMP	BX,DX
 	JB	GOMERR ;Not enough for request
 	MOV	BX,DX
-NOMOPT:	MOV	word [MSWSIZ],BX ;New MAXMEM
+NOMOPT:	MOV word [MSWSIZ], BX ;New MAXMEM
 ;       ADDI    BX,^D256
 ;       JB      MAXRQ1                  ;BRIF very large MAXMEM, value OK
 ;       CMP     BX,TXTTAB               ;Is new MAXMEM big enough?

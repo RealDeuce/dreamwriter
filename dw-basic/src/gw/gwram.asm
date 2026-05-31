@@ -61,7 +61,7 @@ db 0
 %endmacro
 
 ; .RADIX	10
-%define MUSIC PLAYSW OR BEEPSW
+%define MUSIC PLAYSW | BEEPSW
 %assign GRPMCL 1
 %assign NMPAGE 1
 global HEDING

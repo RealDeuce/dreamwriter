@@ -54,6 +54,15 @@ and after row 9 resets `m_matrix` to zero and asserts IRQ bit `0x20` (vector
 `FA`). Reading port `0xB0` returns `ROW[m_matrix - 1]`, or zero when
 `m_matrix` is zero.
 
+When MAME receives the `Home` power-key event, it samples all ten current host
+keyboard rows directly into the firmware's `6D06..6D0F` row cache before the
+retained-RAM wake/reset path. `machine_reset()` samples the rows again before
+the ROM starts executing, and MAME samples once more when the firmware pulses
+port `0x61` from `0xFE` to `0xFF` to start/reset scanning. This models the real
+wake path closely enough for the ROM's reset-side `F+J+SPACE` diagnostic chord
+check to see keys held while pressing power, even if the emulated CPU was
+stopped in the retained power-off loop.
+
 The keyboard scan source appears separate from the `F9` idle/wake timer latch
 at port `0x53`, but MAME currently models both as derived from the same
 `X301 / 20480` clock. The rate is inferred from the firmware repeat counters
@@ -1104,14 +1113,14 @@ unconfirmed.
 | `6D52` | Battery-warning display state. Values `2..4` select main, CR2032, or PCMCIA SRAM-card battery warning checks; bit `0x80` marks that an icon is currently displayed. |
 | `6D57` | RS-232 receive/error flags; IRQ `FC` ORs in bits `0x08`, `0x10`, and `0x20` from status port `0xC1`. |
 | `6D59..6D5B` | Printer setup bytes: printer model, interface, paper feed. |
-| `6D65..6D87` | Saved resume context/checksum area used by suspend/warm paths. |
+| `6D65..6D87` | Saved resume context/checksum area used by suspend/warm paths. `C000:0438` computes the checksum over 15 words at `6D65..6D82` and stores it at `6D83`; `C000:01C5` validates the same range on the saved-context resume branch. This does not include the raw keyboard row cache at `6D06..6D0F`. |
 | `6D79` | Saved resume IP. Diagnostic warm entry stores `4A8D`. |
 | `6D7B` | Saved resume CS. |
 | `6D7D` | Saved resume SP. |
 | `6D81` | Diagnostic/warm marker; `1995` requests diagnostic/warm handling. |
 | `6D96..6DA2` | RTC BCD shadow read from ports `0xD0..0xDC`: seconds, minutes, hours, candidate weekday/status, day, month, and year nibbles. |
 | `72D7..72E3` | Date/time wrapper cache used by WORLD CLOCK and SET TIME/DATE: year, month, day, weekday, hour, minute, second. |
-| `6D83` | Checksum over saved context. |
+| `6D83` | Checksum over saved context words `6D65..6D82`. |
 | `6D92` | Centronics output pointer used by `C000:0738` and `C000:08EC`. |
 | `6D94` | Port `0x30` value mirror. |
 | `6DA4` | Centronics ACK-feed active flag; IRQ `FE` only emits bytes when this is `1`. |

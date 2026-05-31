@@ -802,15 +802,17 @@ first pass suggested.
 
 Reasons it is plausible:
 
-- The BASIC body seems to fit under the ROM CARD loader's practical 64 KiB read
-  limit if copied as the high-ROM application area.
+- The BASIC body fits within one loaded segment when it starts at offset
+  `0x0800`, but not within the ROM CARD loader's one-shot destination window at
+  `0000:A4F0`.
+- A small `EROMCARD.X` first-stage loader can stay below that boundary, then
+  read `GWBASIC.OVR` to `CS:0800` through the normal file API without crossing
+  a 64 KiB destination-offset wrap.
 - The MAME PCMCIA bank model gives us a direct way to map the 325 high ROM into
   its original CPU addresses for a proof-of-concept run.
 - It uses the firmware's DOS-like file/storage and display services rather than
   obvious direct hardware-only assumptions for everything.
 - The repeated `F200` calls are easy to locate and have a bounded service set.
-- Loading at `0xA4F0` can be arranged so the BASIC body starts at a clean
-  paragraph boundary (`0xA5000` / `0A50:0000`).
 
 Reasons it is not a direct transplant:
 

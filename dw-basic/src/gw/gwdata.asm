@@ -53,7 +53,7 @@
 %define UCEMSG NNECBS ;Upper case error messages.
 %define OLD86 MELCO & CPM86 ;For "old" 8086 error messages (prior
 ;to alignment for IBM compatibility).
-%define OLDBLD ALPCPM OR ALPS OR OKI OR HAL OR PC8A OR BUBL OR GW OR TSHIBA
+%define OLDBLD ALPCPM | ALPS | OKI | HAL | PC8A | BUBL | GW | TSHIBA
 %include "gio86u.inc"
 %include "msdosu.inc" ;MSDOS constants
 extern _DVTBL
@@ -315,7 +315,6 @@ dw IMULT
 dw INTDIV
 dw ICOMP
 ; SUBTTL  ERROR MESSAGE TABLE
-; Error-message table generated from gw-basic/gwdata.asm.
 ; Error-message table generated from gw-basic/gwdata.asm.
 global ERRTAB
 ERRTAB:
@@ -652,7 +651,6 @@ db 4 dup (?) ;FAKE END OF PROGRAM FOR RESUME NEXT
 global USRTAB
 USRTAB:
 times 10 dw 0
-global NULCNT
 global NULCNT
 NULCNT:
 db 1 dup (?) ;STORE HERE THE NUMBER OF NULLS

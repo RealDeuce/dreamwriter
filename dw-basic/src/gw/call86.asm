@@ -39,14 +39,14 @@ CALLS:	STC ;Set-carry, (don't PUSH Segment adr of parms)
 CALLS1:	PUSHF
 extern PRODIR ;Don't allow CALL as direct statement in
 	CALL	PRODIR ;protected environment
-	MOV	byte [SUBFLG],0o200 ;say we want to scan only a simple
+	MOV byte [SUBFLG], 0o200 ;say we want to scan only a simple
 	CALL	PTRGET ;scan var and search symbol table
-	MOV	byte [SARYFL],0o0 ;clear Scanned-Array-Element-Flag
+	MOV byte [SARYFL], 0o0 ;clear Scanned-Array-Element-Flag
 	PUSH	BX ;save text pointer
 	MOV	BX,DX ;get pointer to var in BX
 	CALL	VMOVFM ;load variable into FAC
 	CALL	FRQINT ;make it an integer
-	MOV	word [TEMPA],BX ;save text pointer
+	MOV word [TEMPA], BX ;save text pointer
 	MOV	CL,32 ;get max # of parameters
 	CALL	GETSTK ;see if there is that much stack space
 	POP	BX ;get back text pointer
@@ -57,9 +57,9 @@ db 0o50 ; (
 GETPAR:	PUSH	word [ARYTAB] ;save pointer to start of array var data
 	CALL	PTRGET ;scan parameter variable
 	POP	CX ;[CX]=old value of ARYTAB
-	CMP	CX,word [ARYTAB] ;if = old, no undefined simples were referenced
+	CMP CX, word [ARYTAB] ;if = old, no undefined simples were referenced
 	JE	NONEWS ;Branch if New Simple Var not encountered
-	CMP	byte [SARYFL],0o0 ;Z-FLAG if no Array elements have been parsed
+	CMP byte [SARYFL], 0o0 ;Z-FLAG if no Array elements have been parsed
 ; by PTRGET
 	JZ	NONEWS
 	JMP	FCERR ;Undefined scalers can't be passed after array
@@ -77,7 +77,7 @@ SHTPRM:	PUSH	DX ;save Offset of parameter on stack
 	JMP	GETPAR ;scan next parm
 ENDPAR:	CALL	SYNCHR ;check for terminating right paren
 db 0o51 ; )
-CALLST:	MOV	word [TEMP],BX ;save text pointer
+CALLST:	MOV word [TEMP], BX ;save text pointer
 	POPF ;discard CALL/CALLS flag
 	PUSH	CS ;save BASIC code segment
 	MOV	AX,CALLRT ;where to return to
@@ -86,6 +86,6 @@ CALLST:	MOV	word [TEMP],BX ;save text pointer
 	PUSH	word [TEMPA] ;save subroutine address
 db 0o313 ; Do a long return to call the subroutine
 ;
-CALLRT:	MOV	BX,word [TEMP] ;get back text pointer
+CALLRT:	MOV BX, word [TEMP] ;get back text pointer
 	RET ;return to newstt
 ;

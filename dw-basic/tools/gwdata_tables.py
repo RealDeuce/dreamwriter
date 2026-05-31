@@ -158,6 +158,7 @@ def patch_gwdata(path: Path, original: Path) -> None:
         elif in_dsctmp and (
             stripped.startswith("times STRSIZ db 0")
             or stripped.lower().startswith("db strsiz dup (?)")
+            or stripped.lower().startswith("db (strsiz) dup (?)")
         ):
             patched.append("db 0 ;string descriptor length")
             patched.append("global DSCPTR")

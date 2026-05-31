@@ -115,8 +115,8 @@ void init_ext_name() {
 }
 
 int add_ext_name(char *name) {
-	if (max_segs <= ext_name_c) {
-		fprintf(stderr, "Too many extern names! (max=%d)\n", max_segs);
+	if (max_fixups <= ext_name_c) {
+		fprintf(stderr, "Too many extern names! (max=%d)\n", max_fixups);
 		exit(11);
 	}
 
@@ -200,6 +200,28 @@ void add_pub_name(Segment *seg, int offset, char *name) {
 	pub_idx_cur[h] = pub;
 }
 
+void add_abs_pub_name(int offset, char *name) {
+	if (max_pubs <= pub_c) {
+		fprintf(stderr, "Too many public name! (max=%d)\n", max_pubs);
+		exit(11);
+	}
+
+	PubName *pub = &all_pubs[ pub_c++ ];
+	pub->seg    = NULL;
+	pub->offset = offset;
+	pub->name   = name;
+
+	int h = make_str_hash((uchar *)name);	// name's hash
+
+	PubName *p = pub_idx_cur[h];
+	if (p) {
+		p->next = pub;
+	} else {
+		pub_idx_1st[h] = pub;
+	}
+	pub_idx_cur[h] = pub;
+}
+
 int check_duplicate_pub_name() {
 	int dup=0;
 	for(int c=0; c<0x100; c++) {
@@ -214,8 +236,8 @@ int check_duplicate_pub_name() {
 					ERR_PRINT("duplicate public name!\n"
 						"	file=%s name=%s\n"
 						"	file=%s name=%s\n",
-						p ->seg->f_name, p ->name,
-						p2->seg->f_name, p2->name
+						p ->seg ? p ->seg->f_name : "<absolute>", p ->name,
+						p2->seg ? p2->seg->f_name : "<absolute>", p2->name
 					);
 					dup=1;
 					break;

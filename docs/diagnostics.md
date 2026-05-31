@@ -62,11 +62,16 @@ C000:0372  out 70,al
 C000:0374  jmp C000:0374
 ```
 
-In MAME, pressing F1 triggers IRQ `FF` and reaches this path. With
-`F+J+SPACE` held, breakpoints at `C000:02EE`, `C000:0316`, `C000:0329`, and
-`C000:0370` all hit. Interactive testing also confirmed that holding
-`F+J+SPACE` enters the diagnostic UI from the copyright/warm startup path, but
-not during the `INITIALIZING` cold path.
+In MAME, the `Home` power key samples the held keyboard rows into `6D06..6D0F`
+before the retained-RAM wake/reset path, and reset entry samples them again
+before the ROM starts. The port `0x61` `FE -> FF` scan-enable edge samples them
+again after the firmware resets its scan state. Holding `F+J+SPACE` while
+pressing `Home` reaches the ROM's warm diagnostic path. The synthetic F1 IRQ
+reaches `C000:02EE` as a direct debugger shortcut; with `F+J+SPACE` held,
+breakpoints at `C000:02EE`, `C000:0316`, `C000:0329`, and `C000:0370` all hit.
+Interactive testing confirmed that holding `F+J+SPACE` enters the diagnostic UI
+from the copyright/warm startup path, but not during the `INITIALIZING` cold
+path.
 
 ## Command Loop
 

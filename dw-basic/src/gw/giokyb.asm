@@ -103,7 +103,7 @@ KYBINI:
 	PUSHF
 	PUSH	SI
 	XOR	AX,AX
-	MOV	word [CMDOFF],AX ;[CMDOFF]=0 (no soft key)
+	MOV word [CMDOFF], AX ;[CMDOFF]=0 (no soft key)
 	MOV	SI,KYBQDS ;SI = keyboard queue descriptor
 	MOV	BX,KYBQUE ;BX points to 1st byte of queue buff
 	MOV	AX,KYBQSZ ;AX = size of keyboard queue
@@ -191,9 +191,9 @@ RET11:	RET
 KYBOPN:
 	MOV	AH,MD_SQI ;allow input only
 extern FILMOD
-	CMP	byte [FILMOD],MD_RND
+	CMP byte [FILMOD], MD_RND
 	JNZ	KYBOPX ;Leave the mode as it is
-	MOV	byte [FILMOD],AH ;Force the mode to INPUT
+	MOV byte [FILMOD], AH ;Force the mode to INPUT
 KYBOPX:
 	JMP	INIFDB
 ;KYBSIN - Sequential Input.
@@ -211,9 +211,9 @@ extern SAVKYF
 extern SCNPOS
 INCHRI:
 extern INFMAP
-	MOV	AL,byte [SAVKEY]
-	CMP	byte [SAVKYF],0
-	MOV	byte [SAVKYF],0
+	MOV AL, byte [SAVKEY]
+	CMP byte [SAVKYF], 0
+	MOV byte [SAVKYF], 0
 	JNZ	KBSINX ;Send second bytes through unfiltered
 KEYGET:
 	STC
@@ -223,9 +223,9 @@ KEYGET:
 	JZ	KEYGET ;OEM filtered out the key - get the next
 	JMP	KYBSI2 ;Process as other keys
 CHGET:
-KYBSIN:	MOV	AL,byte [SAVKEY]
-	CMP	byte [SAVKYF],0
-	MOV	byte [SAVKYF],0o0 ;clear 2nd-byte of 2-byte sequence flag
+KYBSIN:	MOV AL, byte [SAVKEY]
+	CMP byte [SAVKYF], 0
+	MOV byte [SAVKYF], 0o0 ;clear 2nd-byte of 2-byte sequence flag
 	JNZ	KBSINX ;branch if 2nd-key of 2-byte sequence
 	CALL	STCTYP ;Set to insert or overwrite cursor (PSW.C reset)
 	CALL	KEYIN ;[AX]=next character from keyboard
@@ -242,8 +242,8 @@ KYBSI2:
 KB1X:	POPF
 	JMP	KBSINX
 KBSIN2:
-	MOV	byte [SAVKEY],AL ;save 2nd byte of 2-byte sequence
-	MOV	byte [SAVKYF],255 ;Set saved key flag
+	MOV byte [SAVKEY], AL ;save 2nd byte of 2-byte sequence
+	MOV byte [SAVKYF], 255 ;Set saved key flag
 	XCHG	AH,AL ;return 1st byte to user
 	CLC ;clear carry (not EOF)
 KBSINX:	RET
@@ -286,7 +286,7 @@ CHWAIT:	CALL	CHSNS ;Has a key been typed?
 	JE	CHWAIT ;No, wait
 KEYINX:	PUSHF
 	PUSH	AX
-	MOV	byte [CSRTYP],3 ;Indicate user cursor
+	MOV byte [CSRTYP], 3 ;Indicate user cursor
 	CALL	SETCSR ;Set the cursor
 	POP	AX
 	POPF
@@ -331,7 +331,7 @@ POLKEY:	PUSH	DI
 	PUSH	DX
 GETKLP:
 extern MSDCCF ;MSDOS Ctl-C Interrupt flag
-	TEST	byte [MSDCCF],255
+	TEST byte [MSDCCF], 255
 	JNZ	ITSCTC ;Branch if Ctl-C interrupt detected
 	CALL	KEYINP ;[AX]=next key from keyboard if one exists
 	JE	POLKXI ;branch if no key present
@@ -383,11 +383,11 @@ QONEBT:
 	JMP	QUEKEY ;else queue the key for CHSNS
 ITSCTC:
 	CALL	KYBINI ;clear keyboard queue, reset PTRFIL
-	MOV	byte [MSDCCF],0 ;Reset Ctl-Break interrupt flag
+	MOV byte [MSDCCF], 0 ;Reset Ctl-Break interrupt flag
 extern SNDRST
 	CALL	SNDRST ;reset background music
-	MOV	SP,word [SAVSTK] ;[SP]=SP of interrupted statement
-	MOV	BX,word [SAVTXT] ;[BX]=text pointer of interrupted stmt
+	MOV SP, word [SAVSTK] ;[SP]=SP of interrupted statement
+	MOV BX, word [SAVTXT] ;[BX]=text pointer of interrupted stmt
 	MOV	AX,CTLBRK ;[AX]=Key Code for BREAK (CTL-C)
 ITSINT:	CALL	CNTCCN ;process CTL C or S
 	JMP	GETKLP ;dont queue CTL-S or CTL-C
@@ -453,7 +453,7 @@ NOTCTS:
 	PUSH	AX
 	CALL	FINPRT ;Reset I/O
 	POP	AX
-	MOV	AX,word [CURLIN] ;Print "BREAK" message in program mode only
+	MOV AX, word [CURLIN] ;Print "BREAK" message in program mode only
 	AND	AL,AH ;AL=^D255 if direct mode
 	XOR	AH,AH ;Set PSW.Z so STOP won't give Syntax Error
 	JMP	STOP
@@ -509,7 +509,7 @@ CHSNS2:	MOV	AH,DL ;Put 1st byte in [AH]
 CHSN2A:	CALL	CHKFKY ;see if AX is a non-null function key
 	JZ	CHSNS3 ;BRIF not a string key that needs expansion
 	JB	CHSNG1 ;BRIF is super shift key(return first byte now)
-	MOV	byte [F_SUPR],0o0
+	MOV byte [F_SUPR], 0o0
 	JMP	CHSNSI ;Is string key, get first expansion and return
 CHSNS3:
 	OR	AH,AH ;else NZ, C Indicates 2 byte character
@@ -573,7 +573,7 @@ CHKFKY:	CMP	AH,0o200
 	MOV	BL,16 ;else, tell CHSNS to expand soft-key
 	MUL	BL ;[AX]=16 * function-key id
 	ADD	AX,STRTAB ;Get soft-key address
-	MOV	word [CMDOFF],AX ;save soft-key pointer for soft-key expansion
+	MOV word [CMDOFF], AX ;save soft-key pointer for soft-key expansion
 	MOV	BX,AX
 	POP	AX
 	CMP	byte [BX+0o0],0o0 ;set FLAGS.Z if null soft-key (and FLAGS.NC
@@ -595,7 +595,7 @@ extern ALPTAB
 extern F_SUPR
 SUPRKY:
 extern CURLIN
-	CMP	word [CURLIN],65535 ;Test for direct mode
+	CMP word [CURLIN], 65535 ;Test for direct mode
 	JNZ	NTFKY9 ;Not direct mode - don't expand Supershift key
 	PUSH	CX
 	CALL	MAPSUP ;Map super shift key to letter in AL and count
@@ -626,9 +626,9 @@ SUPKY2:	INC	BX
 	INC	BX ;Skip token value
 	JMP	SUPKY1 ;Check next reserved word
 ;Found the reserved word
-SUPKYX:	MOV	word [CMDOFF],BX ;Set up for string key input
+SUPKYX:	MOV word [CMDOFF], BX ;Set up for string key input
 	DEC	CH
-	MOV	byte [F_SUPR],CH ;Set super shift key flag
+	MOV byte [F_SUPR], CH ;Set super shift key flag
 	POP	BX
 SUPKY9:	POP	CX
 	POP	AX
@@ -659,13 +659,13 @@ SUPKYZ:	POP	BX
 ;                 reset - AL contains character
 ;         BX is used.
 ;
-GETFKY:	CMP	word [CMDOFF],0 ;Softkey available?
+GETFKY:	CMP word [CMDOFF], 0 ;Softkey available?
 	JZ	GETFKX ;No special key available
 	CALL	GTSFKY ;Get a softkey
 	CALL	EOKTST ;Test for end of softkey
 GETFKX:	RET
-GTSFKY:	MOV	BX,word [CMDOFF] ;Get char. offset
-	MOV	AL,byte [F_SUPR] ;Get super-shift flag
+GTSFKY:	MOV BX, word [CMDOFF] ;Get char. offset
+	MOV AL, byte [F_SUPR] ;Get super-shift flag
 	TEST	AL,0o377 ;Super-shift key in progress?
 	JZ	NOTSUP ;Not a super-shift key
 	CMP	AL,0o377 ;F.SUPR is ^O377 or current character
@@ -677,7 +677,7 @@ NOTSUP:	MOV	AL,byte [BX+0o0] ;Get next character
 	INC	BX ;Index to next key
 GTSFKX:	RET
 EOKTST:
-	TEST	byte [F_SUPR],0o377 ;Super-shift key expansion?
+	TEST byte [F_SUPR], 0o377 ;Super-shift key expansion?
 	JZ	EFKTST ;No - testing end of function key
 	OR	AL,AL ;Test highbit (indicates end of key word)
 	JNS	NOHGBT ;Not highbit terminated
@@ -703,16 +703,16 @@ EFKTST:	OR	AL,AL ;Test for null function key
 EOKTRU:	MOV	BX,0 ;Prepare to turn off CMDOFF
 EOKSSX:
 extern F_SUPR
-	MOV	byte [F_SUPR],BL ;Turn off current supershift key expansion
-EOKTSX:	MOV	word [CMDOFF],BX ;Store new softkey expansion index
+	MOV byte [F_SUPR], BL ;Turn off current supershift key expansion
+EOKTSX:	MOV word [CMDOFF], BX ;Store new softkey expansion index
 	RET
 ;SFTOFF - Turn off softkey expansion for the current softkey.  This routine
 ;         has been documented to OEMs for use in implementing PEEK/POKE
 ;         filters for addresses documented to IBM BASIC users.
 ;
 global SFTOFF
-SFTOFF:	MOV	word [CMDOFF],0 ;Stop soft key expansion
-	MOV	byte [F_SUPR],0 ;Turn off super shift flag
+SFTOFF:	MOV word [CMDOFF], 0 ;Stop soft key expansion
+	MOV byte [F_SUPR], 0 ;Turn off super shift flag
 	RET
 ;KYBSNS - Detect whether keys are available in the keyboard buffer.
 ;         This routine has been documented to OEMs for use in implementation
@@ -740,11 +740,11 @@ KYBSNS:	PUSH	AX
 ;        All registers preserved
 ;
 global FKYSNS
-FKYSNS:	CMP	byte [CMDOFF],0 ;Test for expansion in progress
+FKYSNS:	CMP byte [CMDOFF], 0 ;Test for expansion in progress
 	JZ	FKYSNX ;Expansion not in progress
-	CMP	byte [F_SUPR],255 ;Test for super-shift expansion
+	CMP byte [F_SUPR], 255 ;Test for super-shift expansion
 	JZ	FKYSNW ;SS key but not last key
-	CMP	byte [F_SUPR],0 ;Test for super-shift expansion
+	CMP byte [F_SUPR], 0 ;Test for super-shift expansion
 	JZ	FKYSNW ;Function key expansion in progress
 FKYSNW:
 	STC
@@ -775,7 +775,7 @@ INKGET:	CALL	CHSNS ;get next key from queue
 	PUSH	AX ;save char code
 	MOV	AL,0o2
 	CALL	STRINI ;initialize 2-byte string
-	MOV	BX,word [DSCPTR]
+	MOV BX, word [DSCPTR]
 	POP	DX ;restore char code
 	XCHG	DH,DL ;return high-byte in left end of string
 	MOV	word [BX+0o0],DX
@@ -788,8 +788,8 @@ INKEY1:	PUSH	AX
 	CALL	SETSTR ;STUFF IN DESCRIPTOR AND GOTO PUTNEW
 extern DSEGZ
 NULRT:	MOV	BX,DSEGZ ;GUARANTEED ZERO IN DATA SEGMENT
-	MOV	word [FACLO],BX
-	MOV	byte [VALTYP],0o3
+	MOV word [FACLO], BX
+	MOV byte [VALTYP], 0o3
 	POP	BX ;restore text pointer
 	RET
 ; SUBTTL  Cursor Support
@@ -807,10 +807,10 @@ STCTYP:	PUSH	AX
 	MOV	AL,3 ;Assume user cursor
 	JB	CSRSET ;Assumption correct
 	DEC	AL ;Assume overwrite mode cursor
-	TEST	byte [F_INST],255 ;Test for insert mode
+	TEST byte [F_INST], 255 ;Test for insert mode
 	JZ	CSRSET ;Ovewrite mode discovered
 	DEC	AL ;Set for insert mode
-CSRSET:	MOV	byte [CSRTYP],AL ;Save the type
+CSRSET:	MOV byte [CSRTYP], AL ;Save the type
 	POP	AX
 	RET
 ;SETCSR - Set the cursor to the new cursor type.
@@ -823,9 +823,9 @@ extern CSRFLG
 extern CSRDSP
 global SETCSR
 SETCSR:	PUSH	AX
-	MOV	AL,byte [CSRTYP] ;Get cursor type
-	CMP	byte [CSRFLG],AL ;Test for cursor change
-	MOV	byte [CSRFLG],AL ;Remember the new cursor type
+	MOV AL, byte [CSRTYP] ;Get cursor type
+	CMP byte [CSRFLG], AL ;Test for cursor change
+	MOV byte [CSRFLG], AL ;Remember the new cursor type
 	JZ	CSROK ;Cursor already set properly
 	CALL	CSRDSP ;Display the cursor
 CSROK:	POP	AX
