@@ -84,7 +84,7 @@ space; override with `GW_BASIC_MIN_FREE=...`.
 One MAME command line for the generated card image:
 
 ```sh
-../mame/drwrt400 drwrt400 -pcmcia melcard_1m -sramcard /tmp/dw-card-1m-dw-basic.bin
+../mame/drwrt400 drwrt400 -pccard melcard_1m -sramcard /tmp/dw-card-1m-dw-basic.bin
 ```
 
 Expected display:

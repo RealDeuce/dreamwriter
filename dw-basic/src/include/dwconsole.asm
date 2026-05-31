@@ -9,6 +9,11 @@ CONSOLE_ROWS equ 8
 LCD_DEFAULT_FRAMEBUFFER_BASE equ 0x1000
 LCD_STRIDE_BYTES equ 64
 LCD_VISIBLE_BYTES equ 60
+CONSOLE_ATTR_UNDERLINE equ 0x01
+CONSOLE_ATTR_BOLD equ 0x08
+CONSOLE_ATTR_INVERSE equ 0x70
+CONSOLE_ATTR_SMALL equ 0x80
+CONSOLE_ATTR_DEFAULT equ 0x07
 
 console_clear:
     pushf
@@ -21,9 +26,9 @@ console_clear:
     pop es
     mov di, console_text_buffer
     mov cx, CONSOLE_COLS * CONSOLE_ROWS
-    mov al, " "
+    mov ax, (CONSOLE_ATTR_DEFAULT << 8) | " "
     cld
-    rep stosb
+    rep stosw
     xor dx, dx
 .loop:
     mov ax, console_blank_line
@@ -75,9 +80,14 @@ console_show_cursor:
     mov [console_cursor_col], dl
     mov [console_cursor_row], dh
     call console_buffer_get_at_cursor
-    mov [console_cursor_saved_char], al
-    mov [console_cursor_cell + 1], al
-    mov ax, console_cursor_cell
+    mov [console_cursor_saved_cell], ax
+    test ah, CONSOLE_ATTR_INVERSE
+    jz .invert_on
+    and ah, ~CONSOLE_ATTR_INVERSE
+    jmp .draw_cursor
+.invert_on:
+    or ah, CONSOLE_ATTR_INVERSE
+.draw_cursor:
     call console_draw_at_cursor
     mov byte [console_cursor_visible], 1
     pop dx
@@ -100,11 +110,8 @@ console_hide_cursor:
     mov [console_col], al
     mov al, [console_cursor_logical_row]
     mov [console_row], al
-    mov al, [console_cursor_saved_char]
-    mov [console_cell], al
-    mov byte [console_cell + 1], 0
+    mov ax, [console_cursor_saved_cell]
     call console_cursor_display_xy
-    mov ax, console_cell
     call console_draw_at_cursor
     mov byte [console_cursor_visible], 0
     pop ax
@@ -153,10 +160,8 @@ console_putc:
     push ax
     push cx
     push dx
-    mov [console_cell], al
-    mov byte [console_cell + 1], 0
+    mov ah, [console_current_attr]
     call console_buffer_put_at_cursor
-    mov ax, console_cell
     call console_draw_at_cursor
     pop dx
     pop cx
@@ -299,10 +304,8 @@ SCROUT:
     mov [console_col], dh
     mov [console_row], dl
 
-    mov [console_cell], al
-    mov byte [console_cell + 1], 0
+    mov ah, [console_current_attr]
     call console_buffer_put_at_cursor
-    mov ax, console_cell
     call console_draw_at_cursor
 
 .done:
@@ -456,10 +459,10 @@ console_scroll_shadow_rect:
 
 scroll_copy_shadow_cell:
     call scroll_source_cell_offset
-    mov al, [console_text_buffer + di]
-    mov dl, al
+    mov ax, [console_text_buffer + di]
+    mov dx, ax
     call scroll_dest_cell_offset
-    mov [console_text_buffer + di], dl
+    mov [console_text_buffer + di], dx
     ret
 
 scroll_source_cell_offset:
@@ -471,6 +474,7 @@ scroll_source_cell_offset:
     add bl, [scroll_work_col]
     xor bh, bh
     add ax, bx
+    shl ax, 1
     mov di, ax
     ret
 
@@ -483,6 +487,7 @@ scroll_dest_cell_offset:
     add bl, [scroll_work_col]
     xor bh, bh
     add ax, bx
+    shl ax, 1
     mov di, ax
     ret
 
@@ -802,10 +807,10 @@ console_clear_bottom_row:
     push ds
     pop es
     cld
-    mov di, console_text_buffer + (CONSOLE_COLS * (CONSOLE_ROWS - 1))
+    mov di, console_text_buffer + (CONSOLE_COLS * (CONSOLE_ROWS - 1) * 2)
     mov cx, CONSOLE_COLS
-    mov al, " "
-    rep stosb
+    mov ax, (CONSOLE_ATTR_DEFAULT << 8) | " "
+    rep stosw
     pop es
 
     push es
@@ -851,11 +856,8 @@ console_erase_cell:
     push ax
     push cx
     push dx
-    mov al, " "
-    mov [console_cell], al
-    mov byte [console_cell + 1], 0
+    mov ax, (CONSOLE_ATTR_DEFAULT << 8) | " "
     call console_buffer_put_at_cursor
-    mov ax, console_space_cell
     call console_draw_at_cursor
     pop dx
     pop cx
@@ -956,14 +958,82 @@ console_line_goto_offset:
     pop ax
     ret
 
-; AX = CS-relative NUL-terminated string to draw at current cursor cell.
+; AX = text cell: AL=character, AH=attribute.
 console_draw_at_cursor:
+    push ax
+    push bx
     push cx
     push dx
+    mov bx, ax
+    call console_build_cell_string
+    mov ax, console_cell
     call console_cell_xy
     call dw_puts_cs_raw
     pop dx
     pop cx
+    pop bx
+    pop ax
+    ret
+
+; BL=character, BH=attribute. Builds the ROM text-vector string in console_cell.
+console_build_cell_string:
+    push ax
+    push di
+    mov di, console_cell
+    mov ah, bh
+    or ah, ah
+    jnz .attr_ok
+    mov ah, CONSOLE_ATTR_DEFAULT
+.attr_ok:
+    test ah, CONSOLE_ATTR_SMALL
+    jz .small_done
+    mov byte [di], 0xfa
+    inc di
+.small_done:
+    test ah, CONSOLE_ATTR_BOLD
+    jz .bold_done
+    mov byte [di], 0xf8
+    inc di
+.bold_done:
+    mov al, ah
+    and al, 0x07
+    cmp al, CONSOLE_ATTR_UNDERLINE
+    jne .underline_done
+    mov byte [di], 0xf0
+    inc di
+.underline_done:
+    test ah, CONSOLE_ATTR_INVERSE
+    jz .inverse_done
+    mov byte [di], 0xf2
+    inc di
+.inverse_done:
+    mov [di], bl
+    inc di
+    test ah, CONSOLE_ATTR_INVERSE
+    jz .inverse_off_done
+    mov byte [di], 0xf3
+    inc di
+.inverse_off_done:
+    mov al, ah
+    and al, 0x07
+    cmp al, CONSOLE_ATTR_UNDERLINE
+    jne .underline_off_done
+    mov byte [di], 0xf1
+    inc di
+.underline_off_done:
+    test ah, CONSOLE_ATTR_BOLD
+    jz .bold_off_done
+    mov byte [di], 0xf9
+    inc di
+.bold_off_done:
+    test ah, CONSOLE_ATTR_SMALL
+    jz .small_off_done
+    mov byte [di], 0xfb
+    inc di
+.small_off_done:
+    mov byte [di], 0
+    pop di
+    pop ax
     ret
 
 ; Return cursor display cell in DH=row, DL=column.
@@ -983,21 +1053,16 @@ console_cursor_display_xy:
     ret
 
 console_buffer_put_at_cursor:
-    push ax
-    push bx
     push di
-    mov bl, al
     call console_buffer_offset_at_cursor
-    mov [console_text_buffer + di], bl
+    mov [console_text_buffer + di], ax
     pop di
-    pop bx
-    pop ax
     ret
 
 console_buffer_get_at_cursor:
     push di
     call console_buffer_offset_at_cursor
-    mov al, [console_text_buffer + di]
+    mov ax, [console_text_buffer + di]
     pop di
     ret
 
@@ -1012,6 +1077,7 @@ console_buffer_offset_at_cursor:
     mov bl, dl
     xor bh, bh
     add ax, bx
+    shl ax, 1
     mov di, ax
     pop bx
     pop ax
@@ -1054,14 +1120,12 @@ console_cursor_logical_col:
     db 0
 console_cursor_logical_row:
     db 0
-console_cursor_saved_char:
-    db " "
+console_current_attr:
+    db CONSOLE_ATTR_DEFAULT
+console_cursor_saved_cell:
+    dw (CONSOLE_ATTR_DEFAULT << 8) | " "
 console_cell:
-    db 0, 0
-console_space_cell:
-    db " ", 0
-console_cursor_cell:
-    db 0xf2, " ", 0xf3, 0
+    times 10 db 0
 console_blank_line:
     times CONSOLE_COLS db " "
     db 0
@@ -1110,4 +1174,4 @@ scroll_pixel_value:
 scroll_byte_width:
     dw 0
 console_text_buffer:
-    times CONSOLE_COLS * CONSOLE_ROWS db " "
+    times CONSOLE_COLS * CONSOLE_ROWS dw (CONSOLE_ATTR_DEFAULT << 8) | " "

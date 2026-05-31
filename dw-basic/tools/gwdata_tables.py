@@ -48,6 +48,112 @@ def convert_dup_reservations(line: str) -> str:
     return code
 
 
+def normalize_generated_symbol(name: str) -> str:
+    name = name.strip()
+    if name.startswith("$"):
+        return "DOL_" + name[1:]
+    return name
+
+
+def is_low_data_initializer(line: str) -> bool:
+    stripped = line.strip()
+    return (
+        re.match(r"^(db|dw)\s+", stripped, flags=re.I) is not None
+        or re.match(r"^times\s+.+\s+(db|dw)\s+", stripped, flags=re.I) is not None
+    )
+
+
+def is_uninitialized_storage(line: str) -> bool:
+    stripped = line.strip()
+    return re.match(r"^res[ bw]\s+", stripped, flags=re.I) is not None
+
+
+def collect_low_data_initializers(lines: list[str]) -> dict[str, list[str]]:
+    initializers: dict[str, list[str]] = {}
+    in_low_source = False
+    current: str | None = None
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == "; ======== Code Phase ========":
+            in_low_source = True
+            current = None
+            continue
+        if stripped == "DATSTR_SRC equ $":
+            break
+        if not in_low_source:
+            continue
+
+        m = re.match(r"global\s+(.+)$", stripped, flags=re.I)
+        if m:
+            names = [normalize_generated_symbol(name.strip()) for name in m.group(1).split(",")]
+            current = names[-1] if names else None
+            continue
+
+        m = re.match(r";\s*([A-Za-z_.$][\w.$]*)\s*:\s*$", stripped)
+        if m:
+            current = normalize_generated_symbol(m.group(1))
+            continue
+
+        m = re.match(r"([A-Za-z_.$][\w.$]*):\s*$", stripped)
+        if m:
+            current = normalize_generated_symbol(m.group(1))
+            continue
+
+        if current and is_low_data_initializer(line):
+            initializers.setdefault(current, []).append(line)
+
+    return initializers
+
+
+def materialize_low_data_phase(lines: list[str]) -> list[str]:
+    initializers = collect_low_data_initializers(lines)
+    if not initializers:
+        return lines
+
+    patched: list[str] = []
+    in_data_phase = False
+    current: str | None = None
+    initializer_index = 0
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == "; ======== Data Phase ========":
+            in_data_phase = True
+            current = None
+            initializer_index = 0
+            patched.append(line)
+            continue
+
+        if in_data_phase:
+            m = re.match(r"global\s+(.+)$", stripped, flags=re.I)
+            if m:
+                current = None
+                initializer_index = 0
+                patched.append(line)
+                continue
+
+            m = re.match(r"([A-Za-z_.$][\w.$]*):\s*$", stripped)
+            if m:
+                current = normalize_generated_symbol(m.group(1))
+                initializer_index = 0
+                patched.append(line)
+                continue
+
+            if current and is_uninitialized_storage(line):
+                values = initializers.get(current, [])
+                if initializer_index < len(values):
+                    replacement = values[initializer_index]
+                    if is_low_data_initializer(replacement):
+                        patched.append(replacement)
+                        initializer_index += 1
+                        continue
+
+        patched.append(line)
+
+    return patched
+
+
 def parse_error_region(src: Path) -> list[str]:
     lines = src.read_text(errors="replace").splitlines()
     in_region = False
@@ -228,7 +334,7 @@ def patch_gwdata(path: Path, original: Path) -> None:
         patched.append(convert_dup_reservations(line))
         i += 1
 
-    path.write_text("\n".join(patched) + "\n")
+    path.write_text("\n".join(materialize_low_data_phase(patched)) + "\n")
 
 
 def main() -> None:

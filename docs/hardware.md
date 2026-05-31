@@ -873,9 +873,9 @@ Centronics `BUSY` supplies bit `0x02`, PC Card `BVD2` supplies bit `0x10`,
 PC Card write-protect supplies bit `0x40`, and PC Card detect supplies bit
 `0x80`. The main and CR2032 battery-low bits remain configurable inputs.
 
-## PCMCIA Slot
+## PC Card Slot
 
-MAME now attaches a `pcmcia` slot with existing SRAM-card device options:
+MAME now attaches a `pccard` slot with existing SRAM-card device options:
 `melcard_1m`, `sram_1m`, `sram_2m`, and `sram_4m`. Selecting an SRAM device
 exposes an `sramcard` image slot accepting `.bin` files.
 

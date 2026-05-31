@@ -9,6 +9,7 @@ org 0
 ; docs/memory-model.md before changing this loader path.
 
 GW_WRAPPER_STACK_SIZE equ 0x0400
+GW_OVR_READ_CHUNK equ 0x0200
 %ifndef GW_BASIC_MIN_FREE
 GW_BASIC_MIN_FREE equ 4096
 %endif
@@ -154,16 +155,47 @@ read_overlay:
     ; DS=CS is the destination segment for the ROM read wrapper. Fetch the
     ; vector through ES=0 so DS remains the buffer segment.
     push es
+    push si
     mov ax, cs
     mov ds, ax
-    mov ax, [file_handle]
     mov bx, GW_BASIC_LOAD_OFFSET
-    mov cx, GW_OVR_SIZE
+    mov si, GW_OVR_SIZE
+    mov word [read_count], 0
+.loop:
+    or si, si
+    jz .done
+    mov cx, GW_OVR_READ_CHUNK
+    cmp si, cx
+    jae .have_chunk
+    mov cx, si
+.have_chunk:
+    mov ax, [file_handle]
+    push bx
+    push cx
+    push si
     push ax
     xor ax, ax
     mov es, ax
     pop ax
     call far [es:0x0248]
+    pop si
+    pop cx
+    pop bx
+    jc .done
+    or ax, ax
+    jz .done
+    cmp ax, cx
+    ja .done
+    push cs
+    pop ds
+    add bx, ax
+    sub si, ax
+    add [read_count], ax
+    cmp ax, cx
+    je .loop
+.done:
+    mov ax, [read_count]
+    pop si
     pop es
     ret
 

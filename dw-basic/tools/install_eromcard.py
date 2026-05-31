@@ -57,15 +57,17 @@ def get_fat12(data: bytes | bytearray, cluster: int) -> int:
 
 
 def set_fat12(data: bytearray, cluster: int, value: int) -> None:
-    pos = SECTOR_SIZE + (cluster * 3) // 2
+    geometry = read_word(data, 4)
     value &= 0x0FFF
-    pair = data[pos] | (data[pos + 1] << 8)
-    if cluster & 1:
-        pair = (pair & 0x000F) | (value << 4)
-    else:
-        pair = (pair & 0xF000) | value
-    data[pos] = pair & 0xFF
-    data[pos + 1] = pair >> 8
+    for fat_index in range(3):
+        pos = SECTOR_SIZE + (fat_index * geometry * SECTOR_SIZE) + (cluster * 3) // 2
+        pair = data[pos] | (data[pos + 1] << 8)
+        if cluster & 1:
+            pair = (pair & 0x000F) | (value << 4)
+        else:
+            pair = (pair & 0xF000) | value
+        data[pos] = pair & 0xFF
+        data[pos + 1] = pair >> 8
 
 
 def encode_83(name: str) -> bytes:

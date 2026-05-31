@@ -398,7 +398,7 @@ Default outputs:
 One MAME command line for the generated image is:
 
 ```sh
-../mame/drwrt400 drwrt400 -pcmcia melcard_1m -sramcard /tmp/dw-card-1m-basic.bin
+../mame/drwrt400 drwrt400 -pccard melcard_1m -sramcard /tmp/dw-card-1m-basic.bin
 ```
 
 For isolating the T400 ROM-card loader before entering the 325 BASIC runtime,

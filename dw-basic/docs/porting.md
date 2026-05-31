@@ -75,14 +75,20 @@ I/O; the ROM-card smoke program should stay a thin caller of these routines.
 Line editing records the input start cell and maps Backspace from the buffer
 length back to a screen cell, so wrapped input can erase the previous character
 instead of depending on whatever cursor column happens to be current.
-The initial cursor is a non-blinking reverse-video space, emitted as
-`F2 char F3` through the ROM text helper. The console maintains an 80x8 shadow
-text buffer so the cursor can invert and later restore the actual character in
-the cell. `console_show_cursor` records the logical and displayed cursor cell,
-and `console_hide_cursor` erases that recorded cell rather than assuming the
-logical cursor has not moved. A logical column of 80 is the one-past-right-edge
-state and displays by sticking to column 79, so a full line still has a visible
-cursor.
+The initial cursor is a non-blinking reverse-video cell, emitted with the same
+ROM style controls used for normal attributed cells. The console maintains an
+80x8 shadow cell buffer, storing the character in the low byte and an
+MDA-shaped attribute in the high byte, so screen editing can move cells as the
+`AX` values expected by the GW-BASIC screen driver. Attribute `0x07` is normal,
+bit `0x08` is bold/intensity, foreground pattern `0x01` is underline, and
+background bits `0x70` request reverse video; the MDA blink slot is reserved as
+DreamWriter small text. `SCRINP` returns only the character in `AL` because
+GW-BASIC uses nonzero `AH` as a double-byte character marker; `SCRATR` returns
+the saved high-byte attribute for `SCREEN(row,col,nonzero)`. `console_show_cursor`
+records the logical and displayed cursor cell, and `console_hide_cursor` erases
+that recorded cell rather than assuming the logical cursor has not moved. A
+logical column of 80 is the one-past-right-edge state and displays by sticking
+to column 79, so a full line still has a visible cursor.
 
 The display register-preservation contracts for `SCROUT` through the ROM text
 vector are documented in [`display-register-contracts.md`](display-register-contracts.md).

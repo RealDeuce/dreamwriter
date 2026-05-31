@@ -109,11 +109,9 @@ global PRTMAP
 global RDPEN
 global RDSTIK
 global RDTRIG
-global SCRATR
 global SCRSTT
 global SEGINI
 global SETCBF
-global SETCLR
 global SETFBC
 global PIXSIZ
 global READC
@@ -150,11 +148,9 @@ PRODIR:
 RDPEN:
 RDSTIK:
 RDTRIG:
-SCRATR:
 SCRSTT:
 SEGINI:
 SETCBF:
-SETCLR:
 SETFBC:
 SWIDTH:
 VALSC2:

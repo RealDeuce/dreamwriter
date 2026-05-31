@@ -13,17 +13,52 @@ local queue = {}
 local active = {}
 local step = nil
 local step_frames = 0
+local cpu = nil
 local program_space = nil
+local watch_tap = nil
+local watch_count = 0
+local watch_start = tonumber(os.getenv("DWBASIC_WATCH_START") or "")
+local watch_end = tonumber(os.getenv("DWBASIC_WATCH_END") or "")
+local watch_limit = tonumber(os.getenv("DWBASIC_WATCH_LIMIT") or "16")
+
+local function find_cpu()
+	if cpu then
+		return cpu
+	end
+
+	local candidates = { ":v20hl", "v20hl", ":maincpu", "maincpu", ":cpu", "cpu" }
+	for _, tag in ipairs(candidates) do
+		local device = manager.machine.devices[tag]
+		if device and device.spaces and device.spaces["program"] then
+			cpu = device
+			return cpu
+		end
+	end
+
+	pcall(function()
+		for _, device in pairs(manager.machine.devices) do
+			if device.spaces and device.spaces["program"] and device.state then
+				cpu = device
+				return
+			end
+		end
+	end)
+	if cpu then
+		return cpu
+	end
+
+	return nil
+end
 
 local function get_program_space()
 	if not program_space then
-		local cpu = manager.machine.devices[":v20hl"] or manager.machine.devices["v20hl"]
-		if not cpu then
-			error("missing v20hl CPU device")
+		local device = find_cpu()
+		if not device then
+			error("missing CPU device")
 		end
-		program_space = cpu.spaces["program"]
+		program_space = device.spaces["program"]
 		if not program_space then
-			error("missing v20hl program space")
+			error("missing CPU program space")
 		end
 	end
 	return program_space
@@ -42,6 +77,26 @@ local function read_u8(address)
 	return get_program_space():read_u8(address)
 end
 
+local function cpu_item(name)
+	local device = find_cpu()
+	if not device then
+		return nil
+	end
+	local item = device.state[name]
+	if not item then
+		return nil
+	end
+	return item.value
+end
+
+local function basic_hex_line(offset, length)
+	local segment = cpu_item("DS1") or cpu_item("DS") or cpu_item("PS")
+	if not segment then
+		return "ERR missing BASIC segment"
+	end
+	return "OK MEM " .. read_hex(segment * 16 + offset, length)
+end
+
 local function kbd_state_line()
 	return string.format(
 		"OK KBD raw=%s deb=%s sticky=%s flags=%s repeat=%s queue=%02X/%02X events=%s",
@@ -57,25 +112,69 @@ local function kbd_state_line()
 end
 
 local function cpu_state_line()
-	local cpu = manager.machine.devices[":v20hl"] or manager.machine.devices["v20hl"]
-	if not cpu then
-		return "ERR missing v20hl CPU device"
+	local device = find_cpu()
+	if not device then
+		return "ERR missing CPU device"
 	end
 	local names = { "PC", "CURPC", "GENPC", "CS", "IP", "SS", "SP", "DS", "ES", "AX", "BX", "CX", "DX", "FLAGS" }
 	local values = {}
+	local seen = {}
 	for _, name in ipairs(names) do
-		local item = cpu.state[name]
+		local item = device.state[name]
 		if item then
 			values[#values + 1] = string.format("%s=%X", name, item.value)
+			seen[name] = true
 		end
 	end
-	if #values == 0 then
-		for name, item in pairs(cpu.state) do
-			values[#values + 1] = string.format("%s=%X", tostring(name), item.value)
+	local extra = {}
+	for name, item in pairs(device.state) do
+		if not seen[name] then
+			extra[#extra + 1] = string.format("%s=%X", tostring(name), item.value)
 		end
-		table.sort(values)
+	end
+	table.sort(extra)
+	for _, value in ipairs(extra) do
+		values[#values + 1] = value
 	end
 	return "OK CPU " .. table.concat(values, " ")
+end
+
+local function watch_state_line(offset, data, mask)
+	local names = { "PC", "CURPC", "GENPC", "CS", "IP", "DS", "ES", "SS", "SP", "AX", "BX", "CX", "DX" }
+	local values = {
+		string.format("addr=%05X", offset),
+		string.format("data=%X", data),
+		string.format("mask=%X", mask),
+	}
+	local device = find_cpu()
+	if device then
+		for _, name in ipairs(names) do
+			local item = device.state[name]
+			if item then
+				values[#values + 1] = string.format("%s=%X", name, item.value)
+			end
+		end
+	end
+	return "WATCH " .. table.concat(values, " ")
+end
+
+local function install_watch()
+	if watch_tap or not watch_start or not watch_end then
+		return
+	end
+	local space = get_program_space()
+	watch_tap = space:install_write_tap(watch_start, watch_end, "dwbasic-watch", function(offset, data, mask)
+		watch_count = watch_count + 1
+		local line = watch_state_line(offset, data, mask)
+		emu.print_error(line)
+		if socket then
+			socket:write("EVT " .. line .. "\n")
+		end
+		if watch_limit > 0 and watch_count >= watch_limit then
+			watch_tap:remove()
+		end
+	end)
+	emu.print_error(string.format("dwbasic watch installed %05X-%05X", watch_start, watch_end))
 end
 
 local function get_port(name)
@@ -297,6 +396,13 @@ local function handle_line(line)
 		socket:write(kbd_state_line() .. "\n")
 	elseif command == "CPUSTATE" then
 		socket:write(cpu_state_line() .. "\n")
+	elseif command == "MEM" then
+		local offset_text, length_text = payload:match("^(%S+)%s+(%S+)$")
+		if not offset_text then
+			socket:write("ERR MEM needs offset and length\n")
+		else
+			socket:write(basic_hex_line(tonumber(offset_text), tonumber(length_text)) .. "\n")
+		end
 	elseif command == "SNAP" then
 		manager.machine.video:snapshot()
 		socket:write("OK SNAP\n")
@@ -358,6 +464,7 @@ local function apply_step(next_step)
 end
 
 local function process_frame()
+	install_watch()
 	read_commands()
 
 	if step then

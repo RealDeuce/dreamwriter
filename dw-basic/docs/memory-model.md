@@ -24,9 +24,11 @@ RAM.
 The flat64 build intentionally does not preserve the original MASM CSEG/DSEG
 `ORG` layout gaps in `gwdata.asm`. In this model, those gaps would consume the
 single 64K address space without giving us the original split-segment loader
-contract. RAM reservations are still preserved as NASM reservations
-(`resb`/`resw`) rather than initialized data where the conversion can identify
-MASM `DUP(?)` storage.
+contract. Ordinary RAM reservations are still preserved as NASM reservations
+(`resb`/`resw`) where the conversion can identify MASM `DUP(?)` storage. The
+exception is `gwdata.asm`'s low-data phase mirror: placeholders there are
+materialized from the matching source-phase initializer when the original
+source relied on startup copying ROM constants into RAM.
 
 Files that currently encode flat64 policy:
 

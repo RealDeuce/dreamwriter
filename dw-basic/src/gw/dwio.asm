@@ -10,8 +10,10 @@ global CLREOL
 global CLRSCN
 global KEYINP
 global SCRINP
+global SCRATR
 global SCROLL
 global SCROUT
+global SETCLR
 global CSRDSP
 global dw_cursor_init
 global dw_cursor_pre_puts
@@ -46,10 +48,105 @@ dw_cursor_init:
     mov byte [console_cursor_row], 0
     mov byte [console_cursor_logical_col], 0
     mov byte [console_cursor_logical_row], 0
-    mov byte [console_cursor_saved_char], " "
+    mov byte [console_current_attr], CONSOLE_ATTR_DEFAULT
+    mov word [console_cursor_saved_cell], (CONSOLE_ATTR_DEFAULT << 8) | " "
     mov byte [dw_cursor_puts_depth], 0
     mov byte [dw_cursor_restore], 0
     mov byte [dw_cursor_requested_type], 0
+    ret
+
+; COLOR passes a GW-BASIC parameter list at BX: count byte followed by
+; two-byte entries, where entry byte 0 is nonzero when the parameter exists and
+; entry byte 1 is the byte value. Map foreground/background onto the IBM MDA
+; attribute byte and use the blink slot as the DreamWriter "small" extension.
+SETCLR:
+    push ax
+    push bx
+    push cx
+    push dx
+    mov dl, [console_current_attr]
+    mov cl, [bx]
+    xor ch, ch
+    inc bx
+    jcxz .store
+
+    cmp byte [bx], 0
+    je .background
+    mov al, [bx + 1]
+    mov ah, al
+    and al, 0x0f
+    and dl, 0xf0
+    or dl, al
+    test ah, CONSOLE_ATTR_SMALL
+    jz .fg_not_small
+    or dl, CONSOLE_ATTR_SMALL
+    jmp .background
+.fg_not_small:
+    and dl, ~CONSOLE_ATTR_SMALL
+
+.background:
+    cmp cl, 2
+    jb .store
+    add bx, 2
+    cmp byte [bx], 0
+    je .store
+    mov al, [bx + 1]
+    cmp al, 7
+    ja .error
+    shl al, 4
+    and dl, 0x8f
+    or dl, al
+
+.store:
+    mov [console_current_attr], dl
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    clc
+    ret
+
+.error:
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    stc
+    ret
+
+; SCREEN(row, col, nonzero) asks for the attribute at a 1-based cell.
+; gwsts passes the X parameter in AL and the Y parameter in BL.
+SCRATR:
+    push bx
+    push dx
+    mov dh, al
+    mov dl, bl
+    mov ax, CONSOLE_ATTR_DEFAULT
+    cmp dh, 1
+    jb .done
+    cmp dh, CONSOLE_COLS
+    ja .done
+    cmp dl, 1
+    jb .done
+    cmp dl, CONSOLE_ROWS
+    ja .done
+    mov bl, [console_col]
+    mov bh, [console_row]
+    push bx
+    dec dh
+    dec dl
+    mov [console_col], dh
+    mov [console_row], dl
+    call console_buffer_get_at_cursor
+    mov al, ah
+    xor ah, ah
+    pop bx
+    mov [console_col], bl
+    mov [console_row], bh
+.done:
+    pop dx
+    pop bx
+    clc
     ret
 
 ; CSRDSP is passed AL=cursor type.  Use BASIC's 1-based CSRX/CSRY as the cursor

@@ -601,38 +601,38 @@ resb 4
 ; .RADIX	8
 resb 0o1
 RNDCNT:
-resb 0o1
-resb 0o1
+db 0o0
+db 0o0
 	RET ;THIS IS A KLUDGE TO MAKE CHRGET WORK
 global NUMCON
 NUMCON:
-resb 0o1 ;THESE FAKE TOKENS FORCE CHRGET
-resb 0o1 ;TO EFFECTIVELY RE-SCAN THE EMBEDED CONSTANT
+db CONCON ;THESE FAKE TOKENS FORCE CHRGET
+db CONCN2 ;TO EFFECTIVELY RE-SCAN THE EMBEDED CONSTANT
 global DSEGZ
 DSEGZ:
-resb 0o1 ;DATA SEGMENT-LOCATED ZERO
+db 0o0 ;DATA SEGMENT-LOCATED ZERO
 global RNDCOP
 RNDCOP:
-resb 0o1 ;COPY OF THE RANDOM NUMBER SEED
-resb 0o1 ;BETWEEN 0 AND 1
-resb 0o1
-resb 0o1
+db 0o122 ;COPY OF THE RANDOM NUMBER SEED
+db 0o307 ;BETWEEN 0 AND 1
+db 0o117
+db 0o200
 global DOL_RNDX
 DOL_RNDX:
 global RNDX
 RNDX:
-resb 0o1 ;LAST RANDOM NUMBER GENERATED
-resb 0o1 ;BETWEEN 0 AND 1
-resb 0o1
-resb 0o1
+db 0o122 ;LAST RANDOM NUMBER GENERATED
+db 0o307 ;BETWEEN 0 AND 1
+db 0o117
+db 0o200
 ; .RADIX	10
 STAINP:
 	IN	AL,0
 db 0o313 ;"LONG" RETURN
 global ENDPRG
 ENDPRG:
-resb 1
-resb 4 ;FAKE END OF PROGRAM FOR RESUME NEXT
+db ":"
+db 0,0,0,0 ;FAKE END OF PROGRAM FOR RESUME NEXT
 ; SUBTTL LOW SEGMENT -- RAM-- IE THIS STUFF IS NOT CONSTANT
 ;
 ; THIS IS THE "VOLATILE" STORAGE AREA AND NONE OF IT
@@ -642,14 +642,14 @@ resb 4 ;FAKE END OF PROGRAM FOR RESUME NEXT
 ;
 global USRTAB
 USRTAB:
-resw 10
+times 10 dw 65535
 global NULCNT
 NULCNT:
-resb 1 ;STORE HERE THE NUMBER OF NULLS
+db 1 ;STORE HERE THE NUMBER OF NULLS
 ;TO PRINT AFTER CRLF
 global MSDCCF
 MSDCCF:
-resb 1 ;Ctl-C flag set by Ctl-C int handler
+db 0 ;Ctl-C flag set by Ctl-C int handler
 global CTLCAD
 CTLCAD:
 resb 4 ;Store pre-BASIC CTL-C int vector
@@ -658,50 +658,50 @@ DINTAD:
 resb 4 ;Store BASIC Disk error int vector
 global LSTCHR
 LSTCHR:
-resb 1 ;used by SCNSOT to remember last chr out
+db 0 ;used by SCNSOT to remember last chr out
 global ERRFLG
 ERRFLG:
-resb 1 ;USED TO SAVE THE ERROR NUMBER
+db 0 ;USED TO SAVE THE ERROR NUMBER
 ; SO EDIT CAN BE CALLED ON "SN" ERR.
 global LPTLST
 LPTLST:
-resb 1 ;LAST LINE PRINTER OPERATION. ZERO
+db 0 ;LAST LINE PRINTER OPERATION. ZERO
 ;MEANS LINEFEED. NON-ZERO MEANS PRINT
 ;COMMAND (OKIA ONLY)
 global LPTPOS
 LPTPOS:
-resb 1 ;POSITION OF LPT PRINT HEAD -initially 0
+db 0 ;POSITION OF LPT PRINT HEAD -initially 0
 global PRTFLG
 PRTFLG:
-resb 1 ;WHETHER OUTPUT GOES TO LPT
+db 0 ;WHETHER OUTPUT GOES TO LPT
 %define LNCMPS (((LPTLEN/CLMWID)-1)*CLMWID) ;LAST COMMA FIELD POSIT
 global NLPPOS
 NLPPOS:
-resb 1 ;LAST COL # BEYOND WHICH NO MORE COMMA FIELDS
+db LNCMPS ;LAST COL # BEYOND WHICH NO MORE COMMA FIELDS
 global LPTSIZ
 LPTSIZ:
-resb 1 ;DEFAULT LINE PRINTER WIDTH
+db LPTLEN ;DEFAULT LINE PRINTER WIDTH
 global DAYSPM
 DAYSPM:
-resb 6
-resb 6
+db 31,28,31,30,31,30
+db 31,31,30,31,30,31
 %define NCMPOS (((LINLN/CLMWID)-1)*CLMWID) ;POSITION BEYOND WHICH THERE ARE
 ;NO MORE COMMA FIELDS
 CLMLST:
-resb 1 ;POSITION OF LAST COMMA COLUMN
+db NCMPOS ;POSITION OF LAST COMMA COLUMN
 global RUBSW
 RUBSW:
-resb 1 ;RUBOUT SWITCH =1 INSIDE
+db 0 ;RUBOUT SWITCH =1 INSIDE
 ;THE PROCESSING OF A RUBOUT (INLIN)
 global CNTOFL
 CNTOFL:
-resb 1 ;SUPRESS OUTPUT FLAG
+db 0 ;SUPRESS OUTPUT FLAG
 ;NON-ZERO MEANS SUPRESS
 ;RESET BY "INPUT",READY AND ERRORS
 ;COMPLEMENTED BY INPUT OF ^O
 global PTRFIL
 PTRFIL:
-resw 1
+dw 0
 ;POINTER TO DATA BLOCK OF CURRENT FILE
 ;USED BY DISK AND NCR CASSETTE CODE
 global TOPMEM
@@ -727,10 +727,10 @@ OVERRI:
 dw OVRMSG ;ADDRESS OF MESSAGE TO PRINT (OVERFLOW)
 global CSRTYP
 CSRTYP:
-resb 1 ;Type of next cursor
+db 0 ;Type of next cursor
 global CSRFLG
 CSRFLG:
-resb 1 ;Type of current cursor
+db 0 ;Type of current cursor
 ;
 ;Generalized I/O initialized data definitions
 ;
@@ -751,13 +751,13 @@ DEVTRM:
 dw _DVTRM ;points to array of device termination routines
 global SAVKEY
 SAVKEY:
-resb 1 ;for saving 2nd byte of 2-byte seq.
+db 0 ;for saving 2nd byte of 2-byte seq.
 global SAVKYF
 SAVKYF:
-resb 1 ;Flag nonzero when SAVKEY is active (SAVKEY may be 0)
+db 0 ;Flag nonzero when SAVKEY is active (SAVKEY may be 0)
 global FREFDB
 FREFDB:
-resw 1 ;Used by Device Open Routines to release FDB
+dw 0 ;Used by Device Open Routines to release FDB
 ;if error occurs after FDB is allocated but
 ;before File actually becomes OPEN.
 ;FDB is Freed by routine FINPRT.

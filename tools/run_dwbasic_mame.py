@@ -27,9 +27,9 @@ ROM = REPO_ROOT / "t4_ir_2.1.ic303"
 KEYBOARD_SCAN_RATE_HZ = 19660000 / 20480
 KEYBOARD_FULL_SCAN_SECONDS = 10 / KEYBOARD_SCAN_RATE_HZ
 EXPECTED_SIGNPOSTS = {
-    "initial two-button menu": "14bbb2fea6a6ad3635f84f027e2fe40a1bab4088b3a58b0be86f7822426376d4",
-    "WP menu": "97096048743b7a1c3857a78d3f31541b900c6ae750282a8d803ae7c8b4e38a91",
-    "OTHERS menu": "9c10a804b9c04503b0ff7579555f82de41b9b4fb09121b5a9f68d9a188d680d4",
+    "initial two-button menu": "1629822cddb229cf2499f6d7b986fc4a77a43490c7aaba368019b60e392c1f05",
+    "WP menu": "cb2de5ee6c333b2e4bef79d1261f8d8a44df9697662d5094134ce0e0f628f808",
+    "OTHERS menu": "e9632f7a15a3ca41b04f223e40da01a4912701571a332e5e751dc536310a8ebc",
 }
 
 
@@ -190,6 +190,13 @@ def print_cpu_state(stream: socket.socket) -> None:
     print(line[7:])
 
 
+def print_basic_memory(stream: socket.socket, args: str) -> None:
+    line = bridge_request(stream, f"MEM {args}")
+    if not line.startswith("OK MEM "):
+        raise RuntimeError(f"input bridge rejected MEM: {line}")
+    print(line[7:])
+
+
 def snapshot(
     input_stream: socket.socket,
     snap_dir: Path,
@@ -209,12 +216,20 @@ def snapshot(
     raise RuntimeError(f"MAME did not create a snapshot in {snap_dir}")
 
 
-def decode_snapshot(path: Path, *, allow_cursor: bool = False, allow_inverse: bool = False) -> str:
+def decode_snapshot(
+    path: Path,
+    *,
+    allow_cursor: bool = False,
+    allow_inverse: bool = False,
+    attrs: bool = False,
+) -> str:
     command = [sys.executable, str(DECODER), str(path), "--rom", str(ROM)]
     if allow_cursor:
         command.append("--allow-cursor")
     if allow_inverse:
         command.append("--allow-inverse")
+    if attrs:
+        command.append("--attrs")
     result = run(
         command,
         check=False,
@@ -316,35 +331,39 @@ def changed_lines(previous: str | None, current: str) -> str:
     return "\n".join(line for index, line in enumerate(current_lines) if index not in unchanged)
 
 
-def parse_snap_command(command: str) -> tuple[str, float, int | None, int | None]:
+def parse_snap_command(command: str) -> tuple[str, float, int | None, int | None, bool]:
     parts = command.split()
+    show_attrs = False
+    if "attrs" in {part.lower() for part in parts[1:]}:
+        show_attrs = True
+        parts = [parts[0], *(part for part in parts[1:] if part.lower() != "attrs")]
     if len(parts) == 1:
-        return "changed", 0.0, None, None
+        return "changed", 0.0, None, None, show_attrs
     if len(parts) == 2 and parts[1].lower() == "all":
-        return "all", 0.0, None, None
+        return "all", 0.0, None, None, show_attrs
     if len(parts) == 3 and parts[1].lower() == "all":
         try:
-            return "all", float(parts[2]), None, None
+            return "all", float(parts[2]), None, None, show_attrs
         except ValueError as exc:
             raise ValueError("snap delay must be numeric") from exc
     if len(parts) == 3 and parts[2].lower() == "all":
         try:
-            return "all", float(parts[1]), None, None
+            return "all", float(parts[1]), None, None, show_attrs
         except ValueError as exc:
             raise ValueError("snap delay must be numeric") from exc
     if len(parts) == 2:
         try:
-            return "changed", float(parts[1]), None, None
+            return "changed", float(parts[1]), None, None, show_attrs
         except ValueError as exc:
-            raise ValueError("usage: :snap [all [delay]|delay [all]|start-line end-line|delay start-line end-line]") from exc
+            raise ValueError("usage: :snap [attrs] [all [delay]|delay [all]|start-line end-line|delay start-line end-line]") from exc
     try:
         if len(parts) == 3:
-            return "range", 0.0, int(parts[1]), int(parts[2])
+            return "range", 0.0, int(parts[1]), int(parts[2]), show_attrs
         if len(parts) == 4:
-            return "range", float(parts[1]), int(parts[2]), int(parts[3])
+            return "range", float(parts[1]), int(parts[2]), int(parts[3]), show_attrs
     except ValueError as exc:
         raise ValueError("snap delay/range must be numeric") from exc
-    raise ValueError("usage: :snap [all [delay]|delay [all]|start-line end-line|delay start-line end-line]")
+    raise ValueError("usage: :snap [attrs] [all [delay]|delay [all]|start-line end-line|delay start-line end-line]")
 
 
 def print_snapshot(path: Path, decoded: str | None = None, start_line: int | None = None, end_line: int | None = None) -> None:
@@ -372,8 +391,8 @@ def interactive_loop(
 ) -> None:
     print(
         "interactive commands: plain text sends a BASIC line; "
-        ":snap [all [DELAY]|DELAY [all]|START END|DELAY START END] snapshots; :csnap caches a quiet full snapshot; :key NAME sends a matrix key; "
-        ":type TEXT types without Return; :kbdstate dumps ROM keyboard state; :cpustate dumps V20 registers; :quit exits",
+        ":snap [attrs] [all [DELAY]|DELAY [all]|START END|DELAY START END] snapshots; :csnap caches a quiet full snapshot; :key NAME sends a matrix key; "
+        ":type TEXT types without Return; :kbdstate dumps ROM keyboard state; :cpustate dumps V20 registers; :mem OFFSET LEN dumps BASIC-segment memory; :quit exits",
         file=sys.stderr,
     )
     while True:
@@ -398,7 +417,7 @@ def interactive_loop(
             continue
         if command.startswith(":snap"):
             try:
-                mode, delay, start_line, end_line = parse_snap_command(command)
+                mode, delay, start_line, end_line, show_attrs = parse_snap_command(command)
                 previous_snapshot = cached_snapshot
                 if delay < 0:
                     raise ValueError("snap delay must be >= 0")
@@ -410,7 +429,13 @@ def interactive_loop(
                     snapshot_timeout,
                 )
                 print(f"\n== {cached_snapshot[0].name} ==")
-                if mode == "changed" and "non-text cell" not in cached_snapshot[1]:
+                if show_attrs:
+                    output = slice_lines(
+                        decode_snapshot(cached_snapshot[0], allow_cursor=True, allow_inverse=True, attrs=True),
+                        start_line,
+                        end_line,
+                    )
+                elif mode == "changed" and "non-text cell" not in cached_snapshot[1]:
                     output = changed_lines(
                         previous_snapshot[1] if previous_snapshot is not None else None,
                         cached_snapshot[1],
@@ -434,6 +459,9 @@ def interactive_loop(
         if command == ":cpustate":
             print_cpu_state(input_stream)
             continue
+        if command.startswith(":mem "):
+            print_basic_memory(input_stream, command[5:].strip())
+            continue
         send_bridge_text(input_stream, line, add_return=True)
 
 
@@ -445,8 +473,8 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--bios", default="v2_1")
     parser.add_argument("--card", type=Path, default=DEFAULT_CARD)
     parser.add_argument("--card-option", default="-sram", help="MAME image option for the SRAM card")
-    parser.add_argument("--pcmcia", default="melcard_1m")
-    parser.add_argument("--rs232", default="pty")
+    parser.add_argument("--pccard", "--pcmcia", dest="pccard", default="melcard_1m")
+    parser.add_argument("--serial", "--rs232", dest="serial", default="pty")
     parser.add_argument("--snap-dir", type=Path, default=DEFAULT_SNAP_DIR)
     parser.add_argument("--nvram-image", type=Path, default=DEFAULT_NVRAM_IMAGE)
     parser.add_argument("--input-bridge", type=Path, default=DEFAULT_INPUT_BRIDGE)
@@ -500,10 +528,10 @@ def main(argv: list[str]) -> int:
         "%g/%i",
         "-autoboot_script",
         str(args.input_bridge),
-        "-rs232",
-        args.rs232,
-        "-pcmcia",
-        args.pcmcia,
+        "-serial",
+        args.serial,
+        "-pccard",
+        args.pccard,
         args.card_option,
         str(args.card),
     ]

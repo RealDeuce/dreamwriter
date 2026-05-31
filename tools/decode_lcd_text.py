@@ -11,16 +11,30 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from PIL import Image
 
 
 MAIN_GLYPH_BASE = 0x580B6
+BOLD_GLYPH_BASE = 0x586B6
+SMALL_GLYPH_BASE = 0x58CB6
+SMALL_BOLD_GLYPH_BASE = 0x592B6
 FIRST_CODE = 0x20
 DEFAULT_LAST_CODE = 0x7E
 CELL_W = 6
 CELL_H = 8
+ATTR_UNDERLINE = 0x1
+ATTR_INVERSE = 0x2
+ATTR_BOLD = 0x4
+ATTR_SMALL = 0x8
+
+
+@dataclass(frozen=True)
+class DecodedCell:
+    char: str
+    attrs: int
 
 
 def parse_int(text: str) -> int:
@@ -50,8 +64,8 @@ def build_templates(
     base: int,
     first_code: int,
     last_code: int,
-) -> dict[tuple[int, ...], str]:
-    templates: dict[tuple[int, ...], str] = {}
+) -> dict[tuple[int, ...], DecodedCell]:
+    templates: dict[tuple[int, ...], DecodedCell] = {}
     ambiguous: dict[tuple[int, ...], list[int]] = {}
     for code in range(first_code, last_code + 1):
         cell = glyph_cell(rom, base, code, first_code)
@@ -60,13 +74,47 @@ def build_templates(
     for cell, codes in ambiguous.items():
         printable_codes = [code for code in codes if 0x20 <= code <= 0x7E]
         chosen = printable_codes[0] if printable_codes else codes[0]
-        templates[cell] = chr(chosen) if 0x20 <= chosen <= 0x7E else f"\\x{chosen:02X}"
+        char = chr(chosen) if 0x20 <= chosen <= 0x7E else f"\\x{chosen:02X}"
+        templates[cell] = DecodedCell(char, 0)
     return templates
+
+
+def underline_cell(cell: tuple[int, ...]) -> tuple[int, ...]:
+    return (*cell[:-1], (1 << CELL_W) - 1)
 
 
 def invert_cell(cell: tuple[int, ...]) -> tuple[int, ...]:
     mask = (1 << CELL_W) - 1
     return tuple((~row) & mask for row in cell)
+
+
+def build_attribute_templates(
+    rom: bytes,
+    first_code: int,
+    last_code: int,
+) -> dict[tuple[int, ...], DecodedCell]:
+    templates: dict[tuple[int, ...], DecodedCell] = {}
+    font_runs = [
+        (MAIN_GLYPH_BASE, 0),
+        (BOLD_GLYPH_BASE, ATTR_BOLD),
+        (SMALL_GLYPH_BASE, ATTR_SMALL),
+        (SMALL_BOLD_GLYPH_BASE, ATTR_SMALL | ATTR_BOLD),
+    ]
+    for base, font_attrs in font_runs:
+        for code in range(first_code, last_code + 1):
+            char = chr(code) if 0x20 <= code <= 0x7E else f"\\x{code:02X}"
+            cell = glyph_cell(rom, base, code, first_code)
+            templates[cell] = DecodedCell(char, font_attrs)
+            templates.setdefault(invert_cell(cell), DecodedCell(char, font_attrs | ATTR_INVERSE))
+            underlined = underline_cell(cell)
+            templates.setdefault(underlined, DecodedCell(char, font_attrs | ATTR_UNDERLINE))
+            templates.setdefault(invert_cell(underlined), DecodedCell(char, font_attrs | ATTR_UNDERLINE | ATTR_INVERSE))
+        if first_code <= 0x20 <= last_code:
+            space_cell = glyph_cell(rom, base, 0x20, first_code)
+            underlined_space = underline_cell(space_cell)
+            templates[underlined_space] = DecodedCell(" ", font_attrs | ATTR_UNDERLINE)
+            templates[invert_cell(underlined_space)] = DecodedCell(" ", font_attrs | ATTR_UNDERLINE | ATTR_INVERSE)
+    return templates
 
 
 def threshold_pixels(image: Image.Image) -> list[list[bool]]:
@@ -114,12 +162,12 @@ def render_cell(cell: tuple[int, ...]) -> str:
 
 def decode_image(
     image: Image.Image,
-    templates: dict[tuple[int, ...], str],
+    templates: dict[tuple[int, ...], DecodedCell],
     trim: bool,
     allow_cursor: bool,
     allow_inverse: bool,
     cursor_char: str,
-) -> list[str]:
+) -> list[list[DecodedCell]]:
     width, height = image.size
     if width % CELL_W or height % CELL_H:
         raise ValueError(f"snapshot size {width}x{height} is not divisible by {CELL_W}x{CELL_H}")
@@ -127,25 +175,37 @@ def decode_image(
     bits = threshold_pixels(image)
     cols = width // CELL_W
     rows = height // CELL_H
-    decoded: list[str] = []
+    decoded: list[list[DecodedCell]] = []
     for row in range(rows):
-        chars: list[str] = []
+        cells: list[DecodedCell] = []
         for col in range(cols):
             cell = extract_cell(bits, col, row)
-            char = templates.get(cell)
-            if char is None and allow_inverse:
-                char = templates.get(invert_cell(cell))
-            if char is None and allow_cursor and all(value == (1 << CELL_W) - 1 for value in cell):
-                char = cursor_char
-            if char is None:
+            decoded_cell = templates.get(cell)
+            if decoded_cell is None and allow_inverse:
+                inverted = templates.get(invert_cell(cell))
+                if inverted is not None:
+                    decoded_cell = DecodedCell(inverted.char, inverted.attrs | ATTR_INVERSE)
+            if decoded_cell is None and allow_cursor and all(value == (1 << CELL_W) - 1 for value in cell):
+                decoded_cell = DecodedCell(cursor_char, ATTR_INVERSE)
+            if decoded_cell is None:
                 raise ValueError(
                     f"non-text cell at row={row} col={col} x={col * CELL_W} y={row * CELL_H}\n"
                     f"{render_cell(cell)}"
                 )
-            chars.append(char)
-        line = "".join(chars)
-        decoded.append(line.rstrip() if trim else line)
+            cells.append(decoded_cell)
+        if trim:
+            while cells and cells[-1].char == " ":
+                cells.pop()
+        decoded.append(cells)
     return decoded
+
+
+def cells_to_text(cells: list[DecodedCell]) -> str:
+    return "".join(cell.char for cell in cells)
+
+
+def cells_to_attrs(cells: list[DecodedCell]) -> str:
+    return "".join(f"{cell.attrs:X}" if cell.attrs else "." for cell in cells)
 
 
 def main(argv: list[str]) -> int:
@@ -166,14 +226,23 @@ def main(argv: list[str]) -> int:
         action="store_true",
         help="decode exact bitwise-inverted ROM glyphs as text",
     )
+    parser.add_argument(
+        "--attrs",
+        action="store_true",
+        help="print one attribute-mask line after each decoded text line",
+    )
     parser.add_argument("--cursor-char", default=" ", help="character to emit for --allow-cursor")
     args = parser.parse_args(argv)
 
     try:
         rom = args.rom.read_bytes()
         image = Image.open(args.png)
-        templates = build_templates(rom, args.font_base, args.first_code, args.last_code)
-        for line in decode_image(
+        if args.attrs:
+            templates = build_attribute_templates(rom, args.first_code, args.last_code)
+        else:
+            templates = build_templates(rom, args.font_base, args.first_code, args.last_code)
+            templates.update(build_attribute_templates(rom, args.first_code, args.last_code))
+        for cells in decode_image(
             image,
             templates,
             trim=not args.no_trim,
@@ -181,7 +250,9 @@ def main(argv: list[str]) -> int:
             allow_inverse=args.allow_inverse,
             cursor_char=args.cursor_char,
         ):
-            print(line)
+            print(cells_to_text(cells))
+            if args.attrs:
+                print(cells_to_attrs(cells))
     except (OSError, ValueError) as exc:
         print(f"{args.png}: {exc}", file=sys.stderr)
         return 1

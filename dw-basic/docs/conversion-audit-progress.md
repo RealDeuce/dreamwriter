@@ -27,6 +27,17 @@ Status key:
   `gwdata.asm` now emit `resb`/`resw` instead of initialized zero data,
   including generated table reservations and the `USRTAB`, `KBUF`, `BUF`,
   `TEMPST`, `DSCTMP`, `PARM1`, and `PARM2` regions.
+- Fixed in `tools/gwdata_tables.py`: the `gwdata.asm` low-data phase now
+  materializes `DUP(?)` placeholders from matching source-phase initializers
+  when the original source relied on ROM-copy startup initialization. This
+  covers runtime bytes such as `NUMCON`'s fake `CONCON`/`CONCN2` CHRGET stream,
+  `RNDX`, `USRTAB`, printer defaults, and related low-data defaults while
+  preserving truly unknown storage as `resb`/`resw`.
+- Fixed in `src/gw/bimisc.asm`: the DreamWriter OEM profile currently has no
+  event traps (`NUMTRP == 0`), so `INITRP` now skips the trap-table clearing
+  loop and clears only `ONGSBF`. The unguarded source loop used `CH=NUMTRP`;
+  with zero traps that wrapped to 256 iterations and zeroed code following
+  `TRPTBL`, including `CLS`, `LOCATE`, and `COLOR`.
 - Documented memory-model policy in `docs/memory-model.md`: `flat64` is the
   current build target, `split128` is reserved for a future separate
   code/data overlay, `GW_BASIC_MIN_FREE` is part of the flat64 workspace
@@ -932,11 +943,12 @@ Findings:
   `COMMON` source extern at line 176 is renamed to `BASIC_COMMON` at converted
   line 228; the reserved-word/token extern block at source lines 230-260 is
   mostly omitted in converted lines 259-265.
-- Uninitialized `DUP(?)` storage became explicit zero initialization at
-  converted lines 653, 822, 850, 859, 931, 934-937, 1101, and 1111. These
-  correspond to source `USRTAB`, `NAMBUF`, `KBUF`, `BUF`, `TEMPST`,
-  `DSCTMP`/`DSCPTR`, `PARM1`, and `PARM2`. Sizes/offsets appear preserved,
-  but initialization semantics differ.
+- Fixed after runtime testing: the low-data phase initially treated the data
+  phase `NUMCON` bytes as `resb`, losing the source-phase fake `CONCON` and
+  `CONCN2` CHRGET tokens. The generator now copies matching source-phase
+  initializers into the active data-phase symbols where the original source
+  used `DUP(?)` placeholders for ROM-copy initialized data. Other unknown
+  `DUP(?)` storage remains `resb`/`resw`.
 - Duplicate generated labels are emitted for `$OVMSG`/`OVRMSG` and
   `$DIV0M`/`DIVMSG` at converted lines 327-334 and 340-347. NASM accepts the
   same-address duplicates, so this is not a binary-content defect, but it is a
