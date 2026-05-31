@@ -112,7 +112,7 @@ extern GIOINI
     )
     text = text.replace(
         "TBUFF equ CPMWRM+128 ;WHERE CP/M COMMAND BUFFER IS LOCATED\n\tMOV\tBX,TBUFF ;POINT TO FIRST CHAR OF COMMAND BUFFER",
-        "TBUFF equ CPMWRM+128 ;WHERE CP/M COMMAND BUFFER IS LOCATED\n\tMOV\tbyte [TBUFF],0 ;ROM CARD launch has no CP/M/DOS command tail\n\tMOV\tBX,TBUFF ;POINT TO FIRST CHAR OF COMMAND BUFFER",
+        "TBUFF equ BUF ;ROM CARD launch has no CP/M command buffer\n\tMOV\tbyte [TBUFF],0 ;ROM CARD launch has no CP/M/DOS command tail\n\tMOV\tBX,TBUFF ;POINT TO FIRST CHAR OF COMMAND BUFFER",
         1,
     )
     text = text.replace(
