@@ -65,7 +65,6 @@ DISABLED_DISPATCH = {
     "SOUND": "FCERR",
     "STICK": "FCERR",
     "STRIG": "FCERR",
-    "SYSTEM": "FCERR",
     "TIMER": "FCERR",
 }
 

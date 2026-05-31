@@ -1101,8 +1101,8 @@ dw NODSKS
 extern NODSKS
 dw NODSKS
 %assign DOL_FIELD 130
-extern FCERR
-dw FCERR
+extern SYSTEM
+dw SYSTEM
 %assign DOL_SYSTEM 131
 extern NODSKS
 dw NODSKS

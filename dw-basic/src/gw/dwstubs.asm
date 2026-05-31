@@ -128,6 +128,7 @@ global LEFTC
 global RIGHTC
 global SWIDTH
 global EDTMAP
+global SYSTEM
 global SYSTME
 global VALSC2
 
@@ -267,7 +268,44 @@ GETHED:
 .empty_heading:
     db 0
 
+extern CLSALL
+extern GIOTRM
+extern INITFG
+
+SYSTEM:
+    jnz .not_eos
+    push cs
+    pop ds
+    call CLSALL
+    jmp SYSTME
+.not_eos:
+    ret
+
 SYSTME:
+    push cs
+    pop ds
+    cmp byte [INITFG], 0
+    je .restore
+    call GIOTRM
+.restore:
+    cli
+    mov ax, [DW_EXIT_SP]
+    or ax, ax
+    jz .halt
+    mov ax, [DW_EXIT_ES]
+    mov es, ax
+    mov ax, [DW_EXIT_SS]
+    mov ss, ax
+    mov sp, [DW_EXIT_SP]
+    mov bp, sp
+    mov ax, [DW_EXIT_IP]
+    mov [bp], ax
+    mov ax, [DW_EXIT_CS]
+    mov [bp+2], ax
+    mov ax, [DW_EXIT_DS]
+    mov ds, ax
+    sti
+    retf
 .halt:
     sti
     hlt
@@ -279,6 +317,24 @@ SETC:
 
 global DW_LOADER_LIMIT
 DW_LOADER_LIMIT:
+    dw 0
+global DW_EXIT_DS
+DW_EXIT_DS:
+    dw 0
+global DW_EXIT_ES
+DW_EXIT_ES:
+    dw 0
+global DW_EXIT_SS
+DW_EXIT_SS:
+    dw 0
+global DW_EXIT_SP
+DW_EXIT_SP:
+    dw 0
+global DW_EXIT_IP
+DW_EXIT_IP:
+    dw 0
+global DW_EXIT_CS
+DW_EXIT_CS:
     dw 0
 
 %include "dwapi.asm"

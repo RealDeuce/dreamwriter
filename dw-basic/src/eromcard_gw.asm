@@ -41,11 +41,20 @@ GW_BASIC_REQUIRED_SIZE equ GW_LSTVAR + 2 + GW_BASIC_MIN_FREE
 
 entry:
     mov bx, ax
+    mov ax, ds
+    mov [old_ds], ax
+    mov ax, es
+    mov [old_es], ax
     mov ax, cs
     mov ds, ax
     mov [old_sp], sp
     mov ax, ss
     mov [old_ss], ax
+    mov bp, sp
+    mov ax, [ss:bp]
+    mov [old_ip], ax
+    mov ax, [ss:bp+2]
+    mov [old_cs], ax
     mov [stack_top], bx
 
     mov ax, bx
@@ -74,6 +83,18 @@ entry:
     mov ds, ax
     mov ax, [basic_limit]
     mov [GW_DW_LOADER_LIMIT], ax
+    mov ax, [old_ds]
+    mov [GW_DW_EXIT_DS], ax
+    mov ax, [old_es]
+    mov [GW_DW_EXIT_ES], ax
+    mov ax, [old_ss]
+    mov [GW_DW_EXIT_SS], ax
+    mov ax, [old_sp]
+    mov [GW_DW_EXIT_SP], ax
+    mov ax, [old_ip]
+    mov [GW_DW_EXIT_IP], ax
+    mov ax, [old_cs]
+    mov [GW_DW_EXIT_CS], ax
     cli
     mov ax, cs
     mov ss, ax
@@ -347,7 +368,15 @@ write_hex_nibble:
 
 old_ss:
     dw 0
+old_ds:
+    dw 0
+old_es:
+    dw 0
 old_sp:
+    dw 0
+old_ip:
+    dw 0
+old_cs:
     dw 0
 basic_limit:
     dw 0

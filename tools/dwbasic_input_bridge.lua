@@ -56,6 +56,28 @@ local function kbd_state_line()
 	)
 end
 
+local function cpu_state_line()
+	local cpu = manager.machine.devices[":v20hl"] or manager.machine.devices["v20hl"]
+	if not cpu then
+		return "ERR missing v20hl CPU device"
+	end
+	local names = { "PC", "CURPC", "GENPC", "CS", "IP", "SS", "SP", "DS", "ES", "AX", "BX", "CX", "DX", "FLAGS" }
+	local values = {}
+	for _, name in ipairs(names) do
+		local item = cpu.state[name]
+		if item then
+			values[#values + 1] = string.format("%s=%X", name, item.value)
+		end
+	end
+	if #values == 0 then
+		for name, item in pairs(cpu.state) do
+			values[#values + 1] = string.format("%s=%X", tostring(name), item.value)
+		end
+		table.sort(values)
+	end
+	return "OK CPU " .. table.concat(values, " ")
+end
+
 local function get_port(name)
 	local result = manager.machine.ioport.ports[":" .. name] or manager.machine.ioport.ports[name]
 	if not result then
@@ -273,6 +295,8 @@ local function handle_line(line)
 		end
 	elseif command == "KBDSTATE" then
 		socket:write(kbd_state_line() .. "\n")
+	elseif command == "CPUSTATE" then
+		socket:write(cpu_state_line() .. "\n")
 	elseif command == "SNAP" then
 		manager.machine.video:snapshot()
 		socket:write("OK SNAP\n")

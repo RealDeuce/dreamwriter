@@ -183,6 +183,13 @@ def print_kbd_state(stream: socket.socket) -> None:
     print(line[7:])
 
 
+def print_cpu_state(stream: socket.socket) -> None:
+    line = bridge_request(stream, "CPUSTATE")
+    if not line.startswith("OK CPU "):
+        raise RuntimeError(f"input bridge rejected CPUSTATE: {line}")
+    print(line[7:])
+
+
 def snapshot(
     input_stream: socket.socket,
     snap_dir: Path,
@@ -366,7 +373,7 @@ def interactive_loop(
     print(
         "interactive commands: plain text sends a BASIC line; "
         ":snap [all [DELAY]|DELAY [all]|START END|DELAY START END] snapshots; :csnap caches a quiet full snapshot; :key NAME sends a matrix key; "
-        ":type TEXT types without Return; :kbdstate dumps ROM keyboard state; :quit exits",
+        ":type TEXT types without Return; :kbdstate dumps ROM keyboard state; :cpustate dumps V20 registers; :quit exits",
         file=sys.stderr,
     )
     while True:
@@ -423,6 +430,9 @@ def interactive_loop(
             continue
         if command == ":kbdstate":
             print_kbd_state(input_stream)
+            continue
+        if command == ":cpustate":
+            print_cpu_state(input_stream)
             continue
         send_bridge_text(input_stream, line, add_return=True)
 
