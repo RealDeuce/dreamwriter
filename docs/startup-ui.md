@@ -299,7 +299,11 @@ of each word is rendered with the previously selected family. In MAME, the
 surrounding letters are narrow while `A`/`K`/`T`/`S` are bold, so this is a
 confirmed inline bold marker for the active family, not a hard-coded switch to
 the main bold font. The related `FA..FD` controls change `[7117] bit 0x02`,
-which selects the small variant within the active family.
+which selects the small variant within the active family. Live DW-BASIC
+`COLOR 135,0` output also shows that the `FA` path renders those small glyphs
+at the top of the cell, so the visible effect is better described as small font
+plus a superscript position state rather than the down-shifted raw glyph bitmap
+alone.
 
 That `FF` sub-opcode space has at least two groups:
 

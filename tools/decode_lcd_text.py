@@ -29,6 +29,7 @@ ATTR_UNDERLINE = 0x1
 ATTR_INVERSE = 0x2
 ATTR_BOLD = 0x4
 ATTR_SMALL = 0x8
+ATTR_SUPERSCRIPT = 0x10
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,17 @@ def invert_cell(cell: tuple[int, ...]) -> tuple[int, ...]:
     return tuple((~row) & mask for row in cell)
 
 
+def superscript_cell(cell: tuple[int, ...]) -> tuple[int, ...]:
+    leading = 0
+    for row in cell:
+        if row:
+            break
+        leading += 1
+    if leading == 0 or leading == len(cell):
+        return cell
+    return (*cell[leading:], *(0 for _ in range(leading)))
+
+
 def build_attribute_templates(
     rom: bytes,
     first_code: int,
@@ -101,19 +113,31 @@ def build_attribute_templates(
         (SMALL_BOLD_GLYPH_BASE, ATTR_SMALL | ATTR_BOLD),
     ]
     for base, font_attrs in font_runs:
+        rendered_attrs = font_attrs
+        if font_attrs & ATTR_SMALL:
+            rendered_attrs |= ATTR_SUPERSCRIPT
         for code in range(first_code, last_code + 1):
             char = chr(code) if 0x20 <= code <= 0x7E else f"\\x{code:02X}"
             cell = glyph_cell(rom, base, code, first_code)
-            templates[cell] = DecodedCell(char, font_attrs)
-            templates.setdefault(invert_cell(cell), DecodedCell(char, font_attrs | ATTR_INVERSE))
+            if font_attrs & ATTR_SMALL:
+                cell = superscript_cell(cell)
+            if char == " ":
+                # Blank spaces look identical in every font page, so bold/small
+                # are not visible attributes until another glyph is drawn.
+                templates.setdefault(cell, DecodedCell(char, 0))
+            else:
+                templates[cell] = DecodedCell(char, rendered_attrs)
+            templates.setdefault(invert_cell(cell), DecodedCell(char, rendered_attrs | ATTR_INVERSE))
             underlined = underline_cell(cell)
-            templates.setdefault(underlined, DecodedCell(char, font_attrs | ATTR_UNDERLINE))
-            templates.setdefault(invert_cell(underlined), DecodedCell(char, font_attrs | ATTR_UNDERLINE | ATTR_INVERSE))
+            templates.setdefault(underlined, DecodedCell(char, rendered_attrs | ATTR_UNDERLINE))
+            templates.setdefault(invert_cell(underlined), DecodedCell(char, rendered_attrs | ATTR_UNDERLINE | ATTR_INVERSE))
         if first_code <= 0x20 <= last_code:
             space_cell = glyph_cell(rom, base, 0x20, first_code)
+            if font_attrs & ATTR_SMALL:
+                space_cell = superscript_cell(space_cell)
             underlined_space = underline_cell(space_cell)
-            templates[underlined_space] = DecodedCell(" ", font_attrs | ATTR_UNDERLINE)
-            templates[invert_cell(underlined_space)] = DecodedCell(" ", font_attrs | ATTR_UNDERLINE | ATTR_INVERSE)
+            templates[underlined_space] = DecodedCell(" ", ATTR_UNDERLINE)
+            templates[invert_cell(underlined_space)] = DecodedCell(" ", ATTR_UNDERLINE | ATTR_INVERSE)
     return templates
 
 
@@ -205,7 +229,7 @@ def cells_to_text(cells: list[DecodedCell]) -> str:
 
 
 def cells_to_attrs(cells: list[DecodedCell]) -> str:
-    return "".join(f"{cell.attrs:X}" if cell.attrs else "." for cell in cells)
+    return "".join(f"{cell.attrs:02X}" if cell.attrs else ".." for cell in cells)
 
 
 def main(argv: list[str]) -> int:

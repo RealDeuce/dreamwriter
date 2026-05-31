@@ -151,6 +151,7 @@ Options:
 | `--no-trim` | off | Preserve trailing spaces on each decoded row. |
 | `--allow-cursor` | off | Treat an all-lit 6x8 cell as the active inverse text cursor. |
 | `--allow-inverse` | off | Decode exact bitwise-inverted ROM glyphs as text. |
+| `--attrs` | off | Print a fixed-width two-hex-digit attribute mask line after each decoded text line; plain cells are `..`. Bits are `01` underline, `02` inverse, `04` bold, `08` small font, and `10` superscript position. |
 | `--cursor-char` | space | Character emitted for `--allow-cursor`. |
 
 ### `bitmap`

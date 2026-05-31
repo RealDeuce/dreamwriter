@@ -168,8 +168,10 @@ small glyph for code C = 0x58CB6 + (C - 0x20) * 8
 This is the first region that matches the "6-row-high" / subscript-looking
 observation. It is not a 6-byte-packed font; it uses the same one-byte-per-row
 format as the main and bold glyphs. Most printable characters leave the top
-three rows blank and draw in the lower five rows, so "small", "subscript", or
-"down-shifted" are all plausible descriptions until the renderer is traced.
+three rows blank and draw in the lower five rows. The raw bitmap is therefore
+down-shifted, but the `FA` display-control path has been observed rendering
+those small glyphs at the top of the text cell, producing a visible
+small/superscript style.
 
 Examples:
 

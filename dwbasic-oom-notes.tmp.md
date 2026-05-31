@@ -31,3 +31,22 @@ Ok
     BASIC's normal `Out of memory` error string and returns to `Ok`.
   - Needs a clean isolated repro to determine whether prior `LOCATE`/`SCREEN`
     commands matter.
+
+## 2026-05-31: post trap-table fix retest
+
+- Baseline commit: `9176eb1 Fix DW-BASIC startup memory corruption`.
+- Run state: normal harness launch with clean NVRAM/snapshots.
+- Isolated command:
+  - `WIDTH 80` -> `Ok`
+  - `PRINT ERR` -> `0`
+- Old preceding sequence retest:
+  - `PRINT 7` -> printed `7`
+  - `LOCATE 1,1` -> no syntax error; subsequent output overwrote earlier
+    screen cells as expected for cursor positioning
+  - `SCREEN 0` -> `Ok`
+  - `WIDTH 80` -> `Ok`
+  - `PRINT ERR` -> `0`
+- Notes:
+  - The prior `WIDTH 80` BASIC `Out of memory` repro no longer reproduces after
+    the `NUMTRP == 0` trap-table startup fix.
+  - No wrapper-level `DW-BASIC NEEDS MORE MEMORY` path was hit in this retest.
