@@ -104,6 +104,10 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:5209` | `0x45209` | `INT 21h AH=2C` get time. Snapshots the RTC shadow and decodes hour/minute/second into DOS-style registers. |
 | `C000:523D` | `0x4523D` | `INT 21h AH=2D` set time. Converts binary hour/minute/second to BCD shadow bytes and writes RTC time registers. |
 | `C000:5308` | `0x45308` | Weekday calculator used by `INT 21h AH=2A`; computes `0..6` from year/month/day rather than returning the RTC `0xD6` shadow byte. |
+| `C000:5645` | `0x45645` | Keyboard row processor called after each completed 10-row scan. Maintains first-stage/stable row state at `6D10..6D23`, handles two-sample debounce, queues press/repeat events, and clears repeat state on matching release. |
+| `C000:5870` | `0x45870` | Keyboard event builder/enqueuer. Converts the repeating/current stable key address and bit mask into `DL=(row<<3)+bit`, builds `DH` flags through `C000:58A6`, and queues the resulting word through `C000:4B5C`. |
+| `C000:58A6` | `0x458A6` | Keyboard modifier snapshot builder. Adds shifted/caps/control/alt bits to `DH` from stable row state and sticky/modifier state bytes before an event is queued. |
+| `C000:5915` | `0x45915` | Keyboard event translator. Consumes the dequeued `DX` event word, selects normal/shift/control/caps/alt translation tables, and returns the translated byte used by `INT 21h AH=08`. |
 | `C000:5AD6` | `0x45AD6` | Low-level resource/text renderer. Consumes staged bytes, expands glyphs, and writes rows into the framebuffer at `0x1000`. |
 | `C000:6648` | `0x46648` | `FF 42` bitmap blit handler for startup resource records; uses row count, bit width, and source far pointer. |
 | `C000:675D` | `0x4675D` | `FF 44` positioned rectangle/fill handler. The simple form uses `+1 y`, `+3 x`, `+5 height`, `+7 width`, and `+D mode`; nonzero `+9/+B` dispatches to copy/shift-looking helpers. |

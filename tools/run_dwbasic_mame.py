@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import re
+import socket
 import subprocess
 import sys
 import time
@@ -19,26 +21,15 @@ DEFAULT_CARD = Path("/tmp/dw-card-1m-dw-basic.bin")
 DEFAULT_SNAP_DIR = DEFAULT_MAME_DIR / "snap" / "drwrt400"
 DEFAULT_NVRAM_IMAGE = DEFAULT_MAME_DIR / "nvram" / "drwrt400_1" / "nvram"
 DECODER = REPO_ROOT / "tools" / "decode_lcd_text.py"
+DEFAULT_INPUT_BRIDGE = REPO_ROOT / "tools" / "dwbasic_input_bridge.lua"
+DEFAULT_INPUT_SOCKET = Path("/tmp/dwbasic-input.sock")
 ROM = REPO_ROOT / "t4_ir_2.1.ic303"
+KEYBOARD_SCAN_RATE_HZ = 19660000 / 20480
+KEYBOARD_FULL_SCAN_SECONDS = 10 / KEYBOARD_SCAN_RATE_HZ
 EXPECTED_SIGNPOSTS = {
     "initial two-button menu": "14bbb2fea6a6ad3635f84f027e2fe40a1bab4088b3a58b0be86f7822426376d4",
     "WP menu": "97096048743b7a1c3857a78d3f31541b900c6ae750282a8d803ae7c8b4e38a91",
     "OTHERS menu": "9c10a804b9c04503b0ff7579555f82de41b9b4fb09121b5a9f68d9a188d680d4",
-}
-KEYSYM_CHARS = {
-    "!": "exclam",
-    "#": "numbersign",
-    "$": "dollar",
-    "%": "percent",
-    "&": "ampersand",
-    "(": "parenleft",
-    ")": "parenright",
-    "*": "asterisk",
-    "+": "plus",
-    ":": "colon",
-    "<": "less",
-    ">": "greater",
-    "?": "question",
 }
 
 
@@ -52,6 +43,11 @@ def clean_run_state(nvram_image: Path, snap_dir: Path) -> None:
     snap_dir.mkdir(parents=True, exist_ok=True)
     for png in snap_dir.glob("*.png"):
         png.unlink()
+
+
+def clean_socket(path: Path) -> None:
+    if path.exists():
+        path.unlink()
 
 
 def find_mame_window(pid: int, timeout: float) -> str:
@@ -78,15 +74,6 @@ def ensure_process_alive(proc: subprocess.Popen) -> None:
     status = proc.poll()
     if status is not None:
         raise RuntimeError(f"MAME exited unexpectedly with status {status}")
-
-
-def ensure_window(window_id: str, proc: subprocess.Popen | None = None) -> None:
-    if proc is not None:
-        ensure_process_alive(proc)
-    result = run(["xdotool", "getwindowname", window_id], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if result.returncode:
-        detail = result.stderr.strip() or result.stdout.strip()
-        raise RuntimeError(f"MAME window {window_id} is no longer valid: {detail}")
 
 
 def pointer_position() -> tuple[int, int] | None:
@@ -133,7 +120,8 @@ def current_monitor_origin() -> tuple[int, int]:
 def move_window(window_id: str, position: str | None, proc: subprocess.Popen | None = None) -> None:
     if not position:
         return
-    ensure_window(window_id, proc)
+    if proc is not None:
+        ensure_process_alive(proc)
     if position == "top":
         x, y = current_monitor_origin()
         run(["xdotool", "windowmove", window_id, str(x), str(y)])
@@ -145,84 +133,65 @@ def move_window(window_id: str, position: str | None, proc: subprocess.Popen | N
     raise ValueError(f"unsupported window position {position!r}; use 'top' or 'x,y'")
 
 
-def active_window() -> str | None:
-    result = run(["xdotool", "getactivewindow"], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if result.returncode:
-        return None
-    text = result.stdout.strip()
-    return text or None
+def connect_input_bridge(path: Path, proc: subprocess.Popen, timeout: float) -> socket.socket:
+    deadline = time.monotonic() + timeout
+    last_error: OSError | None = None
+    while time.monotonic() < deadline:
+        ensure_process_alive(proc)
+        stream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            stream.connect(str(path))
+            stream.settimeout(2.0)
+            return stream
+        except OSError as exc:
+            last_error = exc
+            stream.close()
+            time.sleep(0.05)
+    detail = f": {last_error}" if last_error else ""
+    raise RuntimeError(f"unable to connect to DW-BASIC input bridge at {path}{detail}")
 
 
-def activate(window_id: str) -> None:
-    run(["xdotool", "windowactivate", "--sync", window_id])
+def bridge_request(stream: socket.socket, command: str) -> str:
+    stream.sendall(f"{command}\n".encode("ascii"))
+    response = b""
+    while b"\n" not in response:
+        chunk = stream.recv(4096)
+        if not chunk:
+            raise RuntimeError("input bridge closed the socket")
+        response += chunk
+    return response.split(b"\n", 1)[0].decode("utf-8", errors="replace")
 
 
-def require_active_window(window_id: str) -> None:
-    active = active_window()
-    if active != window_id:
-        raise RuntimeError(f"refusing to send input: active window is {active}, expected MAME window {window_id}")
+def send_bridge_text(stream: socket.socket, text: str, *, add_return: bool) -> None:
+    command = "TEXT" if add_return else "TYPE"
+    payload = text.encode("utf-8").hex()
+    line = bridge_request(stream, f"{command} {payload}")
+    if not line.startswith("OK "):
+        raise RuntimeError(f"input bridge rejected command: {line}")
 
 
-def key(
-    window_id: str,
-    key_name: str,
-    hold: float,
-    *,
-    focus: bool = True,
-    proc: subprocess.Popen | None = None,
-) -> None:
-    ensure_window(window_id, proc)
-    if focus:
-        activate(window_id)
-        require_active_window(window_id)
-    else:
-        raise RuntimeError("non-focused directed input is disabled because xdotool can leak into the active window")
-    run(["xdotool", "keydown", "--clearmodifiers", "--window", window_id, key_name])
-    try:
-        time.sleep(hold)
-    finally:
-        run(["xdotool", "keyup", "--clearmodifiers", "--window", window_id, key_name], check=False)
+def send_bridge_key(stream: socket.socket, key_name: str) -> None:
+    line = bridge_request(stream, f"KEY {key_name}")
+    if not line.startswith("OK "):
+        raise RuntimeError(f"input bridge rejected key {key_name!r}: {line}")
 
 
-def type_text(
-    window_id: str,
-    text: str,
-    delay_ms: int,
-    *,
-    focus: bool = True,
-    proc: subprocess.Popen | None = None,
-) -> None:
-    ensure_window(window_id, proc)
-    if focus:
-        activate(window_id)
-        run(["xdotool", "keyup", "--window", window_id, "Shift_L"], check=False)
-        run(["xdotool", "keyup", "--window", window_id, "Shift_R"], check=False)
-        for char in text:
-            require_active_window(window_id)
-            key_name = KEYSYM_CHARS.get(char)
-            if key_name is None:
-                run(["xdotool", "type", "--clearmodifiers", "--window", window_id, "--delay", str(delay_ms), char])
-            else:
-                run(["xdotool", "keydown", "--clearmodifiers", "--window", window_id, key_name])
-                time.sleep(max(0.005, delay_ms / 1000))
-                run(["xdotool", "keyup", "--clearmodifiers", "--window", window_id, key_name], check=False)
-                time.sleep(delay_ms / 1000)
-        run(["xdotool", "keyup", "--window", window_id, "Shift_L"], check=False)
-        run(["xdotool", "keyup", "--window", window_id, "Shift_R"], check=False)
-        return
-    raise RuntimeError("non-focused directed input is disabled because xdotool can leak into the active window")
+def print_kbd_state(stream: socket.socket) -> None:
+    line = bridge_request(stream, "KBDSTATE")
+    if not line.startswith("OK KBD "):
+        raise RuntimeError(f"input bridge rejected KBDSTATE: {line}")
+    print(line[7:])
 
 
 def snapshot(
-    window_id: str,
+    input_stream: socket.socket,
     snap_dir: Path,
     timeout: float,
-    *,
-    focus_input: bool = True,
-    proc: subprocess.Popen | None = None,
 ) -> Path:
     before = {path.name for path in snap_dir.glob("*.png")}
-    key(window_id, "F12", 0.05, focus=focus_input, proc=proc)
+    line = bridge_request(input_stream, "SNAP")
+    if line != "OK SNAP":
+        raise RuntimeError(f"input bridge rejected SNAP: {line}")
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         after = sorted(snap_dir.glob("*.png"))
@@ -270,14 +239,12 @@ def check_signpost(path: Path, label: str) -> None:
 
 
 def wait_for_signpost(
-    window_id: str,
-    proc: subprocess.Popen,
+    input_stream: socket.socket,
     snap_dir: Path,
     label: str,
     timeout: float,
     interval: float,
     snapshot_timeout: float,
-    focus_input: bool,
 ) -> Path:
     expected = EXPECTED_SIGNPOSTS[label]
     deadline = time.monotonic() + timeout
@@ -285,11 +252,9 @@ def wait_for_signpost(
     last_path: Path | None = None
     while time.monotonic() < deadline:
         path = snapshot(
-            window_id,
+            input_stream,
             snap_dir,
             snapshot_timeout,
-            focus_input=focus_input,
-            proc=proc,
         )
         actual = file_sha256(path)
         if actual == expected:
@@ -306,33 +271,102 @@ def wait_for_signpost(
     )
 
 
-def print_snapshot(path: Path) -> None:
+def decoded_lines(text: str) -> list[str]:
+    return [line.rstrip() for line in text.splitlines()]
+
+
+def slice_lines(text: str, start_line: int | None, end_line: int | None) -> str:
+    lines = decoded_lines(text)
+    if start_line is None and end_line is None:
+        return "\n".join(lines)
+    start = 1 if start_line is None else start_line
+    end = len(lines) if end_line is None else end_line
+    if start < 1 or end < start:
+        raise ValueError("line range must be 1-based with start <= end")
+    return "\n".join(lines[start - 1 : end])
+
+
+def changed_lines(previous: str | None, current: str) -> str:
+    current_lines = decoded_lines(current)
+    if previous is None:
+        return "\n".join(current_lines)
+
+    previous_lines = decoded_lines(previous)
+    unchanged = {
+        index
+        for index, line in enumerate(current_lines)
+        if index < len(previous_lines) and line == previous_lines[index]
+    }
+
+    for offset in range(1, len(previous_lines)):
+        match_count = min(len(current_lines), len(previous_lines) - offset)
+        if match_count <= 0:
+            continue
+        if all(current_lines[index] == previous_lines[offset + index] for index in range(match_count)):
+            unchanged.update(range(match_count))
+            break
+
+    return "\n".join(line for index, line in enumerate(current_lines) if index not in unchanged)
+
+
+def parse_snap_command(command: str) -> tuple[str, float, int | None, int | None]:
+    parts = command.split()
+    if len(parts) == 1:
+        return "changed", 0.0, None, None
+    if len(parts) == 2 and parts[1].lower() == "all":
+        return "all", 0.0, None, None
+    if len(parts) == 3 and parts[1].lower() == "all":
+        try:
+            return "all", float(parts[2]), None, None
+        except ValueError as exc:
+            raise ValueError("snap delay must be numeric") from exc
+    if len(parts) == 3 and parts[2].lower() == "all":
+        try:
+            return "all", float(parts[1]), None, None
+        except ValueError as exc:
+            raise ValueError("snap delay must be numeric") from exc
+    if len(parts) == 2:
+        try:
+            return "changed", float(parts[1]), None, None
+        except ValueError as exc:
+            raise ValueError("usage: :snap [all [delay]|delay [all]|start-line end-line|delay start-line end-line]") from exc
+    try:
+        if len(parts) == 3:
+            return "range", 0.0, int(parts[1]), int(parts[2])
+        if len(parts) == 4:
+            return "range", float(parts[1]), int(parts[2]), int(parts[3])
+    except ValueError as exc:
+        raise ValueError("snap delay/range must be numeric") from exc
+    raise ValueError("usage: :snap [all [delay]|delay [all]|start-line end-line|delay start-line end-line]")
+
+
+def print_snapshot(path: Path, decoded: str | None = None, start_line: int | None = None, end_line: int | None = None) -> None:
     print(f"\n== {path.name} ==")
-    print(decode_snapshot(path, allow_cursor=True, allow_inverse=True))
+    if decoded is None:
+        decoded = decode_snapshot(path, allow_cursor=True, allow_inverse=True)
+    print(slice_lines(decoded, start_line, end_line))
 
 
-def screen_has_error(text: str) -> bool:
-    lowered = text.lower()
-    return "syntax error" in lowered or "needs more memory" in lowered or "undefined user function" in lowered
-
-
-def screen_has_prompt(text: str) -> bool:
-    lines = [line.strip().lower() for line in text.splitlines()]
-    return "ok" in lines
+def take_decoded_snapshot(
+    input_stream: socket.socket,
+    snap_dir: Path,
+    snapshot_timeout: float,
+) -> tuple[Path, str]:
+    path = snapshot(input_stream, snap_dir, snapshot_timeout)
+    decoded = decode_snapshot(path, allow_cursor=True, allow_inverse=True)
+    return path, decoded
 
 
 def interactive_loop(
-    window_id: str,
-    proc: subprocess.Popen,
+    input_stream: socket.socket,
     snap_dir: Path,
     snapshot_timeout: float,
-    key_hold: float,
-    type_delay_ms: int,
-    focus_input: bool,
+    cached_snapshot: tuple[Path, str] | None,
 ) -> None:
     print(
         "interactive commands: plain text sends a BASIC line; "
-        ":snap snapshots; :key NAME sends a key; :type TEXT types without Return; :quit exits",
+        ":snap [all [DELAY]|DELAY [all]|START END|DELAY START END] snapshots; :csnap caches a quiet full snapshot; :key NAME sends a matrix key; "
+        ":type TEXT types without Return; :kbdstate dumps ROM keyboard state; :quit exits",
         file=sys.stderr,
     )
     while True:
@@ -345,17 +379,52 @@ def interactive_loop(
             continue
         if command in {":q", ":quit", ":exit"}:
             break
-        if command == ":snap":
-            print_snapshot(snapshot(window_id, snap_dir, snapshot_timeout, focus_input=focus_input, proc=proc))
+        if command == ":csnap":
+            cached_snapshot = take_decoded_snapshot(
+                input_stream,
+                snap_dir,
+                snapshot_timeout,
+            )
+            if "non-text cell" in cached_snapshot[1]:
+                print(f"\n== {cached_snapshot[0].name} ==")
+                print(cached_snapshot[1])
+            continue
+        if command.startswith(":snap"):
+            try:
+                mode, delay, start_line, end_line = parse_snap_command(command)
+                previous_snapshot = cached_snapshot
+                if delay < 0:
+                    raise ValueError("snap delay must be >= 0")
+                if delay:
+                    time.sleep(delay)
+                cached_snapshot = take_decoded_snapshot(
+                    input_stream,
+                    snap_dir,
+                    snapshot_timeout,
+                )
+                print(f"\n== {cached_snapshot[0].name} ==")
+                if mode == "changed" and "non-text cell" not in cached_snapshot[1]:
+                    output = changed_lines(
+                        previous_snapshot[1] if previous_snapshot is not None else None,
+                        cached_snapshot[1],
+                    )
+                else:
+                    output = slice_lines(cached_snapshot[1], start_line, end_line)
+                if output:
+                    print(output)
+            except ValueError as exc:
+                print(str(exc), file=sys.stderr)
             continue
         if command.startswith(":key "):
-            key(window_id, command[5:].strip(), key_hold, focus=focus_input, proc=proc)
+            send_bridge_key(input_stream, command[5:].strip())
             continue
         if command.startswith(":type "):
-            type_text(window_id, command[6:], type_delay_ms, focus=focus_input, proc=proc)
+            send_bridge_text(input_stream, command[6:], add_return=False)
             continue
-        type_text(window_id, line, type_delay_ms, focus=focus_input, proc=proc)
-        key(window_id, "Return", key_hold, focus=focus_input, proc=proc)
+        if command == ":kbdstate":
+            print_kbd_state(input_stream)
+            continue
+        send_bridge_text(input_stream, line, add_return=True)
 
 
 def main(argv: list[str]) -> int:
@@ -370,31 +439,26 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--rs232", default="pty")
     parser.add_argument("--snap-dir", type=Path, default=DEFAULT_SNAP_DIR)
     parser.add_argument("--nvram-image", type=Path, default=DEFAULT_NVRAM_IMAGE)
+    parser.add_argument("--input-bridge", type=Path, default=DEFAULT_INPUT_BRIDGE)
+    parser.add_argument("--input-socket", type=Path, default=DEFAULT_INPUT_SOCKET)
+    parser.add_argument("--bridge-hold-frames", type=int, default=2)
+    parser.add_argument("--bridge-gap-frames", type=int, default=1)
+    parser.add_argument("--bridge-shift-lead-frames", type=int, default=1)
+    parser.add_argument("--bridge-shift-trail-frames", type=int, default=1)
     parser.add_argument("--boot-wait", type=float, default=2.0)
     parser.add_argument("--boot-timeout", type=float, default=1.0)
     parser.add_argument("--menu-wait", type=float, default=0.2)
     parser.add_argument("--menu-timeout", type=float, default=1.0)
     parser.add_argument("--basic-wait", type=float, default=3.0)
     parser.add_argument("--signpost-interval", type=float, default=0.25)
-    parser.add_argument("--key-hold", type=float, default=0.20)
     parser.add_argument("--window-timeout", type=float, default=10.0)
     parser.add_argument("--snapshot-timeout", type=float, default=5.0)
-    parser.add_argument("--type-line", action="append", default=[], help="type a BASIC line/command after startup")
-    parser.add_argument("--type-delay-ms", type=int, default=35)
-    parser.add_argument("--after-type-wait", type=float, default=0.5)
-    parser.add_argument("--no-stop-on-screen-error", action="store_true", help="continue --type-line batch after decoded errors")
     parser.add_argument("--no-clean", action="store_true", help="do not delete NVRAM/snapshots before launch")
     parser.add_argument("--no-signpost-check", action="store_true", help="do not verify menu snapshot hashes")
-    parser.add_argument("--keep-running", action="store_true", help="leave MAME running after snapshots")
-    parser.add_argument("--verbose", action="store_true", help="print launch line and intermediate snapshots")
-    parser.add_argument("--interactive", action="store_true", help="enter a command loop after booting to BASIC")
+    parser.add_argument("--natural", action="store_true", help="enable MAME natural keyboard mode")
+    parser.add_argument("--steadykey", action="store_true", help="enable MAME steadykey support")
+    parser.add_argument("--verbose", action="store_true", help="print launch line")
     parser.add_argument("--window-position", default="top", help="move MAME after launch: 'top', 'x,y', or empty string")
-    parser.add_argument(
-        "--focus-input",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="activate the MAME window before sending keys; --no-focus-input is disabled for safety",
-    )
     args = parser.parse_args(argv)
 
     if not args.card.exists():
@@ -403,9 +467,13 @@ def main(argv: list[str]) -> int:
     if not args.mame.exists():
         print(f"MAME binary does not exist: {args.mame}", file=sys.stderr)
         return 1
+    if not args.input_bridge.exists():
+        print(f"input bridge script does not exist: {args.input_bridge}", file=sys.stderr)
+        return 1
 
     if not args.no_clean:
         clean_run_state(args.nvram_image, args.snap_dir)
+    clean_socket(args.input_socket)
 
     command = [
         str(args.mame),
@@ -420,6 +488,8 @@ def main(argv: list[str]) -> int:
         "internal",
         "-snapname",
         "%g/%i",
+        "-autoboot_script",
+        str(args.input_bridge),
         "-rs232",
         args.rs232,
         "-pcmcia",
@@ -427,146 +497,92 @@ def main(argv: list[str]) -> int:
         args.card_option,
         str(args.card),
     ]
+    if args.natural:
+        command.append("-natural")
+    if args.steadykey:
+        command.append("-steadykey")
     if args.verbose:
         print("launch:", " ".join(command))
-    proc = subprocess.Popen(command, cwd=args.mame_dir)
-    snapshots: list[Path] = []
+    env = os.environ.copy()
+    env["DWBASIC_INPUT_SOCKET"] = str(args.input_socket)
+    env["DWBASIC_INPUT_HOLD_FRAMES"] = str(args.bridge_hold_frames)
+    env["DWBASIC_INPUT_GAP_FRAMES"] = str(args.bridge_gap_frames)
+    env["DWBASIC_INPUT_SHIFT_LEAD_FRAMES"] = str(args.bridge_shift_lead_frames)
+    env["DWBASIC_INPUT_SHIFT_TRAIL_FRAMES"] = str(args.bridge_shift_trail_frames)
+    proc = subprocess.Popen(command, cwd=args.mame_dir, env=env)
     try:
         window_id = find_mame_window(proc.pid, args.window_timeout)
         move_window(window_id, args.window_position, proc)
+        input_stream = connect_input_bridge(args.input_socket, proc, args.window_timeout)
 
         time.sleep(args.boot_wait)
         if args.no_signpost_check:
-            snapshots.append(
-                snapshot(
-                    window_id,
-                    args.snap_dir,
-                    args.snapshot_timeout,
-                    focus_input=args.focus_input,
-                    proc=proc,
-                )
-            )
-        else:
-            snapshots.append(
-                wait_for_signpost(
-                    window_id,
-                    proc,
-                    args.snap_dir,
-                    "initial two-button menu",
-                    args.boot_timeout,
-                    args.signpost_interval,
-                    args.snapshot_timeout,
-                    args.focus_input,
-                )
-            )
-
-        key(window_id, "Page_Down", args.key_hold, focus=args.focus_input, proc=proc)
-        time.sleep(args.menu_wait)
-        if args.no_signpost_check:
-            snapshots.append(
-                snapshot(
-                    window_id,
-                    args.snap_dir,
-                    args.snapshot_timeout,
-                    focus_input=args.focus_input,
-                    proc=proc,
-                )
-            )
-        else:
-            snapshots.append(
-                wait_for_signpost(
-                    window_id,
-                    proc,
-                    args.snap_dir,
-                    "WP menu",
-                    args.menu_timeout,
-                    args.signpost_interval,
-                    args.snapshot_timeout,
-                    args.focus_input,
-                )
-            )
-
-        key(window_id, "6", args.key_hold, focus=args.focus_input, proc=proc)
-        time.sleep(args.menu_wait)
-        if args.no_signpost_check:
-            snapshots.append(
-                snapshot(
-                    window_id,
-                    args.snap_dir,
-                    args.snapshot_timeout,
-                    focus_input=args.focus_input,
-                    proc=proc,
-                )
-            )
-        else:
-            snapshots.append(
-                wait_for_signpost(
-                    window_id,
-                    proc,
-                    args.snap_dir,
-                    "OTHERS menu",
-                    args.menu_timeout,
-                    args.signpost_interval,
-                    args.snapshot_timeout,
-                    args.focus_input,
-                )
-            )
-
-        key(window_id, "4", args.key_hold, focus=args.focus_input, proc=proc)
-        time.sleep(args.basic_wait)
-        snapshots.append(
             snapshot(
-                window_id,
+                input_stream,
                 args.snap_dir,
                 args.snapshot_timeout,
-                focus_input=args.focus_input,
-                proc=proc,
             )
+        else:
+            wait_for_signpost(
+                input_stream,
+                args.snap_dir,
+                "initial two-button menu",
+                args.boot_timeout,
+                args.signpost_interval,
+                args.snapshot_timeout,
+            )
+
+        send_bridge_key(input_stream, "Page_Down")
+        time.sleep(args.menu_wait)
+        if args.no_signpost_check:
+            snapshot(
+                input_stream,
+                args.snap_dir,
+                args.snapshot_timeout,
+            )
+        else:
+            wait_for_signpost(
+                input_stream,
+                args.snap_dir,
+                "WP menu",
+                args.menu_timeout,
+                args.signpost_interval,
+                args.snapshot_timeout,
+            )
+
+        send_bridge_key(input_stream, "6")
+        time.sleep(args.menu_wait)
+        if args.no_signpost_check:
+            snapshot(
+                input_stream,
+                args.snap_dir,
+                args.snapshot_timeout,
+            )
+        else:
+            wait_for_signpost(
+                input_stream,
+                args.snap_dir,
+                "OTHERS menu",
+                args.menu_timeout,
+                args.signpost_interval,
+                args.snapshot_timeout,
+            )
+
+        send_bridge_key(input_stream, "4")
+        time.sleep(args.basic_wait)
+        interactive_loop(
+            input_stream,
+            args.snap_dir,
+            args.snapshot_timeout,
+            None,
         )
-
-        for line in args.type_line:
-            type_text(window_id, line, args.type_delay_ms, focus=args.focus_input, proc=proc)
-            key(window_id, "Return", args.key_hold, focus=args.focus_input, proc=proc)
-            time.sleep(args.after_type_wait)
-            path = snapshot(
-                window_id,
-                args.snap_dir,
-                args.snapshot_timeout,
-                focus_input=args.focus_input,
-                proc=proc,
-            )
-            snapshots.append(path)
-            decoded = decode_snapshot(path, allow_cursor=True, allow_inverse=True)
-            if args.verbose:
-                print(f"\n== {path.name} after {line!r} ==")
-                print(decoded)
-            if not args.no_stop_on_screen_error and (screen_has_error(decoded) or not screen_has_prompt(decoded)):
-                print(f"stopping after {line!r}: screen did not return to an OK prompt", file=sys.stderr)
-                break
-
-        output_paths = snapshots if args.verbose else snapshots[-1:]
-        for index, path in enumerate(output_paths):
-            print(f"\n== {path.name} ==")
-            final_snapshot = path == snapshots[-1]
-            print(decode_snapshot(path, allow_cursor=final_snapshot, allow_inverse=final_snapshot))
-        if args.interactive:
-            interactive_loop(
-                window_id,
-                proc,
-                args.snap_dir,
-                args.snapshot_timeout,
-                args.key_hold,
-                args.type_delay_ms,
-                args.focus_input,
-            )
     finally:
-        if not args.keep_running:
-            try:
-                proc.terminate()
-                proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait(timeout=5)
+        try:
+            proc.terminate()
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=5)
     return 0
 
 

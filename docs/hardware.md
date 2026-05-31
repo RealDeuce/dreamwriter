@@ -34,8 +34,50 @@ C000:0529  mov byte [6D29],00
 C000:053C  call C000:5645
 ```
 
-The firmware stores level state, not just key edges. Normal key repeat is
-handled higher up using state around `6EB0..6EB3`.
+The firmware stores level state, not just key edges. After each completed
+10-row scan, `C000:5645` compares the raw rows against two state bytes per row
+at `6D10..6D23`:
+
+| RAM | Meaning |
+| ---: | --- |
+| `6D06 + row` | Raw row byte just read from port `0xB0`. |
+| `6D10 + row*2` | First-stage row state. |
+| `6D11 + row*2` | Stable row state used for events and modifiers. |
+
+The row processor is effectively a two-sample debounce:
+
+```text
+if raw != first_stage:
+    first_stage = raw
+    no key event is queued
+else if raw != stable:
+    stable = raw
+    press transitions may queue a key event
+    release transitions clear repeat state when they match the repeating key
+```
+
+Key releases are not queued as make/break events. A press must survive until the
+next completed full scan before it can be emitted, and releases similarly take a
+second scan to update the stable state.
+
+Keyboard events are queued as two-byte words in the ring buffer at
+`70A6..70E1`, with read/write offsets at `70E2`/`70E3`. The enqueue helper
+`C000:4B5C` stores `DX`; `C000:4B2D` dequeues it as `AX`. For keyboard events,
+`C000:5870` builds:
+
+| Byte | Meaning |
+| ---: | --- |
+| `DL` | Physical key index: `(row << 3) + bit_index`. |
+| `DH` | Event flags snapshot. Bit `0x01` marks repeat; `0x10` shift, `0x20` caps-style state, `0x40` control, and `0x80` alt. |
+
+`C000:58A6` builds the `DH` modifier snapshot from the stable row bytes, not
+the raw matrix. In particular, Shift comes from `6D11` bits `0x01` and `0x02`.
+This means a synthesized shifted key must let Shift reach the stable state
+before the printable key's press event is queued.
+
+Normal key repeat uses `6EB0..6EB3`: `6EB0` holds the repeating key's row-state
+address, `6EB2` its bit mask, and `6EB3` is the repeat countdown. A new key
+press seeds `6EB3` with `0x41`; repeat reload uses `0x08`.
 
 The scan flow now looks like this:
 
@@ -68,12 +110,14 @@ at port `0x53`, but MAME currently models both as derived from the same
 `X301 / 20480` clock. The rate is inferred from the firmware repeat counters
 and tied to a plausible CPU/crystal divider rather than the RTC. A full keyboard
 scan consumes ten row IRQs plus the scan-cycle/reset IRQ, so about `960 Hz`
-produces roughly 87 full scans/second. The repeat path seeds `[6EB3]` with
-`0x41` on a new keypress and reloads it with `0x08` after each repeat, giving
-about a 0.75 second initial delay and about 11 repeats/second. The previous
-250 Hz row timer
-stretched the initial repeat delay to almost three seconds, which made held keys
-in the WP editor appear not to repeat.
+produces roughly 87 full scans/second. With the two-sample row state above,
+ordinary debounce latency is about one full scan after the first observed
+change, plus phase jitter from where the host event lands in the row sequence.
+The repeat path seeds `[6EB3]` with `0x41` on a new keypress and reloads it with
+`0x08` after each repeat, giving about a 0.75 second initial delay and about 11
+repeats/second. The previous 250 Hz row timer stretched the initial repeat delay
+to almost three seconds, which made held keys in the WP editor appear not to
+repeat.
 
 | Row | Bits |
 | ---: | --- |
@@ -1101,6 +1145,8 @@ unconfirmed.
 | `680D` | Alarm/power service guard. When zero, `C000:4961` allows `[6809] == 0x1992` to force the retained power-transition path; alarm display/service code sets it nonzero while handling the event. |
 | `7036` | Built-in store dirty/checksum-needed flag. Cleared at startup; storage write/format/delete-like paths set it. If nonzero during the `C000:035D` retained transition, `C000:044B` checksums `1800:0008..7FFF` into `1800:0006` before the port `0x70` power handoff. |
 | `6D06..6D0F` | Raw keyboard matrix rows. |
+| `6D10..6D23` | Keyboard row state, two bytes per row. Even offsets are first-stage state; odd offsets are stable state used for queued events and modifier snapshots. |
+| `6D24..6D27` | Keyboard sticky/modifier state bytes used by `C000:58A6` along with stable row state. |
 | `6D28` | Keyboard scan state/idle counter. |
 | `6D29` | Keyboard scan row index. |
 | `6D2A..6D2E` | RS-232C setup bytes: baud index, bit length, stop bits, parity, XON/XOFF. |
@@ -1113,6 +1159,12 @@ unconfirmed.
 | `6D52` | Battery-warning display state. Values `2..4` select main, CR2032, or PCMCIA SRAM-card battery warning checks; bit `0x80` marks that an icon is currently displayed. |
 | `6D57` | RS-232 receive/error flags; IRQ `FC` ORs in bits `0x08`, `0x10`, and `0x20` from status port `0xC1`. |
 | `6D59..6D5B` | Printer setup bytes: printer model, interface, paper feed. |
+| `6EAE` | Count of currently active stable key bits tracked by `C000:5645`; ordinary key press handling is suppressed at three active keys, with special-case paths around modifier/sticky handling. |
+| `6EAF` | Keyboard event/repeat flag; bit `0x01` is set after enqueue and cleared by the scan processor after reporting carry. |
+| `6EB0` | Stable row-state address for the repeating key. |
+| `6EB2` | Bit mask for the repeating key. |
+| `6EB3` | Repeat countdown: seeded with `0x41` on a new press and reloaded with `0x08` after repeat emission. |
+| `6EB4` | Keyboard translation mode flag used by `C000:5915` when `DH bit 0x40` is set. |
 | `6D65..6D87` | Saved resume context/checksum area used by suspend/warm paths. `C000:0438` computes the checksum over 15 words at `6D65..6D82` and stores it at `6D83`; `C000:01C5` validates the same range on the saved-context resume branch. This does not include the raw keyboard row cache at `6D06..6D0F`. |
 | `6D79` | Saved resume IP. Diagnostic warm entry stores `4A8D`. |
 | `6D7B` | Saved resume CS. |
