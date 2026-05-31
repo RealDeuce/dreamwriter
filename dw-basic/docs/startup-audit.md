@@ -107,16 +107,16 @@ not generic stubs.
 | `GRPRST` | Preserve registers and reset graphics state. | Real `gengrp` routine. Uses `GETFBC` and `SETATR`; both must return normally. |
 | `GETFBC` | Return deterministic foreground/background values. | Fixed to return foreground `AL=1`, background `BL=0`, carry clear. The previous version left `BX` undefined. |
 | `SETATR` | Accept default draw attribute during graphics reset. | Minimal success return. Safe while `PIXSIZ=0`; real pixel drawing is disabled. |
-| `GWINI` | OEM startup initialization. | Clears the LCD, sets 80x8 screen size, clears soft-key state, and delegates to real screen init. It preserves `AX`/`CX`; no downstream startup caller depends on other registers. |
+| `GWINI` | OEM startup initialization. | Clears the LCD, initializes the local cursor helper, sets 80x8 screen size, clears soft-key state, and delegates to real screen init. It preserves registers and flags so startup does not depend on hidden OEM side effects. |
 | `MSISET`/`MSIRST` | Install/restore DOS Ctrl-C and critical-error vectors while preserving registers. | Patched to `RET` for ROM CARD. The original converted body used DOS `INT 21h` vector services, which are not valid in this environment. |
 | `SCROUT` | Draw one character at 1-based `DH` column and `DL` row without changing logical cursor. | Implemented over the DreamWriter firmware text vector plus a shadow cell buffer. Returns carry clear. This is correct for startup because `ESCCTL=0` and startup only emits normal bytes. |
-| `CLREOL` | Clear from 1-based `DH,DL` to end of line. | Implemented by repeated `SCROUT`. Used by `KEYDSP` with soft keys off. |
-| `SCRINP` | Read one screen cell at 1-based `DH,DL`. | Implemented from the shadow text buffer. Not on startup before `READY`, but required by enabled screen editor paths. |
-| `CSRDSP` | Display or hide cursor type `AL` at caller-provided `DX` position; preserve registers/flags. | Implemented. `SETCSR` supplies `AL` from `CSRTYP`; callers that need a visible cursor set `DX` first. Off-cursor calls do not require a meaningful position. |
-| `KEYINP` | Poll keyboard. Z set means no key; C set means two-byte/control key. Preserve non-result registers. | Implemented over DreamWriter INT 21h key status/read calls, with DreamWriter cursor/insert/delete/return translated to the MS Universal editor codes expected by `giokyb`. Not on startup until the first input wait. |
-| `FKYADV` | Select/confirm a soft-key page and return NZ if displayable. | Minimal one-page implementation. It intentionally returns NZ. |
+| `CLREOL` | Clear from 1-based `DH,DL` to end of line. | Implemented by repeated `SCROUT`. It now preserves flags around the internal output loop. |
+| `SCRINP` | Read one screen cell at 1-based `DH,DL`. | Implemented from the shadow text buffer. It returns carry clear for this single-byte display implementation. |
+| `CSRDSP` | Display or hide cursor type `AL`; preserve registers/flags. | Implemented. It reads the canonical 1-based BASIC cursor state from `CSRX`/`CSRY` instead of trusting every `SETCSR` caller to have loaded `DX`. |
+| `KEYINP` | Poll keyboard. Z set means no key; C set means two-byte/control key. Preserve non-result registers. | Implemented over DreamWriter INT 21h key status/read calls, setting `ES=DS` for the firmware calls and preserving the non-result registers that `POLKEY` does not save. |
+| `FKYADV` | Select/confirm a soft-key page and return NZ if displayable. | Minimal one-page implementation. It preserves registers and intentionally returns NZ. |
 | `FKYFMT` | Return `BX` pointing to key count, chars per key, and first key number. | Returns 10 keys, 6 chars/key, first key 1; this matches `GETFMT`'s table layout. |
-| `GETHED` | Return OEM heading pointer in `BX`; Z set controls heading behavior. | Returns an empty string and Z set, so the Microsoft heading is still printed. |
+| `GETHED` | Return OEM heading pointer in `BX`; Z set controls heading behavior. | Returns an empty string and Z set, so the Microsoft heading is still printed, without clobbering unrelated registers. |
 | `SYSTME` | Exit to host/system. | Currently halts forever. Not on the successful startup-to-READY path, but `SYSTEM` will not return to the ROM CARD menu yet. |
 
 ## Stub Audit

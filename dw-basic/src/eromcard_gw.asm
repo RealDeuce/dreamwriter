@@ -82,8 +82,9 @@ entry:
     jmp GW_INIT
 
 not_enough_memory:
-    mov ax, not_enough_message
-    call print_message_wait
+    call snapshot_not_enough_state
+    call fill_not_enough_segment_dump
+    call print_not_enough_dump_wait
     mov ax, cs
     mov ds, ax
     restore_loader_stack
@@ -201,6 +202,147 @@ print_message_wait:
     call dw_getkey
     ret
 
+print_not_enough_dump_wait:
+    xor cx, cx
+    xor dx, dx
+    mov ax, not_enough_title
+    call dw_puts_cs
+    mov dx, 8
+    mov ax, not_enough_segments
+    call dw_puts_cs
+    mov dx, 16
+    mov ax, not_enough_stack
+    call dw_puts_cs
+    mov dx, 24
+    mov ax, not_enough_indirect
+    call dw_puts_cs
+    mov dx, 32
+    mov ax, not_enough_prompt
+    call dw_puts_cs
+    call dw_getkey
+    ret
+
+snapshot_not_enough_state:
+    mov [cs:not_enough_saved_bp], bp
+    mov [cs:not_enough_saved_bx], bx
+    mov [cs:not_enough_saved_di], di
+    mov [cs:not_enough_saved_ax], ax
+    mov ax, bx
+    add ax, di
+    sub ax, 2
+    mov [cs:not_enough_saved_ea], ax
+    push bx
+    mov bx, ax
+    mov ax, [cs:bx]
+    mov [cs:not_enough_saved_target], ax
+    pop bx
+    mov bp, sp
+
+    push cs
+    pop ax
+    mov [cs:not_enough_saved_cs], ax
+    mov ax, ds
+    mov [cs:not_enough_saved_ds], ax
+    mov ax, es
+    mov [cs:not_enough_saved_es], ax
+    mov ax, ss
+    mov [cs:not_enough_saved_ss], ax
+
+    lea ax, [bp + 2]
+    mov [cs:not_enough_saved_sp], ax
+    mov ax, [ss:bp + 2]
+    mov [cs:not_enough_saved_s0], ax
+    mov ax, [ss:bp + 4]
+    mov [cs:not_enough_saved_s2], ax
+
+    mov bp, [cs:not_enough_saved_bp]
+    ret
+
+fill_not_enough_segment_dump:
+    push ax
+    push bx
+    push di
+    push ds
+
+    push cs
+    pop ds
+
+    mov ax, [not_enough_saved_cs]
+    mov di, not_enough_cs_value
+    call write_hex_word
+    mov ax, [not_enough_saved_ds]
+    mov di, not_enough_ds_value
+    call write_hex_word
+    mov ax, [not_enough_saved_es]
+    mov di, not_enough_es_value
+    call write_hex_word
+    mov ax, [not_enough_saved_ss]
+    mov di, not_enough_ss_value
+    call write_hex_word
+    mov ax, [not_enough_saved_sp]
+    mov di, not_enough_sp_value
+    call write_hex_word
+    mov ax, [not_enough_saved_bp]
+    mov di, not_enough_bp_value
+    call write_hex_word
+    mov ax, [not_enough_saved_s0]
+    mov di, not_enough_s0_value
+    call write_hex_word
+    mov ax, [not_enough_saved_s2]
+    mov di, not_enough_s2_value
+    call write_hex_word
+    mov ax, [not_enough_saved_bx]
+    mov di, not_enough_bx_value
+    call write_hex_word
+    mov ax, [not_enough_saved_di]
+    mov di, not_enough_di_value
+    call write_hex_word
+    mov ax, [not_enough_saved_ea]
+    mov di, not_enough_ea_value
+    call write_hex_word
+    mov ax, [not_enough_saved_target]
+    mov di, not_enough_target_value
+    call write_hex_word
+
+    pop ds
+    pop di
+    pop bx
+    pop ax
+    ret
+
+; AX = word, DS:DI = four ASCII hex digits.
+write_hex_word:
+    push ax
+    mov al, ah
+    call write_hex_byte
+    pop ax
+    call write_hex_byte
+    ret
+
+; AL = byte, DS:DI = two ASCII hex digits. Advances DI.
+write_hex_byte:
+    push ax
+    mov ah, al
+    shr al, 4
+    call write_hex_nibble
+    mov al, ah
+    and al, 0x0f
+    call write_hex_nibble
+    pop ax
+    ret
+
+; AL = low nibble, DS:DI = output digit. Advances DI.
+write_hex_nibble:
+    and al, 0x0f
+    cmp al, 10
+    jb .digit
+    add al, "A" - 10 - "0"
+.digit:
+    add al, "0"
+    mov [di], al
+    inc di
+    ret
+
 %include "src/include/dwapi.asm"
 
 old_ss:
@@ -215,9 +357,75 @@ file_handle:
     dw 0
 read_count:
     dw 0
+not_enough_saved_cs:
+    dw 0
+not_enough_saved_ds:
+    dw 0
+not_enough_saved_es:
+    dw 0
+not_enough_saved_ss:
+    dw 0
+not_enough_saved_sp:
+    dw 0
+not_enough_saved_bp:
+    dw 0
+not_enough_saved_s0:
+    dw 0
+not_enough_saved_s2:
+    dw 0
+not_enough_saved_bx:
+    dw 0
+not_enough_saved_di:
+    dw 0
+not_enough_saved_ax:
+    dw 0
+not_enough_saved_ea:
+    dw 0
+not_enough_saved_target:
+    dw 0
 
-not_enough_message:
-    db "DW-BASIC NEEDS MORE MEMORY", 13
+not_enough_title:
+    db "DW-BASIC NEEDS MORE MEMORY", 0
+not_enough_segments:
+    db "CS="
+not_enough_cs_value:
+    db "0000"
+    db " DS="
+not_enough_ds_value:
+    db "0000"
+    db " ES="
+not_enough_es_value:
+    db "0000"
+    db " SS="
+not_enough_ss_value:
+    db "0000", 0
+not_enough_stack:
+    db "SP="
+not_enough_sp_value:
+    db "0000"
+    db " BP="
+not_enough_bp_value:
+    db "0000"
+    db " S0="
+not_enough_s0_value:
+    db "0000"
+    db " S2="
+not_enough_s2_value:
+    db "0000", 0
+not_enough_indirect:
+    db "BX="
+not_enough_bx_value:
+    db "0000"
+    db " DI="
+not_enough_di_value:
+    db "0000"
+    db " EA="
+not_enough_ea_value:
+    db "0000"
+    db " TG="
+not_enough_target_value:
+    db "0000", 0
+not_enough_prompt:
     db "PRESS KEY TO RETURN", 0
 loading_message:
     db "LOADING DW-BASIC", 0

@@ -130,6 +130,29 @@ Other options:
 | `--text` | none | Render glyphs for each character in a string. |
 | `--code` | none | Render a specific code; may be repeated. |
 
+### `decode_lcd_text.py`
+
+Decodes a `drwrt400` LCD snapshot PNG into text using the ROM's main 6x8 text
+font.  The decoder is exact: every 6x8 cell must match a ROM glyph, otherwise it
+reports the row/column and cell pixels that did not decode.
+
+```sh
+python3 tools/decode_lcd_text.py ../mame/snap/drwrt400/0000.png
+```
+
+Options:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--rom` | `t4_ir_2.1.ic303` | ROM image to read font data from. |
+| `--font-base` | `0x580b6` | File offset for the first glyph. |
+| `--first-code` | `0x20` | Character code represented by the first glyph. |
+| `--last-code` | `0x7e` | Last character code accepted as text. |
+| `--no-trim` | off | Preserve trailing spaces on each decoded row. |
+| `--allow-cursor` | off | Treat an all-lit 6x8 cell as the active inverse text cursor. |
+| `--allow-inverse` | off | Decode exact bitwise-inverted ROM glyphs as text. |
+| `--cursor-char` | space | Character emitted for `--allow-cursor`. |
+
 ### `bitmap`
 
 Renders fixed-size 1bpp bitmap blocks as `#` and `.` text.

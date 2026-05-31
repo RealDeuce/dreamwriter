@@ -40,31 +40,47 @@ dw_puts_cs:
 
 dw_puts_cs_raw:
     ; DC98:0E81 uses AX:BX as the string far pointer, writes its command stream
-    ; through DS:72E5, and loads ES while walking the source string. Preserve
-    ; the caller-visible inputs and segment registers; the helper preserves
-    ; CX/DX/SI/DI/BP itself, and SS is not modified.
-    push ax
-    push bx
+    ; through DS:72E5, and loads ES while walking the source string. Treat the
+    ; firmware helper as an opaque OEM boundary and preserve caller state here.
+    pushf
+    pusha
     push ds
     push es
-    push ax
-    xor ax, ax
-    mov ds, ax
-    pop ax
+    xor bx, bx
+    mov ds, bx
     mov bx, cs
     call far [DW_VEC_PUTS]
     pop es
     pop ds
-    pop bx
-    pop ax
+    popa
+    popf
     ret
 
 dw_getkey:
+    push bp
+    mov bp, sp
+    sub sp, 2
+    pushf
+    push bx
+    push cx
+    push dx
+    push si
+    push di
     push ds
     push es
-    xor ax, ax
-    mov ds, ax
+    xor bx, bx
+    mov ds, bx
     call far [DW_VEC_GETKEY]
+    mov [bp - 2], ax
     pop es
     pop ds
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    popf
+    mov ax, [bp - 2]
+    mov sp, bp
+    pop bp
     ret

@@ -63,7 +63,7 @@
 %define DOL__SCRN 0o376
 %define DOL__CONS 0o375
 %define DOL__LPT1 0o374
-%define DOL__NDEV 3
+%define DOL__NDEV 4
 
 ; Screen/editor policy: one 80x8 LCD text page.  GW-BASIC still expects the
 ; default ten soft-key string slots even when they are not displayed.

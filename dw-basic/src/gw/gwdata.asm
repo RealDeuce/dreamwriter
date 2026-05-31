@@ -326,10 +326,6 @@ db "Out of DATA", 0
 db "Illegal function call", 0
 global DOL_OVMSG
 DOL_OVMSG:
-global DOL_OVMSG
-DOL_OVMSG:
-global OVRMSG
-OVRMSG:
 global OVRMSG
 OVRMSG:
 db "Overflow", 0
@@ -339,10 +335,6 @@ db "Subscript out of range", 0
 db "Duplicate Definition", 0
 global DOL_DIV0M
 DOL_DIV0M:
-global DOL_DIV0M
-DOL_DIV0M:
-global DIVMSG
-DIVMSG:
 global DIVMSG
 DIVMSG:
 db "Division by zero", 0
@@ -410,10 +402,10 @@ db "Rename across disks", 0
 global CONSTR
 global RAMLOW
 global CNSLEN
-CNSLEN equ ENDCNS-CONSTR
+CNSLEN equ DATSTR_SRC-CONSTR
 ;FOR ON-MACHINE COMPILATIONS
 global CONSTR
-CONSTR equ $
+CONSTR:
 ;************************************************************
 ;****** BEGDSG: is the begining of the data segment.  *******
 ;****** It MUST be the first label in DSEG, as it is  *******
@@ -425,7 +417,7 @@ BEGDSG:
 global CPMMEM
 CPMMEM:
 ; ======== Code Phase ========
-RAMLOW:
+; source RAMLOW phase marker
 db 0o352 ;INTER-SEGMENT DIRECT JUMP
 resb 4
 ;
@@ -594,12 +586,12 @@ dw 0 ;Used by Device Open Routines to release FDB
 ;if error occurs after FDB is allocated but
 ;before File actually becomes OPEN.
 ;FDB is Freed by routine FINPRT.
-%define DATSTR $
+DATSTR_SRC equ $
 ;
 ; ======== Data Phase ========
 ;
 ; org 0+0o400
-; duplicate RAMLOW phase marker
+RAMLOW:
 db 0o352 ;INTER-SEGMENT DIRECT JUMP
 resb 4
 ;
@@ -769,7 +761,7 @@ resw 1 ;Used by Device Open Routines to release FDB
 ;if error occurs after FDB is allocated but
 ;before File actually becomes OPEN.
 ;FDB is Freed by routine FINPRT.
-%define DATSTR $
+DATSTR equ $
 ;
 ;========== End of Phase ==========
 ;

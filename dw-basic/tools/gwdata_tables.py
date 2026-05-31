@@ -72,14 +72,18 @@ def parse_error_region(src: Path) -> list[str]:
         if m:
             for name in m.group(1).split(","):
                 name = name.strip()
-                if name in {"$OVMSG", "OVRMSG", "$DIV0M", "DIVMSG"}:
+                if name in {"$OVMSG", "OVRMSG", "$DIV0M", "DIVMSG"} and name not in pending_labels:
                     pending_labels.append(name)
             if "DSKLOC" in [n.strip() for n in m.group(1).split(",")]:
                 out.append("DSKLOC equ $+6")
             continue
 
         m = re.match(r"([A-Za-z_$][\w$]*):$", code)
-        if m and m.group(1) in {"$OVMSG", "OVRMSG", "$DIV0M", "DIVMSG"}:
+        if (
+            m
+            and m.group(1) in {"$OVMSG", "OVRMSG", "$DIV0M", "DIVMSG"}
+            and m.group(1) not in pending_labels
+        ):
             pending_labels.append(m.group(1))
             continue
 
@@ -111,6 +115,7 @@ def patch_gwdata(path: Path, original: Path) -> None:
     patched: list[str] = []
     i = 0
     saw_ramlow = False
+    saw_datstr = False
     in_dsctmp = False
     emitted_dscptr = False
     while i < len(lines):
@@ -151,20 +156,28 @@ def patch_gwdata(path: Path, original: Path) -> None:
             patched.append("OPCNT equ (($-DBLDSP)/2)-1")
             i += 1
             continue
-        if stripped == "%define CNSLEN ENDCNS-CONSTR":
-            patched.append("CNSLEN equ ENDCNS-CONSTR")
+        if stripped in {"%define CNSLEN ENDCNS-CONSTR", "CNSLEN equ ENDCNS-CONSTR"}:
+            patched.append("CNSLEN equ DATSTR_SRC-CONSTR")
             i += 1
             continue
-        if stripped == "%define CONSTR $":
+        if stripped in {"%define CONSTR $", "CONSTR equ $"}:
             patched.append("CONSTR:")
             i += 1
             continue
         if stripped.startswith("%define RAMLOW $"):
             if not saw_ramlow:
-                patched.append("RAMLOW:")
+                patched.append("; source RAMLOW phase marker")
                 saw_ramlow = True
             else:
-                patched.append("; duplicate RAMLOW phase marker")
+                patched.append("RAMLOW:")
+            i += 1
+            continue
+        if stripped in {"%define DATSTR $", "DATSTR equ $"}:
+            if not saw_datstr:
+                patched.append("DATSTR_SRC equ $")
+                saw_datstr = True
+            else:
+                patched.append("DATSTR equ $")
             i += 1
             continue
         if stripped == "%define ENDCNS $":

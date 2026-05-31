@@ -4,6 +4,12 @@ The Microsoft GW-BASIC source is organized for OEM retargeting. The useful
 porting boundary is the generalized I/O and OEM hook layer, not the DOS process
 model.
 
+The target CPU is the NEC V20, so the port may use 80186-class instruction
+forms such as `pusha`/`popa`, `enter`/`leave`, immediate `push`, immediate
+`imul`, and `bound` when they solve a concrete porting problem. The current
+flat model still assembles as 16-bit code and avoids newer instructions unless
+they make an OEM wrapper contract clearer.
+
 ## Reference Modules
 
 High-value files in `../gw-basic`:
@@ -33,7 +39,7 @@ The first DreamWriter-specific module should provide these primitives:
 | `SCRINP` | Read character under cursor. | Implemented from the console shadow buffer. |
 | `SCROLL` | Scroll screen window. | Framebuffer line copy plus clear. |
 | `CLREOL` | Clear from cursor to end of line. | Implemented by blanking cells through `SCROUT`. |
-| `SETCSR` | Cursor display mode/position. | Present as a no-op until GW-BASIC data state is wired. |
+| `SETCSR` | Cursor display mode/position. | The converted GW-BASIC routine calls the DreamWriter `CSRDSP` hook. |
 | `KEYINP` | Poll for one key without blocking. | T400 keyboard vector or direct key queue. |
 | `DONOTE` | Start/stop sound. | T400 beeper port path; initially stub. |
 
@@ -103,19 +109,22 @@ keeps `DS` as the application data segment; direct framebuffer copies use
 explicit segment-zero memory accesses instead of changing `DS` around console
 state reads.
 
-`SCROUT`, `SCRINP`, and `CLREOL` are now exported with the 1-based position
-contract used by `scndrv.asm`: `DH=column`, `DL=line`. They preserve the
-console's local cursor state because GW-BASIC tracks cursor position in its own
-screen-driver variables and passes explicit positions to the OEM hooks.
-`SETCSR` is intentionally inert for now; the real implementation needs the
-ported GW-BASIC data segment, especially `CSRTYP`, before it can map cursor
-mode requests onto the local reverse-video cursor helper.
+`SCROUT`, `SCRINP`, `SCROLL`, and `CLREOL` are exported with the 1-based
+position contract used by `scndrv.asm`: `DH/AH/BH=column`, `DL/AL/BL=line`.
+They preserve the console's local cursor state because GW-BASIC tracks cursor
+position in its own screen-driver variables and passes explicit positions to
+the OEM hooks. `CSRDSP` is the cursor display OEM hook; it receives `AL` as the
+cursor type and reads the canonical 1-based position from `CSRX`/`CSRY`.
 
 `src/gw/dwio.asm` exports the OMF-facing DreamWriter hook module. It reuses
 the same console primitive layer for `CLRSCN`, `SCROLL`, `SCROUT`, `SCRINP`,
 and `CLREOL`, and implements `KEYINP` as a nonblocking poll through the ROM's
-`INT 21h` keyboard services. The T400 keyboard table reports cursor events as
-`0x10..0x13`, physical `INSERT` as `0x0D`, and physical `ENTER` as `0xDA`.
+`INT 21h` keyboard services. OEM wrappers are kept strict: unless a return
+register or flag is part of the documented contract, the wrapper preserves it.
+The lower `dw_puts_cs_raw` and `dw_getkey` firmware-vector wrappers follow the
+same rule rather than relying on inspected ROM implementation details. The T400
+keyboard table reports cursor events as `0x10..0x13`, physical `INSERT` as
+`0x0D`, and physical `ENTER` as `0xDA`.
 `KEYINP` maps those into Microsoft Universal keyboard controls:
 
 | DreamWriter event | MS Universal result |

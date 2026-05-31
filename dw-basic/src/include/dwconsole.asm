@@ -204,6 +204,47 @@ SCROLL:
     push di
     push es
 
+    cmp ah, 1
+    jb .done
+    cmp al, 1
+    jb .done
+    cmp bh, 1
+    jb .done
+    cmp bl, 1
+    jb .done
+    or ch, ch
+    jz .done
+    or cl, cl
+    jz .done
+
+    mov dl, ah
+    add dl, ch
+    jc .done
+    dec dl
+    cmp dl, CONSOLE_COLS
+    ja .done
+
+    mov dl, al
+    add dl, cl
+    jc .done
+    dec dl
+    cmp dl, CONSOLE_ROWS
+    ja .done
+
+    mov dl, bh
+    add dl, ch
+    jc .done
+    dec dl
+    cmp dl, CONSOLE_COLS
+    ja .done
+
+    mov dl, bl
+    add dl, cl
+    jc .done
+    dec dl
+    cmp dl, CONSOLE_ROWS
+    ja .done
+
     mov [scroll_src_col], ah
     dec byte [scroll_src_col]
     mov [scroll_src_row], al
@@ -214,11 +255,6 @@ SCROLL:
     dec byte [scroll_dst_row]
     mov [scroll_cols], ch
     mov [scroll_rows], cl
-
-    or ch, ch
-    jz .done
-    or cl, cl
-    jz .done
 
     call console_scroll_shadow_rect
     call console_scroll_pixel_rect
@@ -317,11 +353,13 @@ SCRINP:
     pop di
     pop dx
     pop bx
+    clc
     ret
 
 ; GW-BASIC OEM clear-to-end-of-line primitive.
 ; DH=1-based start column, DL=1-based line.
 CLREOL:
+    pushf
     push ax
     push dx
     cmp dl, 1
@@ -344,6 +382,7 @@ CLREOL:
 .done:
     pop dx
     pop ax
+    popf
     ret
 
 %ifndef DWCONSOLE_NO_LOCAL_SETCSR

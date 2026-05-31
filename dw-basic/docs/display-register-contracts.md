@@ -34,9 +34,12 @@ Inspected ROM behavior:
 Current `dw_puts_cs_raw` contract:
 
 - Input: `AX = CS-relative NUL-terminated string`.
-- Preserves: `AX`, `BX`, `DS`, `ES`.
-- Preserved by inspected callee behavior: `CX`, `DX`, `SI`, `DI`, `BP`, `SS`.
-- Flags are not preserved.
+- Preserves: flags, `AX`, `BX`, `CX`, `DX`, `SI`, `DI`, `BP`, `DS`, and `ES`.
+- `SS` is not modified.
+
+The wrapper preserves this state itself instead of relying on inspected ROM
+callee behavior, because the DreamWriter firmware call is an opaque boundary
+from the GW-BASIC port's point of view.
 
 ## Console Helpers
 

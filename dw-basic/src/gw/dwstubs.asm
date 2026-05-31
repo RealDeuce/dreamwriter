@@ -9,9 +9,12 @@
 
 extern FCERR
 extern DERFNF
+extern DERDNA
+extern _RET
 
 global CHNENT
 global FILIND
+global LPTDSP
 global LRUN
 global OKGETM
 global OUTLOD
@@ -28,6 +31,31 @@ PRGFLI:
     ; to NODSKS, which is the startup NEW/scratch initializer.
     jmp DERFNF
 
+LPTDSP:
+    dw DERDNA        ; EOF
+    dw DERDNA        ; LOC
+    dw DERDNA        ; LOF
+    dw _RET          ; CLS
+    dw _RET          ; SWD
+    dw DERDNA        ; RND
+    dw DERDNA        ; OPN
+    dw DERDNA        ; SIN
+    dw _RET          ; SOT
+    dw .gps          ; GPS
+    dw .gwd          ; GWD
+    dw _RET          ; SCW
+    dw _RET          ; GCW
+    dw DERDNA        ; BIN
+    dw _RET          ; BOT
+
+.gps:
+    xor ah, ah
+    ret
+
+.gwd:
+    mov ah, 255
+    ret
+
 global DLINE
 global GPUTG
 global LCPY
@@ -40,9 +68,14 @@ DLINE:
 GPUTG:
 MACLNG:
 MCLXEQ:
+    jmp FCERR
+
 PEKFLT:
 POKFLT:
-    jmp FCERR
+    ; No DreamWriter-specific PEEK/POKE addresses are intercepted yet. Return
+    ; NZ so GW-BASIC performs the ordinary ES:[BX] read or ES:[DX] write.
+    or sp, sp
+    ret
 
 LCPY:
     ; LCOPYS saves the text pointer before calling the OEM hardcopy hook and
@@ -188,7 +221,10 @@ softkey_format:
 FKYADV:
     ; Single fixed soft-key page. Return NZ so callers know there is a page to
     ; display and LABEL does not interpret the advance as "past the last page".
-    or ax, 1
+    push ax
+    mov al, 1
+    or al, al
+    pop ax
     ret
 
 FKYFMT:
@@ -206,8 +242,11 @@ extern CSRFLG
 extern dw_cursor_init
 
 GWINI:
-    push ax
-    push cx
+    pushf
+    pusha
+    push ds
+    push es
+    call dw_cursor_init
     call CLRSCN
     mov al, 80
     mov cl, 8
@@ -215,14 +254,15 @@ GWINI:
     mov byte [KEYSW], 0
     call SCNBRK
     call SCNCLR
-    pop cx
-    pop ax
-    clc
+    pop es
+    pop ds
+    popa
+    popf
     ret
 
 GETHED:
     mov bx, .empty_heading
-    xor ax, ax
+    cmp byte [bx], 0
     ret
 .empty_heading:
     db 0

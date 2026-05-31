@@ -17,6 +17,9 @@ global dw_cursor_init
 global dw_cursor_pre_puts
 global dw_cursor_post_puts
 
+extern CSRX
+extern CSRY
+
 DW_KEY_RIGHT equ 0x10
 DW_KEY_LEFT equ 0x11
 DW_KEY_DOWN equ 0x12
@@ -49,9 +52,8 @@ dw_cursor_init:
     mov byte [dw_cursor_requested_type], 0
     ret
 
-; CSRDSP is passed AL=cursor type and DH/DL=1-based column/row. SETCSR supplies
-; AL from CSRTYP; callers that use SETCSR are responsible for keeping DX as the
-; cursor display position.
+; CSRDSP is passed AL=cursor type.  Use BASIC's 1-based CSRX/CSRY as the cursor
+; position instead of trusting every SETCSR caller to have loaded DX.
 CSRDSP:
     pushf
     push ax
@@ -64,19 +66,19 @@ CSRDSP:
 
     call console_hide_cursor
 
-    mov al, dh
+    mov al, [CSRX]
     cmp al, 1
     jae .column_1_based
     mov al, 1
 .column_1_based:
     dec al
-    cmp al, CONSOLE_COLS
+    cmp al, CONSOLE_COLS - 1
     jbe .column_ok
-    mov al, CONSOLE_COLS
+    mov al, CONSOLE_COLS - 1
 .column_ok:
     mov [console_col], al
 
-    mov al, dl
+    mov al, [CSRY]
     cmp al, 1
     jae .row_1_based
     mov al, 1
@@ -171,7 +173,12 @@ KEYINP:
     push bx
     push cx
     push dx
+    push si
+    push di
     push ds
+    push es
+    mov bx, ds
+    mov es, bx
 
     mov ah, 0x0b
     int 0x21
@@ -189,7 +196,10 @@ KEYINP:
 
 .store_result:
     mov [bp - 2], ax
+    pop es
     pop ds
+    pop di
+    pop si
     pop dx
     pop cx
     pop bx
