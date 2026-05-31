@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Patch generated gwdata.asm table regions that were MASM macro-generated."""
+"""Patch generated gwdata.asm table regions that were MASM macro-generated.
+
+This pass follows the current flat64 memory model.  It preserves RAM
+reservation semantics with resb/resw, but it does not materialize the original
+MASM CSEG/DSEG ORG gaps.  Those gaps belong to the future split128 model
+described in docs/memory-model.md.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +16,36 @@ from pathlib import Path
 
 ERROR_REGION_START = "global ERRTAB"
 ERROR_REGION_END = "; SUBTTL CONSTANTS FOR ROM BASIC I/O"
+
+
+def convert_dup_reservations(line: str) -> str:
+    code, sep, comment = line.partition(";")
+    if sep and not code.strip():
+        return line
+
+    def replace_db(match: re.Match[str]) -> str:
+        return match.group(1) + "resb " + match.group(2)
+
+    def replace_dw(match: re.Match[str]) -> str:
+        return match.group(1) + "resw " + match.group(2)
+
+    code = re.sub(
+        r"^(\s*)db\s+\(?([^()]+?)\)?\s+dup\s+\(\?\)\s*$",
+        replace_db,
+        code,
+        flags=re.I,
+    )
+    code = re.sub(
+        r"^(\s*)dw\s+\(?([^()]+?)\)?\s+dup\s+\(\?\)\s*$",
+        replace_dw,
+        code,
+        flags=re.I,
+    )
+    code = re.sub(r"^(\s*)times\s+(.+?)\s+db\s+0\s*$", r"\1resb \2", code, flags=re.I)
+    code = re.sub(r"^(\s*)times\s+(.+?)\s+dw\s+0\s*$", r"\1resw \2", code, flags=re.I)
+    if sep:
+        return code.rstrip() + " " + sep + comment
+    return code
 
 
 def parse_error_region(src: Path) -> list[str]:
@@ -97,7 +133,7 @@ def patch_gwdata(path: Path, original: Path) -> None:
                 i += 3
                 continue
             if i + 2 < len(lines) and "dw 1 dup (?)" in lines[i + 1].lower():
-                patched.append("times 10 dw 0")
+                patched.append("resw 10")
                 i += 3
                 continue
 
@@ -146,7 +182,7 @@ def patch_gwdata(path: Path, original: Path) -> None:
         if stripped == "global DSCPTR" and emitted_dscptr:
             i += 1
             continue
-        if stripped.startswith("%define DSCPTR $-2"):
+        if stripped.startswith("%define DSCPTR $-2") or stripped.startswith("DSCPTR equ $-2"):
             i += 1
             continue
 
@@ -160,10 +196,10 @@ def patch_gwdata(path: Path, original: Path) -> None:
             or stripped.lower().startswith("db strsiz dup (?)")
             or stripped.lower().startswith("db (strsiz) dup (?)")
         ):
-            patched.append("db 0 ;string descriptor length")
+            patched.append("resb 1 ;string descriptor length")
             patched.append("global DSCPTR")
             patched.append("DSCPTR:")
-            patched.append("times STRSIZ-1 db 0 ;string descriptor pointer/type")
+            patched.append("resb STRSIZ-1 ;string descriptor pointer/type")
             emitted_dscptr = True
             in_dsctmp = False
             i += 1
@@ -176,9 +212,7 @@ def patch_gwdata(path: Path, original: Path) -> None:
             line = re.sub(r"\bdb\s+117\b", "db 0o117", line, flags=re.I)
         elif re.match(r"\s*db\s+200\s*$", line, flags=re.I):
             line = re.sub(r"\bdb\s+200\b", "db 0o200", line, flags=re.I)
-        line = re.sub(r"\bdb\s+\(([^)]+)\)\s+dup\s+\(\?\)", r"times \1 db 0", line, flags=re.I)
-        line = re.sub(r"\bdw\s+\(([^)]+)\)\s+dup\s+\(\?\)", r"times \1 dw 0", line, flags=re.I)
-        patched.append(line)
+        patched.append(convert_dup_reservations(line))
         i += 1
 
     path.write_text("\n".join(patched) + "\n")

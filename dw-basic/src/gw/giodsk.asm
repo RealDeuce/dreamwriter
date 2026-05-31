@@ -7,15 +7,15 @@
 ; SUBTTL  GLOBAL TEMPS and DEFS
 ; TITLE   GIODSK - BASIC-86 Generalized I/O Disk Driver
 ; COMMENT *
-; 
+;
 ; --------- --- ---- -- ---------
 ; COPYRIGHT (C) 1982 BY MICROSOFT
 ; --------- --- ---- -- ---------
-; 
+;
 ;         T. Corbett      Microsoft   for BASIC-86 Generalized I/O
 ;                         Based on code written for BASCOM-86
 %include "gio86u.inc"
-%define CPM86 0
+%define CPM86 0o0
 %include "msdosu.inc"
 ; .RADIX	10
 extern CHRGTR
@@ -45,8 +45,8 @@ extern LBUFF
 extern PBUFF
 extern FILNAM
 extern FILNA2
-%define ASCCR 13 ;Ascii carriage return
-%define ASCCTZ 26 ;END OF FILE CHARACTER
+%assign ASCCR 13 ;Ascii carriage return
+%assign ASCCTZ 26 ;END OF FILE CHARACTER
 ;Disk Dispatch Table
 ;
 global DSKDSP
@@ -87,7 +87,7 @@ ORNCHK:
 CHKCTZ:
 	MOV	BX,DATPSC
 	SUB	BL,byte [F_BREM+SI] ;[BX] = char offset
-	CMP	byte [DATOFS][BX+SI],ASCCTZ ;check for EOF
+	CMP	byte [DATOFS+BX+SI],ASCCTZ ;check for EOF
 	JNZ	NOTEOF ;Brif next char not EOF
 WASEOF:
 	MOV	BX,-1 ; -1 if EOF
@@ -117,10 +117,10 @@ DSKLOF:
 	INC	BX
 	MOV	CH,4
 	CALL	MOVE1 ;Move file length to FAC
-	MOV	byte [FAC+1],CH ;zero sign
+	MOV byte [FAC+1], CH ;zero sign
 	MOV	word [BX+0],CX ;zero high bytes of FAC
 	MOV	word [BX+2],((128+56)*256) ;Initialize Exponent
-	MOV	byte [VALTYP],8 ;Dbl prec value
+	MOV byte [VALTYP], 8 ;Dbl prec value
 	JMP	DOL_NORMD ;Normalize value
 ;DSKGPS - return current file position.
 ; Entry - SI points to File-Data-Block.
@@ -172,7 +172,7 @@ extern FREFDB
 ;         All other registers are preserved.
 ;
 DSKOPN: ;note: save [AL]=device ID till INIFDB
-	CMP	byte [FILMOD],MD_RND
+	CMP byte [FILMOD], MD_RND
 	JNZ	DSKOP2 ;branch if not OPEN RANDOM
 	OR	CX,CX
 	JNZ	DSKOP2 ;branch if user requested Record-Size
@@ -183,7 +183,7 @@ DSKOP2:	PUSH	CX ;save user requested Random-Record-Size
 	MOV	DX,255 ;[DH]=initial file column position
 ;[DL]=initial file width
 	CALL	INIFDB ;SI points to new file's FDB
-	MOV	word [FREFDB],SI ;save pointer to FDB so FINPRT will
+	MOV word [FREFDB], SI ;save pointer to FDB so FINPRT will
 ;release it if error occurs before file
 ;gets completely opened.
 	PUSH	SI ;save FDB pointer
@@ -203,7 +203,7 @@ DSKOP2:	PUSH	CX ;save user requested Random-Record-Size
 	POP	AX ;[AX]=random record size
 	MOV	word [FD_SIZ+SI],AX ;save in FDB
 	CALL	SETBUF ;Set Buffer addr
-	MOV	AL,byte [FILMOD] ;[AL]=file mode
+	MOV AL, byte [FILMOD] ;[AL]=file mode
 	CMP	AL,MD_APP
 	JNZ	NTOAPP ;Brif not open append
 	CALL	CHKFOP ;check for file already open
@@ -225,7 +225,7 @@ mov ah, C_OPEN
 int 33 ;Try OPEN
 	INC	AL
 	JNZ	OPNSET ;Brif found
-	MOV	AL,byte [FILMOD] ;Mode
+	MOV AL, byte [FILMOD] ;Mode
 	CMP	AL,MD_APP
 	JNZ	NTAPNF ;Brif not append
 	MOV	AL,MD_SQO ; else change to seq output
@@ -240,8 +240,8 @@ OPNSET:
 	MOV	word [FCB_RC+SI],128 ;Record len = 128
 	XOR	CX,CX
 	MOV	word [F_CLOC+SI],CX ;Clear curloc
-	MOV	word [F_CLOC]+[SI+2],CX ;Clear numloc
-	MOV	AL,byte [FILMOD]
+	MOV	word [F_CLOC+SI+2],CX ;Clear numloc
+	MOV AL, byte [FILMOD]
 	CMP	AL,MD_RND
 	JZ	RNDFIN ;Brif finish random open
 	CMP	AL,MD_APP
@@ -249,7 +249,7 @@ OPNSET:
 	CMP	AL,MD_SQI
 	JNZ	OPNFIN ;If not input get text pointer/exit
 	CALL	DOL_READS ;Read 1st data block into buffer
-OPNFIN:	MOV	word [FREFDB],0 ;file is completely open.
+OPNFIN:	MOV word [FREFDB], 0 ;file is completely open.
 ;FINPRT won't release FDB.
 	RET
 RNDFIN:
@@ -265,7 +265,7 @@ RNDFIN:
 APPFIN:
 	CMP	word [FCB_FS+SI],CX ;Test for empty file
 	JNZ	NTZRF1 ;Brif file not empty
-	CMP	word [FCB_FS]+[SI+2],CX
+	CMP	word [FCB_FS+SI+2],CX
 	JNZ	NTZRF1
 	MOV	byte [F_MODE+SI],MD_SQO ;Change mode to Seq output
 	JMP	OPNFIN ; and exit
@@ -315,7 +315,7 @@ SETSQO:
 BAKURN:
 	SUB	word [FCB_RN+SI],1 ;Random rec no. -1
 	JAE	BAKRET ;Brif no underflow
-	DEC	word [FCB_RN]+[SI+2] ;hi word -1
+	DEC	word [FCB_RN+SI+2] ;hi word -1
 BAKRET:	RET
 ; SUBTTL  CLOSE (CLSFIL) hook for Disk files
 ;DSKCLS - perform any device dependent close functions.
@@ -373,7 +373,7 @@ SINP1:
 	MOV	BL,byte [F_ORCT+SI]
 	SUB	BL,byte [F_BREM+SI]
 	DEC	byte [F_BREM+SI] ;number left -1
-	MOV	AL,byte [DATOFS][BX+SI] ;Get the character
+	MOV	AL,byte [DATOFS+BX+SI] ;Get the character
 	POP	BX
 	OR	AL,AL ;Clear carry
 	RET
@@ -389,7 +389,7 @@ FILLS1:
 SINP50: ;Serial Input from Random File
 	PUSH	BX
 	CALL	FOVCHK ;Field overflow check
-	MOV	AL,byte [FD_DAT]-[BX+SI+1] ;Get character
+	MOV	AL,byte [FD_DAT+BX+SI-1] ;Get character
 	CLC
 	POP	BX
 	RET
@@ -415,7 +415,7 @@ DSKSOT:
 	JNZ	FILOU4 ;branch if sequential access
 	PUSH	BX ;Do Serial output to random
 	CALL	FOVCHK ;check for FIELD overflow
-	MOV	byte [FD_DAT]-[BX+SI+1],AL ;store character
+	MOV	byte [FD_DAT+BX+SI-1],AL ;store character
 	POP	BX
 	JMP	SOUTPS ;Update posn and exit
 FILOU4:
@@ -426,7 +426,7 @@ SOUT2:
 	PUSH	BX
 	XOR	BX,BX
 	MOV	BL,byte [F_ORCT+SI] ;[BX] = Buffer offset
-	MOV	byte [DATOFS][BX+SI],AL ;store char
+	MOV	byte [DATOFS+BX+SI],AL ;store char
 	POP	BX
 	INC	byte [F_ORCT+SI]
 SOUTPS:
@@ -441,9 +441,9 @@ SOUT3:
 	ADC	byte [F_POS+SI],0 ;posn +1  if printable char
 	RET
 ; SUBTTL GET and PUT for Disk Files
-%define PGFLAG 1 ;On = PUT, Off = GET
-%define RELFLG 2 ;On = Relative, Off = Sequential
-%define DIRFLG 4 ;On = Write, Off = Read
+%assign PGFLAG 1 ;On = PUT, Off = GET
+%assign RELFLG 2 ;On = Relative, Off = Sequential
+%assign DIRFLG 4 ;On = Write, Off = Read
 ER_BRN:	JMP	DERBRN ;bad record number error
 ER_FC:	JMP	FCERR ;function call error
 ;DSKRND - perform random I/O.
@@ -489,16 +489,16 @@ RAND3:
 ; [DX] = physical record number
 ; [BX] = offset into physical record
 RAND4:
-	MOV	word [RECRD],DX ;Save record no.
+	MOV word [RECRD], DX ;Save record no.
 	LEA	CX,dword [FD_DAT+SI] ;[CX] = Field buffer addr
-	MOV	word [LBUFF],CX ;Save Logical buffer addr
+	MOV word [LBUFF], CX ;Save Logical buffer addr
 	POP	DX ;Get record length
 ; [DX] = bytes left to transfer (initially record length)
 ; [BX] = offset into current record
 NXTOPD:
 	LEA	CX,dword [DATOFS+SI] ;[CX] = Physical buffer addr
 	ADD	CX,BX ;       + offset
-	MOV	word [PBUFF],CX ;Save physical offset
+	MOV word [PBUFF], CX ;Save physical offset
 	MOV	CX,DATPSC
 	SUB	CX,BX ;[CX] = bytes left in buffer
 	CMP	CX,DX ;want smaller of bufl, recl
@@ -513,8 +513,8 @@ DATMOF:
 NOFVRD:
 	PUSH	SI
 	PUSH	CX
-	MOV	SI,word [LBUFF]
-	MOV	DI,word [PBUFF]
+	MOV SI, word [LBUFF]
+	MOV DI, word [PBUFF]
 	SHR	CX,1
 	CLD ;Set Post-Increment mode
  REP	MOVSW
@@ -529,8 +529,8 @@ FIVDRD:
 	CALL	GETSUB ;Read current record
 	PUSH	SI
 	PUSH	CX
-	MOV	SI,word [PBUFF]
-	MOV	DI,word [LBUFF]
+	MOV SI, word [PBUFF]
+	MOV DI, word [LBUFF]
 	SHR	CX,1
 	CLD ;Set Post-Increment mode
  REP	MOVSW
@@ -541,7 +541,7 @@ EVENPL:
 	POP	SI
 NXFVBF:
 	INC	word [RECRD] ;current record +1
-	ADD	word [LBUFF],CX ;logical offset +length
+	ADD word [LBUFF], CX ;logical offset +length
 	SUB	DX,CX ;offset - bytes transfered
 	XOR	BX,BX ;zero buffer offset
 	OR	DX,DX ;More to transfer?
@@ -558,7 +558,7 @@ PGSUB1:
 	PUSH	BX
 	PUSH	CX
 	PUSH	DX
-	MOV	BX,word [RECRD] ;Get record no.
+	MOV BX, word [RECRD] ;Get record no.
 	INC	BX
 	CMP	BX,word [FD_PHY+SI] ;current record in buffer?
 	JNE	NTREDS ;Brif not
@@ -570,7 +570,7 @@ NTREDS:
 	MOV	byte [F_ORCT+SI],DATPSC
 	MOV	byte [F_BREM+SI],DATPSC
 	MOV	word [FCB_RN+SI],BX ;Set record number
-	MOV	word [FCB_RN]+[SI+2],0
+	MOV	word [FCB_RN+SI+2],0
 	TEST	AL,DIRFLG
 	JZ	GET1 ;Brif read
 	CALL	DOL_WRITS ; else Write it
@@ -651,7 +651,7 @@ ACCFIL:
 int 33 ;Do OS I/O Op
 	INC	word [FCB_RN+SI] ;Record no. +1
 	JNZ	ACCFL1
-	INC	word [FCB_RN]+[SI+2] ;High order +1
+	INC	word [FCB_RN+SI+2] ;High order +1
 ACCFL1:
 	CMP	AH,C_RNDW ;Was it Random Write?
 	JNE	ACCFL2 ;Brif not
@@ -687,9 +687,9 @@ int 33
 	INC	AL ;Convert A: to 1.. etc.
 	MOV	byte [FCB_DV+SI],AL ;Store real drive no.
 NTCRDV:
-	MOV	DI,word [FILTAB] ;Start with first FDB in chain
+	MOV DI, word [FILTAB] ;Start with first FDB in chain
 CHKNFL:
-	CMP	DI,word [STKLOW]
+	CMP DI, word [STKLOW]
 	JE	CHKFLX ;branch if at end of FDB chain
 	CMP	SI,DI
 	JE	IGNTFL ;branch if same as FDB in question
@@ -746,7 +746,7 @@ DFSTLD:
 	PUSH	DS ;save BASIC's Data Segment adr
 	PUSH	BX ;save start adr
 	PUSH	DX ;save block read Data Segment adr
-	MOV	SI,word [PTRFIL] ;SI points to current FDB
+	MOV SI, word [PTRFIL] ;SI points to current FDB
 	MOV	AL,byte [F_ORCT+SI]
 	SUB	AL,byte [F_BREM+SI] ;[AL]=# bytes read so far
 	MOV	byte [FCB_RN+SI],AL ;set next rec #
@@ -779,7 +779,7 @@ extern CURLIN
 extern PROFLG
 extern TEMP
 PROSAV:	CALL	CHRGTR ;skip "P"
-	MOV	word [TEMP],BX ;Save text pointer
+	MOV word [TEMP], BX ;Save text pointer
 	CALL	SCCPTR ;Get rid of GOTO pointers
 	CALL	PENCOD ;Encode binary
 	MOV	AL,254 ;ID byte for Protected files
@@ -800,13 +800,13 @@ CMPFPS:	CALL	GETFPS ;Get present posit
 	POP	DX ;Get back posit
 	CMP	BX,DX ;See if were at end
 RET12:	RET
-%define N1 11 ;Number of bytes to use from ATNCON
-%define N2 13 ;Number of bytes to use from SINCON
+%assign N1 11 ;Number of bytes to use from ATNCON
+%assign N2 13 ;Number of bytes to use from SINCON
 global PENCOD
 PENCOD:	MOV	CX,N1+N2*256 ;Initialize both counters
-	MOV	BX,word [TXTTAB] ;Starting point
+	MOV BX, word [TXTTAB] ;Starting point
 	MOV	DX,BX ;Into [DX]
-ENCDBL:	MOV	BX,word [VARTAB] ;At end?
+ENCDBL:	MOV BX, word [VARTAB] ;At end?
 	CMP	BX,DX ;Test
 	JZ	RET12 ;Yes
 	MOV	BX,DOL_EXPCN
@@ -840,9 +840,9 @@ CNTZER:	DEC	CH ;dedecrement counter-2
 global PROLOD
 PROLOD:
 PDECOD:	MOV	CX,N1+N2*256 ;Initialize both counters
-	MOV	BX,word [TXTTAB] ;Starting point
+	MOV BX, word [TXTTAB] ;Starting point
 	MOV	DX,BX ;Into [D,E]
-DECDBL:	MOV	BX,word [VARTAB] ;At end?
+DECDBL:	MOV BX, word [VARTAB] ;At end?
 	CMP	BX,DX ;Test
 	JZ	RET12 ;Yes
 	MOV	BX,DOL_LOGP
@@ -876,13 +876,13 @@ CNTZR2:	DEC	CH
 global PROCHK
 global PRODIR
 PRODIR:	PUSH	BX ;Save [H,L]
-	MOV	BX,word [CURLIN] ;Get current line #
+	MOV BX, word [CURLIN] ;Get current line #
 	INC	BX ;Direct? (if BX=0, direct)
 	POP	BX ;Restore [H,L]
 	JZ	PROCHK
 	RET
 PROCHK:	PUSHF ;Save flags
-	MOV	AL,byte [PROFLG] ;Is this a protected file?
+	MOV AL, byte [PROFLG] ;Is this a protected file?
 	OR	AL,AL ;Set CC's
 	JNZ	FCERRA ;Yes, give error
 	POPF ;Restore flags
@@ -917,7 +917,7 @@ FILES:
 	CMP	AH,":"
 	JNE	GOTNAM ;branch if not "<drive>:"
 	MOV	SI,FILNA2+2 ;[SI] points to buffer for building filename
-	MOV	word [FILNA2],AX ;Store <drive>: in filename buffer
+	MOV word [FILNA2], AX ;Store <drive>: in filename buffer
 	JMP	ALFILS ;append "*.*" to name
 NOARG:
 	MOV	SI,FILNA2 ;[SI] points to buffer for building filename
@@ -1040,10 +1040,10 @@ db "S"
 ;[CX] = number of bytes in filename
 	PUSH	BX ;text pointer
 	CALL	FILFCB ;FILNAM=un-opened FCB for new filename
-	MOV	AL,byte [FILNAM] ;[AL]=drive for New filename
+	MOV AL, byte [FILNAM] ;[AL]=drive for New filename
 	OR	AL,AL ;test drive id of New filename
 	JZ	SAMDRV ;branch if default drive
-	CMP	AL,byte [FILNA2] ;Compare with drive of original name
+	CMP AL, byte [FILNA2] ;Compare with drive of original name
 	JZ	SAMDRV ;branch if both drives are the same
 extern DERRAD
 	JMP	DERRAD ;Rename Across Disks Error
@@ -1111,7 +1111,7 @@ NAMORE:	OR	CX,CX ;Anything left?
 	JAE	LNGNAM ;Yes, the excess chars become the extension.
 	INC	AH ;No, increment the name character count.
 	JMP	NAMORE ;Go look at the next char.
-LNGNAM:	MOV	byte -[DI+1],"." ;Put in the dot so the extra chars look
+LNGNAM:	MOV	byte [DI-1],"." ;Put in the dot so the extra chars look
 	MOV	byte [DI+0],AL ;like an extension.
 	INC	DI
 FINNAM:	OR	CX,CX ;Anything left?
@@ -1126,7 +1126,7 @@ mov ah, C_PARS
 int 33
 	OR	AL,AL ;test for legal filename
 	JNE	FLFCBX ;branch if error or non-empty filename
-	CMP	byte [FILNAM+1]," " ;test 1st byte of filename
+	CMP byte [FILNAM+1], " " ;test 1st byte of filename
 	JNE	FLFCBX ;branch if non-empty filename
 	DEC	AL ;[AL] = FF (illegal filename)
 FLFCBX:
@@ -1168,6 +1168,5 @@ extern CPMEXT ;MSDOS exit jump vector.
 ;translator can't handle JMPI ,adr yet
 	PUSH	word [CPMEXT+2] ;put segment adr on stack
 	PUSH	word [CPMEXT] ;put offset on stack
-dumy  PROC    FAR
+dumy:
 	RET ;intra-segment return
-dumy  ENDP

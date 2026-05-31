@@ -6,16 +6,16 @@
 %include "dwoem.inc"
 ; TITLE   GIOLPT - Line Printer Machine Independent Device Driver Code
 ; COMMENT *
-; 
+;
 ; --------- --- ---- -- ---------
 ; COPYRIGHT (C) 1982 BY MICROSOFT
 ; --------- --- ---- -- ---------
-; 
+;
 %include "gio86u.inc"
-%define MELCO 0
-%define TETRA 0
-%define ZENITH 0
-%define CPM86 0
+%define MELCO 0o0
+%define TETRA 0o0
+%define ZENITH 0o0
+%define CPM86 0o0
 %include "msdosu.inc"
 ;OEM Switches
 ;
@@ -50,18 +50,18 @@ LPTTRM:	RET
 extern LP1DCB
 ;LPT Device Control Block field definitions:
 ;
-%define _LPWID 0 ;device width (columns per line)
-%define _LPPOS 1 ;current column device is in
-%define _LPFLG 2 ;Boolean attributes mask for this device
-%define _LPCRF 1 ;non-zero=last char sent was Carriage Return
+%define _LPWID 0o0 ;device width (columns per line)
+%define _LPPOS 0o1 ;current column device is in
+%define _LPFLG 0o2 ;Boolean attributes mask for this device
+%define _LPCRF 0o1 ;non-zero=last char sent was Carriage Return
 ;LPTINI - called during BASIC initialization
 ; Entry - DI = -2*device id
 ;
 LPTINI:	PUSH	DI
 	CALL	GLPDCB ;DI points to device control block
 	MOV	byte [_LPWID+DI],80 ;default width = 80 chars / line
-	MOV	byte [_LPPOS+DI],0 ;initial position = 0
-	MOV	byte [_LPFLG+DI],0 ;reset device Flags
+	MOV	byte [_LPPOS+DI],0o0 ;initial position = 0
+	MOV	byte [_LPFLG+DI],0o0 ;reset device Flags
 	POP	DI
 	RET
 ;LPTCLS - perform any device dependent close functions.
@@ -132,7 +132,7 @@ NOOPT:
 	POPF
 	POP	AX ;[AL]=device id
 	PUSHF ;remember if BIN option was selected
-	MOV	AH,MD_SQO OR	[MD_RND] ;allow open for output/random
+	MOV	AH,MD_SQO | MD_RND ;allow open for output/random
 	CALL	INIFDB
 	POPF
 	JE	NOBIN ;branch if BIN option was not selected
@@ -235,10 +235,6 @@ LPOUTX:
 ;
 extern SNDLPT
 extern ERROR
-extern ERRDNA
-extern ERRDTO
-extern ERROTP
-extern ERRDIO
 LPROUT:
 	PUSH	AX
 	CALL	SNDLPT ;Call OEM routine to output to printer
@@ -252,8 +248,8 @@ LPERR:
 	DEC	AX ;[AX]=error code 0..n
 	MOV	DI,LPERRT
 	ADD	DI,AX ;[DI] points to BASIC Error code
-	MOV	DL,byte [CS:DI+0]
-	CMP	AL,3
+	MOV	DL,byte [CS:DI+0o0]
+	CMP	AL,0o3
 	JB	ERROR1 ;branch if legal error code
 	MOV	DL,ERRC_ERRDIO ;map all other error codes to I/O error
 ERROR1:	JMP	ERROR
@@ -271,10 +267,10 @@ LPOS:	PUSH	BX
 	OR	AX,AX ;Test for LPT number 0 to map to 1
 	JZ	LPTN0 ;n = 0, so map to 1
 	DEC	AX
-	SHR	AX,1 ;Offset to correct DCB
+	SHR	AX,0o1 ;Offset to correct DCB
 LPTN0:	MOV	BX,LP1DCB+_LPPOS ;Get address of LPOS in first LPT DCB
 	ADD	BX,AX ;Get address of LPOS in current LPT DCB
-	MOV	AL,byte [BX+0] ;[AL]=current 0 relative position
+	MOV	AL,byte [BX+0o0] ;[AL]=current 0 relative position
 	INC	AL ;return 1 relative number
 	POP	BX
 	JMP	SNGFLT ;return result to user
@@ -318,11 +314,11 @@ LPTGCW:	RET
 ;
 GLPDCB:
 	MOV	AX,(DOL__LPT1-0o400) ;[AX]=-device id for LPT1
-	SHL	AX,1 ;[AX]=-2*device id for LPT1
+	SHL	AX,0o1 ;[AX]=-2*device id for LPT1
 	ADD	AX,DI ;[AX]=0, 2, ... for LPT1, LPT2, ...
 	MOV	DI,AX ;[DI]=0, 2, ... for LPT1, LPT2, ...
-	SHL	DI,1 ;[DI]=0, 4, ... for LPT1, LPT2, ...
-	SHR	AX,1 ;[AX]=0, 1, ... for LPT1, LPT2, ...
+	SHL	DI,0o1 ;[DI]=0, 4, ... for LPT1, LPT2, ...
+	SHR	AX,0o1 ;[AX]=0, 1, ... for LPT1, LPT2, ...
 	ADD	DI,LP1DCB ;[DI] points to LPTx device ctl block
 	RET
 ;

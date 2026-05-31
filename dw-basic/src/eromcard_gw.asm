@@ -3,6 +3,11 @@ org 0
 
 %include "build/gw-basic-symbols.inc"
 
+; Current policy is the flat64 model: load one GWBASIC.OVR into the card
+; loader's segment and enter it with CS=DS=ES=SS.  The future split128 model
+; should choose a separate overlay/container when enough RAM is available; see
+; docs/memory-model.md before changing this loader path.
+
 GW_WRAPPER_STACK_SIZE equ 0x0400
 %ifndef GW_BASIC_MIN_FREE
 GW_BASIC_MIN_FREE equ 4096

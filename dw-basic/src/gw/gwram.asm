@@ -12,6 +12,8 @@
 %include "gio86u.inc"
 
 ; GWRAM RAM-declaration macros reconstructed from the MASM source.
+%assign DW_BASIC_GWRAM_PDIRAM_PHASE 0
+
 %macro RINIT 2
 global %1
 %1:
@@ -21,24 +23,26 @@ global %1
 global %1
 %1:
 %if %2
-times %2 db 0
+resb %2
 %endif
 %endmacro
 
 %macro R1 2
 global %1
-%1:
+%1 equ $-1
 %if %2
-times %2 db 0
+resb %2
 %endif
 %endmacro
 
 %macro PDIRAM 0
-%ifndef DW_BASIC_GWRAM_PDIRAM_DONE
-%define DW_BASIC_GWRAM_PDIRAM_DONE 1
+%if DW_BASIC_GWRAM_PDIRAM_PHASE = 0
+db 0
+%elif DW_BASIC_GWRAM_PDIRAM_PHASE = 1
 	RINIT	KEYSW,1
 db 0
 %endif
+%assign DW_BASIC_GWRAM_PDIRAM_PHASE DW_BASIC_GWRAM_PDIRAM_PHASE+1
 %endmacro
 
 %macro PDURAM 0

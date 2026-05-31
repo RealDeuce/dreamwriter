@@ -413,6 +413,6 @@ CMDERR:	MOV	BX,HEDING ;Get heading ("BASIC VERSION...")
 	CALL	STROUT ;Print it
 	JMP	SYSTME ;Exit to the OS
 global DOL_LAST
-%define DOL_LAST $
+DOL_LAST equ $
 global LASTWR
-%define LASTWR $
+LASTWR equ $

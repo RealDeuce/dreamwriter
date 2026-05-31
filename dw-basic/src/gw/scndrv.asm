@@ -31,7 +31,7 @@
 ; If other scroll types are needed then additional SCROLT types should be
 ;   defined here.
 %define INVLIN SCROLT ;Invisible (function key) Line
-%define FKFSRL (SCROLT-0o1) AND 0o1 ;Clear fkeys/full scroll/rewrite fkeys
+%define FKFSRL (SCROLT-0o1) & 0o1 ;Clear fkeys/full scroll/rewrite fkeys
 ;OTHER GENERIC SWITCHES(OEM SPECIFIC)
 %define TXTWDO 0o0 ;list of OEM's which have window setting capability
 ; SUBTTL  DATA DEFINITIONS - Internal routines(with usage description)
@@ -1025,7 +1025,7 @@ db CHRADV ; CURSOR_ADV
 db CHRREG ; CURSOR_REG
 db CHRUP ; CURSOR_UP
 db CHRDWN ; CURSOR_DOWN
-%define CTLCNT $-CTLITB
+CTLCNT equ $-CTLITB
 ;SUBROUTINE CTLIRS              ; Reset insert flag for specified characters
 ;**                 on entry:   AL=character
 ;**                 on exit:    DI garbaged

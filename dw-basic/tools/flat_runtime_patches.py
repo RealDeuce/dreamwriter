@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Patch converted GW-BASIC startup code for the flat ROM CARD memory model."""
+"""Patch converted GW-BASIC startup code for the flat64 ROM CARD model.
+
+The flat64 model is the current target: one overlay is loaded into one 64K
+segment and BASIC runs with CS=DS=ES=SS.  The original GW-BASIC sources also
+contain split code/data startup machinery; keep split128 policy in
+docs/memory-model.md rather than deleting those original paths silently.
+"""
 
 from __future__ import annotations
 

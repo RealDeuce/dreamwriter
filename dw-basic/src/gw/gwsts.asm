@@ -30,12 +30,12 @@
 ; If other scroll types are needed then additional SCROLT types should be
 ;   defined here.
 %define INVLIN SCROLT ;Invisible (function key) Line
-%define FKFSRL (SCROLT-0o1) AND 0o1 ;Clear fkeys/full scroll/rewrite fkeys
+%define FKFSRL (SCROLT-0o1) & 0o1 ;Clear fkeys/full scroll/rewrite fkeys
 ;Local Switches
 ;
 %define KEYFSW 0o0 ;No KEY Function
 %define INTHND SCP ;MSDOS Ctl-C interrupt handler
-%define CLRFMT (MELCO-0o1) AND (ZENITH-0o1) ;New COLOR parameter format
+%define CLRFMT (MELCO-0o1) & (ZENITH-0o1) ;New COLOR parameter format
 %assign FKEYCR 27 ;IBM CR FKey display line graphic
 ; .RADIX	10
 extern CHRGTR
@@ -618,7 +618,7 @@ PLYNO2:	DEC	CL ;MAP BACK TO UNSHARPED
 PLYSHP:	MOV	AL,CL ;INTO [AL] FOR XLAT
 	MOV	BX,NOTXLT ;POINT TO TRANSLATE TABLE
 ?CSLAB: ; Code segment dummy label
-	xlatb ;TRANSLATE INTO NOTE TABLE INDEX
+	cs xlatb ;TRANSLATE INTO NOTE TABLE INDEX
 	OR	AL,AL ;SEE IF LEGAL NOTE
 	JS	PLGOFC ;NOTE'S OK IF NOT .GT. 127
 ;

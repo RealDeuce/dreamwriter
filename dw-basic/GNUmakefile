@@ -18,7 +18,12 @@ GW_BASIC_BIN := $(BUILD_DIR)/gw-basic.bin
 GW_BASIC_MAP := $(BUILD_DIR)/gw-basic.map
 GW_BASIC_SYMBOLS := $(BUILD_DIR)/gw-basic-symbols.inc
 GW_BASIC_MIN_FREE ?= 4096
+GW_MEMORY_MODEL ?= flat64
 TRUNCATE_SIZE ?= 8192
+
+ifneq ($(GW_MEMORY_MODEL),flat64)
+$(error GW_MEMORY_MODEL=$(GW_MEMORY_MODEL) is scaffolded but not implemented; see docs/memory-model.md)
+endif
 GW_MODULES := \
 	bimisc \
 	biprtu \
@@ -58,7 +63,7 @@ GW_INCLUDES := \
 	src/include/gwtokens.inc \
 	src/include/msdosu.inc
 
-.PHONY: all basic-card basic-payload clean card flatlink gw-basic-bin gw-objects gw-sources large-smoke-card large-smoke-payload omf-unresolved truncate-card truncate-payload
+.PHONY: all basic-card basic-payload clean card flatlink gw-basic-bin gw-objects gw-sources gw-math2-source large-smoke-card large-smoke-payload omf-unresolved truncate-card truncate-payload
 
 all: $(EROMCARD)
 
@@ -89,6 +94,11 @@ $(GW_SRC_DIR)/ibmres.asm: $(GW_REF_DIR)/ibmres.asm tools/masm2nasm.py tools/ibmr
 $(GW_SRC_DIR)/math1.asm: $(GW_REF_DIR)/math1.asm $(GW_REF_DIR)/math2.asm tools/masm2nasm.py tools/gwmath_module.py tools/gwmath_symbols.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/gwmath_module.py $(GW_REF_DIR)/math1.asm $(GW_REF_DIR)/math2.asm $@
 	$(PYTHON) tools/gwmath_symbols.py $@
+
+$(GW_SRC_DIR)/math2.asm: $(GW_REF_DIR)/math2.asm tools/masm2nasm.py | $(GW_SRC_DIR)
+	$(PYTHON) tools/masm2nasm.py --initial-radix 8 $< $@
+
+gw-math2-source: $(GW_SRC_DIR)/math2.asm
 
 $(GW_SRC_DIR)/gwinit.asm: $(GW_REF_DIR)/gwinit.asm tools/masm2nasm.py tools/flat_runtime_patches.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/masm2nasm.py $< $@

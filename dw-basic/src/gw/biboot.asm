@@ -6,14 +6,14 @@
 %include "dwoem.inc"
 ; TITLE   BIBOOT - Initialization File for ASM86 BASICs
 ; COMMENT *
-; 
+;
 ; --------- --- ---- -- --------- -----------
 ; COPYRIGHT (C) 1982 BY MICROSOFT CORPORATION
 ; --------- --- ---- -- --------- -----------
-; 
+;
 ;         by Niklas Traub
 %include "gio86u.inc"
-%define CPM86 0
+%define CPM86 0o0
 %include "msdosu.inc"
 ; SUBTTL  ASM86 Version
 ;
@@ -53,5 +53,5 @@ BIBOOT:
 ;
 global LSTVAR
 LSTVAR:
-	END	BIBOOT ; BIBOOT is the entry point.
+; BIBOOT is the entry point.
 ;

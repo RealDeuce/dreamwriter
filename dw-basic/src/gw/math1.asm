@@ -267,7 +267,7 @@ FTH20:	MOV	AL,DH ;GET INTEGER
 	XCHG	AH,AL ;NOW IN AL
 ;LOOK FROM CODE SEGMENT
 ?CSLAB: ; Code segment dummy label
-	xlatb ;LOOK-UP ASCII
+	cs xlatb ;LOOK-UP ASCII
 	STOSB
 	SHL	DX,CL ;SHIFT NUMBER
 	MOV	CL,CH ;GET NO. BITS TO SHIFT
@@ -295,7 +295,7 @@ FTH50:	RET
 ;               WITH $FBUFF CONTAINING THE FORMATTED NUMBER
 ;
 ;*****************************************************************
-%define CURNCY "$" ;Default floating currency is dollars.
+CURNCY equ "$" ;Default floating currency is dollars.
 DOL_PUFXE: PUSH	BX ;SAVE END OF BUFFER POINTER
 	CALL	DOL_FOTZS ;DO ZERO SUPPRESSION
 ;$FOTZS WILL LEAVE ZF=0 IF THERE IS
@@ -403,7 +403,7 @@ PFX90:	RET
 ;               WITH (CX) SET TO NO. PLACES TO LEFT/RIGHT OF D.P.
 ;               AND (AL) TO NO. LEADING ZEROS
 ;*************************************************************
-%define CURNCY "$" ;Default floating currency is dollars.
+CURNCY equ "$" ;Default floating currency is dollars.
 DOL_FOTZS: MOV	BX,DOL_FBUFF+0o1 ;ADDRESS OF SIGN(IF LEADING)
 	MOV	CH,byte [BX+0o0] ;FETCH LEADING CHARACTER
 	MOV	CL," " ;SPACE TO CL
@@ -1819,7 +1819,7 @@ ZCMPCK: OR	BH,BH ;Is the comperand zero?
 	CALL	SIS05 ;Yes, result is the sign of the FAC.
 	STC ;Set carry to say comparison is done
 	RET ;and return.
-NZCOMP: MOV	AL,byte [DOL_FAC] ;Is the FAC zero?
+NZCOMP: MOV AL, byte [DOL_FAC] ;Is the FAC zero?
 	OR	AL,AL ;(Also clear carry.)
 	JNZ	ZCMPRT ;No, return with carry clear to tell
 ;the caller he must continue.
@@ -2433,7 +2433,7 @@ XTON10: SHR	word [DOL_ARG],0o1 ;SHIFT RIGHT 1 BIT
 	PUSH	BX ;AND PUT IT BACK ON STACK
 	PUSH	DX
 	CALL	DOL_FMULS ;Y=Y*Z
-XTON20: TEST	word [DOL_ARG],0o177777 ;SEE IF N HAS GONE TO ZERO
+XTON20: TEST word [DOL_ARG], 0o177777 ;SEE IF N HAS GONE TO ZERO
 	JZ	XTON30 ;GET OUT IF FINISHED
 	POP	DX ;FETCH Z TO REGISTERS
 	POP	BX
@@ -2715,10 +2715,10 @@ POPHRT: POP	BX
 CONIA: ;CONVERT NO. IN A TO AN INTEGER
 	CBW
 	MOV	BX,AX
-MAKINT: MOV	byte [DOL_VALTP],0o2 ;MAKE INTEGER
+MAKINT: MOV byte [DOL_VALTP], 0o2 ;MAKE INTEGER
 	MOV word [DOL_FACLO], BX ;STORE INTEGER IN $FAC
 	RET
-VALSNG: MOV	byte [DOL_VALTP],0o4
+VALSNG: MOV byte [DOL_VALTP], 0o4
 	RET
 SGN:	CALL	VSIGN
 	JMP	CONIA
@@ -3093,7 +3093,7 @@ DOL_EXP:	MOV	DX,0o125073 ;LOG2(e)
 	JMP	DOL_FMULS
 EXP100: ;OVERFLOW WITH VALUES ON THE STACK
 	ADD	SP,0o4
-EXP110: AND	byte [DOL_FAC-0o1],0o200 ;Is it positively too big?
+EXP110: AND byte [DOL_FAC-0o1], 0o200 ;Is it positively too big?
 	JZ	EXP115 ;Yes, overflow.
 	JMP	DOL_ZERO ;No, underflow for negative.
 EXP115: XOR	AH,AH ;OVERFLOW WITH STACK CLEAR
@@ -3292,10 +3292,10 @@ FDD95:	JMP	DOL_ROUNX ;PUT IN THE SIGN AND DONE
 ;       CALLING SEQUENCE:       CALL    $FSUBS
 ;
 ;**********************************************************
-FEXIT1: MOV	word [DOL_FAC-0o1],BX ;MOV (BXDX) TO $FAC
+FEXIT1: MOV word [DOL_FAC-0o1], BX ;MOV (BXDX) TO $FAC
 	MOV word [DOL_FACLO], DX
 EXIT2:	RET
-DOL_FSUBS: MOV	AX,word [DOL_FAC-0o1] ;FETCH FAC
+DOL_FSUBS: MOV AX, word [DOL_FAC-0o1] ;FETCH FAC
 	OR	AH,AH ;IF ZF=1 (BXDX) IS ANSWER
 	JZ	FEXIT1 ;(BXDX) IS THE ANSWER
 	XOR byte [DOL_FAC-0o1], 0o200 ;FLIP SIGN
@@ -4078,7 +4078,7 @@ CXRET:
 	POP	AX
 	MOV word [DOL_FACLO], BX ;Result in both FAC and BX
 VALINT:
-DOL_VALNT: MOV	byte [DOL_VALTP],0o2
+DOL_VALNT: MOV byte [DOL_VALTP], 0o2
 	RET
 POSBOVER: ;Here for either -32768 or overflow
 	OR	AH,AH ;If signed then -32768
@@ -4518,7 +4518,7 @@ DOL_FOTNV:
 FNV10:	MOV	BX,DOL_FOTB ;ADDRESS OF BRACKET CONTROL TABLE
 	MOV AL, byte [DOL_FAC] ;FETCH THE EXPONENT
 ;MUST FETCH FROM CODE SEGMENT
-	xlatb ;GET MULTIPLIER
+	cs xlatb ;GET MULTIPLIER
 	OR	AL,AL ;IF ZERO - DONE
 	JZ	FNV20
 	POP	DI ;RECALL EXPONENT

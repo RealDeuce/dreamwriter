@@ -16,6 +16,7 @@ from pathlib import Path
 COMMENT_BLOCK_RE = re.compile(r"^\s*COMMENT\s+(.).*")
 CURRENT_RADIX = 10
 DATA_SYMBOLS: set[str] = set()
+ASSIGNMENT_COUNTS: dict[str, int] = {}
 REGISTERS = {
     "al",
     "ah",
@@ -406,6 +407,19 @@ def convert_if_expr(text: str) -> str:
     return text
 
 
+def convert_masm_boolean_operators(text: str) -> str:
+    def convert_part(part: str) -> str:
+        part = re.sub(r"\bOR\b", "|", part, flags=re.I)
+        part = re.sub(r"\bAND\b", "&", part, flags=re.I)
+        return part
+
+    return "".join(chunk if quoted else convert_part(chunk) for quoted, chunk in split_quoted(text))
+
+
+def expr_has_location_counter(text: str) -> bool:
+    return re.search(r"(?<![A-Za-z0-9_?])\$(?![A-Za-z_?])", text) is not None
+
+
 def rename_symbol(name: str) -> str:
     name = re.sub(r"^\$([A-Za-z_?][\w.$?]*)", r"DOL_\1", name)
     return SYMBOL_RENAMES.get(name.upper(), name)
@@ -485,6 +499,18 @@ def collect_data_symbols(src: Path) -> set[str]:
     return symbols
 
 
+def collect_assignment_counts(src: Path) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for line in src.read_text(errors="replace").splitlines():
+        code, _comment = split_comment(line)
+        stripped = code.strip()
+        m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s*=\s*(.+)$", stripped)
+        if m:
+            name = rename_symbol(m.group(1)).upper()
+            counts[name] = counts.get(name, 0) + 1
+    return counts
+
+
 def split_operands(text: str) -> list[str]:
     operands: list[str] = []
     start = 0
@@ -552,7 +578,7 @@ def wrap_masm_data_memory_operands(original_body: str, converted_code: str) -> s
     if not any(masm_operand_is_data_memory(operand) for operand in original_operands):
         return converted_code
 
-    converted_match = re.match(r"(\s*(?:[A-Za-z_.$?][\w.$?]*:\t)?)\s*([A-Za-z][A-Za-z0-9]*)\s+(.+)$", converted_code)
+    converted_match = re.match(r"(\s*(?:[A-Za-z_.$?][\w.$?]*:\s*)?)\s*([A-Za-z][A-Za-z0-9]*)\s+(.+)$", converted_code)
     if not converted_match:
         return converted_code
     converted_operands = split_operands(converted_match.group(3))
@@ -564,6 +590,38 @@ def wrap_masm_data_memory_operands(original_body: str, converted_code: str) -> s
             converted_operands[i] = wrap_data_memory_operand(converted_operands[i])
 
     return converted_match.group(1) + converted_match.group(2) + " " + ", ".join(converted_operands)
+
+
+def normalize_masm_indexed_memory_syntax(code: str) -> str:
+    code = re.sub(
+        r"\b(byte|word|dword)\s+\[([A-Za-z_.$?][\w.$?]*)\]\s*\+\s*\[([^\]]+)\]",
+        r"\1 [\2+\3]",
+        code,
+        flags=re.I,
+    )
+    code = re.sub(
+        r"\b(byte|word|dword)\s+\[([A-Za-z_.$?][\w.$?]*)\]\s*-\s*\[([^\]]+)\+([0-9]+|0o[0-7]+)\]",
+        r"\1 [\2+\3-\4]",
+        code,
+        flags=re.I,
+    )
+    code = re.sub(
+        r"\b(byte|word|dword)\s+\[([A-Za-z_.$?][\w.$?]*)\]\[([^\]]+)\]",
+        r"\1 [\2+\3]",
+        code,
+        flags=re.I,
+    )
+    return code
+
+
+def convert_instruction_operand_boolean_operators(code: str) -> str:
+    m = re.match(r"(\s*(?:(?:[A-Za-z_.$?][\w.$?]*:)\s*)?)([A-Za-z][A-Za-z0-9]*)\b(.*)$", code)
+    if not m:
+        return code
+    op = m.group(2).upper()
+    if op not in {"MOV", "ADD", "ADC", "SUB", "SBB", "CMP", "XCHG", "PUSH", "TEST"}:
+        return code
+    return m.group(1) + m.group(2) + convert_masm_boolean_operators(m.group(3))
 
 
 def convert_octal_byte(text: str) -> str:
@@ -594,7 +652,7 @@ def convert_instruction(code: str) -> str:
         return ""
     if upper.startswith("ASSUME"):
         return ""
-    if upper in {".SALL", ".XLIST", ".LIST", "PAGE", "END"}:
+    if upper in {".SALL", ".XLIST", ".LIST", "PAGE", "END"} or re.match(r"END\s+", stripped, flags=re.I):
         return ""
     if upper.startswith("SUBTTL") or upper.startswith("TITLE"):
         return "; " + stripped
@@ -658,8 +716,10 @@ def convert_instruction(code: str) -> str:
     m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s*=\s*(.+)$", stripped)
     if m:
         name = rename_symbol(m.group(1))
-        expr = convert_expr(m.group(2).strip())
-        expr = re.sub(r"\bOR\b", "|", expr, flags=re.I)
+        raw_expr = m.group(2).strip()
+        expr = convert_masm_boolean_operators(convert_expr(raw_expr))
+        if expr_has_location_counter(raw_expr) and not (raw_expr == "$" and ASSIGNMENT_COUNTS.get(name.upper(), 0) > 1):
+            return name + " equ " + expr
         if name in {"DATAS", "FORSZC"}:
             return name + " equ " + expr
         if re.search(rf"\b{re.escape(name)}\b", expr):
@@ -672,8 +732,7 @@ def convert_instruction(code: str) -> str:
 
     m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s+EQU\s+(.+)$", stripped, flags=re.I)
     if m:
-        expr = convert_expr(m.group(2).strip())
-        expr = re.sub(r"\bOR\b", "|", expr, flags=re.I)
+        expr = convert_masm_boolean_operators(convert_expr(m.group(2).strip()))
         return rename_symbol(m.group(1)) + " equ " + expr
 
     m = re.match(r"ORG\s+(.+)$", stripped, flags=re.I)
@@ -740,6 +799,13 @@ def convert_instruction(code: str) -> str:
             ]
         )
 
+    m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s+PROC\b", body, flags=re.I)
+    if m:
+        return label + rename_symbol(m.group(1)) + ":"
+
+    if re.match(r"[A-Za-z_.$?][\w.$?]*\s+ENDP\b", body, flags=re.I):
+        return ""
+
     m = re.match(r"ADR\s+(.+)$", body, flags=re.I)
     if m:
         return label + "dw " + convert_expr(m.group(1))
@@ -784,8 +850,9 @@ def convert_instruction(code: str) -> str:
 
     # Common instruction expression fixes.
     code = convert_expr(code)
+    code = convert_instruction_operand_boolean_operators(code)
     code = re.sub(r"\bMOV\s+CH,\s*CNSLEN\+3\b", "mov cx, CNSLEN+3\nmov ch, cl", code, flags=re.I)
-    code = re.sub(r"\bXLAT\s+BYTE PTR\s+\?CSLAB\b", "xlatb", code, flags=re.I)
+    code = re.sub(r"\bXLAT\s+BYTE PTR\s+\?CSLAB\b", "cs xlatb", code, flags=re.I)
     code = re.sub(r"\bMOVS\s+\?CSLAB,\s*WORD PTR\s+\?CSLAB\b", "cs movsw", code, flags=re.I)
     code = re.sub(r"\bLODS\s+WORD PTR\s+\?CSLAB\b", "cs lodsw", code, flags=re.I)
     code = re.sub(r"\bLODS\s+BYTE PTR\s+\?CSLAB\b", "cs lodsb", code, flags=re.I)
@@ -799,6 +866,7 @@ def convert_instruction(code: str) -> str:
     code = re.sub(r"\b(word|byte|dword)\s+-\[([A-Za-z]{2})\+([0-9]+)\]", r"\1 [\2-\3]", code, flags=re.I)
     code = re.sub(r"\b([A-Za-z_.$?][\w.$?]*)-\[([^\]]+)\+0o([0-7]+)\]", r"[\1+\2-0o\3]", code)
     code = re.sub(r"\b([A-Za-z_.$?][\w.$?]*)-\[([A-Za-z]{2})\+([0-9]+)\]", r"[\1+\2-\3]", code)
+    code = normalize_masm_indexed_memory_syntax(code)
     code = re.sub(r"\b(CS|DS|ES|SS):-\[([^\]]+)\+([0-9]+)\]", r"\1:[\2-\3]", code, flags=re.I)
     code = re.sub(r"\b([A-Za-z_.$?][\w.$?]*)\[([A-Za-z]{2})\]", r"[\1+\2]", code)
     code = re.sub(r"\[([A-Za-z]{2})\]:\[([^\]]+)\]", r"[\1:\2]", code)
@@ -821,11 +889,12 @@ def convert_instruction(code: str) -> str:
         flags=re.I,
     )
     code = wrap_masm_data_memory_operands(body, code)
+    code = normalize_masm_indexed_memory_syntax(code)
     return code
 
 
-def convert_file(src: Path, dst: Path) -> None:
-    global CURRENT_RADIX, DATA_SYMBOLS
+def convert_file(src: Path, dst: Path, initial_radix: int = 10) -> None:
+    global CURRENT_RADIX, DATA_SYMBOLS, ASSIGNMENT_COUNTS
     dst.parent.mkdir(parents=True, exist_ok=True)
     out: list[str] = [
         "; Auto-converted mechanically from " + str(src),
@@ -834,8 +903,9 @@ def convert_file(src: Path, dst: Path) -> None:
     ]
     in_comment_block: str | None = None
     in_macro_block = False
-    CURRENT_RADIX = 10
+    CURRENT_RADIX = initial_radix
     DATA_SYMBOLS = collect_data_symbols(src)
+    ASSIGNMENT_COUNTS = collect_assignment_counts(src)
     for line in src.read_text(errors="replace").splitlines():
         if in_comment_block is not None:
             if line.strip() == in_comment_block:
@@ -873,10 +943,17 @@ def convert_file(src: Path, dst: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--initial-radix",
+        type=int,
+        choices=(8, 10),
+        default=10,
+        help="initial MASM radix before the first .RADIX directive; use 8 for sources inheriting a prior .RADIX 8",
+    )
     parser.add_argument("src", type=Path)
     parser.add_argument("dst", type=Path)
     args = parser.parse_args()
-    convert_file(args.src, args.dst)
+    convert_file(args.src, args.dst, initial_radix=args.initial_radix)
 
 
 if __name__ == "__main__":

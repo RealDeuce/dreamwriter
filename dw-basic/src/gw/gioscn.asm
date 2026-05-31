@@ -20,7 +20,7 @@
 ; If other scroll types are needed then additional SCROLT types should be
 ;   defined here.
 %define INVLIN SCROLT ;Invisible (function key) Line
-%define FKFSRL (SCROLT-0o1) AND 0o1 ;Clear fkeys/full scroll/rewrite fkeys
+%define FKFSRL (SCROLT-0o1) & 0o1 ;Clear fkeys/full scroll/rewrite fkeys
 %include "msdosu.inc" ;Operating System Constants
 global SCNDSP
 global SCNINI
