@@ -6,11 +6,11 @@
 %include "dwoem.inc"
 ; TITLE   GIOKYB - Machine Independent Keyboard Device Driver Code
 ; COMMENT *
-; 
+;
 ; --------- --- ---- -- ---------
 ; COPYRIGHT (C) 1982 BY MICROSOFT
 ; --------- --- ---- -- ---------
-; 
+;
 %include "gio86u.inc"
 ;Generic Switches
 ;

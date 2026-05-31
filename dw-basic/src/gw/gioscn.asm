@@ -6,11 +6,11 @@
 %include "dwoem.inc"
 ; TITLE   GIOSCN - Screen Machine Independent Device Driver Code
 ; COMMENT *
-; 
+;
 ; --------- --- ---- -- ---------
 ; COPYRIGHT (C) 1982 BY MICROSOFT
 ; --------- --- ---- -- ---------
-; 
+;
 %include "gio86u.inc"
 %define CPM86 0o0 ;CPM86 Operating System
 %define IBMCSR IBMLIK ;IBM compatibile cursor control interface

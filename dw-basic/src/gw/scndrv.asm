@@ -10,9 +10,9 @@
 ; 	--------- --- ---- -- ---------
 ; 	COPYRIGHT (C) 1982 BY MICROSOFT
 ; 	--------- --- ---- -- ---------
-; 
+;
 ; 	PROGRAMMER: MARC WILSON
-; 
+;
 %include "gio86u.inc"
 ; .RADIX	8
 ;OEM IFNDEFs

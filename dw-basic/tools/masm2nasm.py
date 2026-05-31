@@ -666,6 +666,8 @@ def convert_instruction(code: str) -> str:
             return "%assign " + name + " " + expr
         if re.fullmatch(r"[0-9]+", expr):
             return "%assign " + name + " " + expr
+        if expr == "_OFFST":
+            return "%xdefine " + name + " " + expr
         return "%define " + name + " " + expr
 
     m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s+EQU\s+(.+)$", stripped, flags=re.I)

@@ -19,7 +19,7 @@
 
 %assign _OFFST 0
 %macro ROFFST 2
-    %define %1 _OFFST
+    %xdefine %1 _OFFST
     %assign _OFFST _OFFST + %2
 %endmacro
 

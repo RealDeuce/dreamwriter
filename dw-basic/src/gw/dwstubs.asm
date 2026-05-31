@@ -102,7 +102,6 @@ CMPFBC:
 CSRATR:
 DECFET:
 DONOTE:
-EDTMAP:
 FETCHR:
 FETCHZ:
 FIXINP:
@@ -114,7 +113,6 @@ POLLEV:
 PRGFIN:
 PROCHK:
 PRODIR:
-PRTMAP:
 RDPEN:
 RDSTIK:
 RDTRIG:
@@ -127,6 +125,24 @@ SETFBC:
 SWIDTH:
 VALSC2:
     clc
+    ret
+
+EDTMAP:
+PRTMAP:
+    ; The generic screen driver expects OEM mapping hooks to turn output
+    ; controls into AH=0xff function codes before CTLDSP dispatches FUNTAB.
+    ; Leaving CR/LF as plain bytes makes the display path try to wrap/draw
+    ; them as printable cells instead of running LCARET/LFEED.
+    or al, al
+    jz .done
+    cmp al, 32
+    jb .control
+    cmp al, 127
+    jne .done
+.control:
+    mov ah, 0xff
+    cmp al, 0
+.done:
     ret
 
 GRPSIZ:
@@ -225,159 +241,7 @@ global DW_LOADER_LIMIT
 DW_LOADER_LIMIT:
     dw 0
 
-global DW_DEBUG_INIT
-global DW_DEBUG_STACK
-global DW_DEBUG_PRE_SCNIPL
-global DW_DEBUG_POST_SCNIPL
-global DW_DEBUG_PRE_GWINI
-global DW_DEBUG_POST_GWINI
-global DW_DEBUG_PRE_SNDRST
-global DW_DEBUG_POST_SNDRST
-global DW_DEBUG_PRE_GIOINI
-global DW_DEBUG_POST_GIOINI
-global DW_DEBUG_PRE_STKINI
-global DW_DEBUG_POST_STKINI
-global DW_DEBUG_PRE_INITSA
-global DW_DEBUG_INITSA_ENTRY
-global DW_DEBUG_INITSA_READY
-global DW_DEBUG_INITSA_LRUN
-global DW_DEBUG_READY
-global DW_DEBUG_POST_CMDTAIL
-global DW_DEBUG_POST_MEMLAYOUT
-global DW_DEBUG_PRE_HEADING
-global DW_DEBUG_POST_HEADING
-global DW_DEBUG_PRE_STROUT_OEM
-global DW_DEBUG_POST_STROUT_OEM
-global DW_DEBUG_PRE_STROUT_HEDING
-global DW_DEBUG_POST_STROUT_HEDING
-global DW_DEBUG_SHOW_HEADING
-global DW_DEBUG_PRE_SKEYON
-global DW_DEBUG_POST_SKEYON
-
 %include "dwapi.asm"
-
-%macro debug_wait 2
-%1:
-    pushf
-    push ax
-    push bx
-    push cx
-    push dx
-    push di
-    push si
-    mov ax, .message
-    call dw_debug_puts
-    call dw_getkey
-    pop si
-    pop di
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    popf
-    ret
-.message:
-    db %2, 13, "PRESS KEY", 0
-%endmacro
-
-debug_wait DW_DEBUG_INIT, "DBG INIT"
-debug_wait DW_DEBUG_STACK, "DBG STACK"
-debug_wait DW_DEBUG_PRE_SCNIPL, "DBG PRE SCNIPL"
-debug_wait DW_DEBUG_POST_SCNIPL, "DBG POST SCNIPL"
-debug_wait DW_DEBUG_PRE_GWINI, "DBG PRE GWINI"
-debug_wait DW_DEBUG_POST_GWINI, "DBG POST GWINI"
-debug_wait DW_DEBUG_PRE_SNDRST, "DBG PRE SNDRST"
-debug_wait DW_DEBUG_POST_SNDRST, "DBG POST SNDRST"
-debug_wait DW_DEBUG_PRE_GIOINI, "DBG PRE GIOINI"
-debug_wait DW_DEBUG_POST_GIOINI, "DBG POST GIOINI"
-debug_wait DW_DEBUG_PRE_STKINI, "DBG PRE STKINI"
-debug_wait DW_DEBUG_POST_STKINI, "DBG POST STKINI"
-debug_wait DW_DEBUG_PRE_INITSA, "DBG PRE INITSA"
-debug_wait DW_DEBUG_INITSA_ENTRY, "DBG INITSA"
-debug_wait DW_DEBUG_INITSA_READY, "DBG INITSA READY"
-debug_wait DW_DEBUG_INITSA_LRUN, "DBG INITSA LRUN"
-debug_wait DW_DEBUG_READY, "DBG READY"
-debug_wait DW_DEBUG_POST_CMDTAIL, "DBG POST CMDTAIL"
-debug_wait DW_DEBUG_POST_MEMLAYOUT, "DBG POST MEMLAYOUT"
-debug_wait DW_DEBUG_PRE_HEADING, "DBG PRE HEADING"
-debug_wait DW_DEBUG_POST_HEADING, "DBG POST HEADING"
-debug_wait DW_DEBUG_PRE_STROUT_OEM, "DBG PRE OEM STROUT"
-debug_wait DW_DEBUG_POST_STROUT_OEM, "DBG POST OEM STROUT"
-debug_wait DW_DEBUG_PRE_STROUT_HEDING, "DBG PRE HEADING STROUT"
-debug_wait DW_DEBUG_POST_STROUT_HEDING, "DBG POST HEADING STROUT"
-
-DW_DEBUG_SHOW_HEADING:
-    pushf
-    push ax
-    push bx
-    push cx
-    push dx
-    push di
-    push si
-    mov ax, .message
-    call dw_debug_puts
-    mov ax, bx
-    call dw_debug_puts
-    pop si
-    pop di
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    popf
-    ret
-.message:
-    db "DBG SHOW HEADING", 13, 0
-
-DW_DEBUG_PRE_SKEYON:
-    pushf
-    push ax
-    push bx
-    push cx
-    push dx
-    push di
-    push si
-    mov ax, .message
-    call dw_debug_puts
-    call dw_getkey
-    pop si
-    pop di
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    popf
-    ret
-.message:
-    db "DBG PRE SKEYON", 13, "PRESS KEY", 0
-
-DW_DEBUG_POST_SKEYON:
-    pushf
-    push ax
-    push bx
-    push cx
-    push dx
-    push di
-    push si
-    mov ax, .message
-    call dw_debug_puts
-    call dw_getkey
-    pop si
-    pop di
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    popf
-    ret
-.message:
-    db "DBG POST SKEYON", 13, "PRESS KEY", 0
-
-dw_debug_puts:
-    xor cx, cx
-    xor dx, dx
-    call dw_puts_cs
-    ret
 
 global LSTVAR
 LSTVAR:

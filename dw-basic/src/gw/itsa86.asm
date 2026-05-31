@@ -6,11 +6,11 @@
 %include "dwoem.inc"
 ; TITLE   ITSA86 - Resident Initialization for I8086
 ; COMMENT *
-; 
+;
 ; --------- --- ---- -- --------- -----------
 ; COPYRIGHT (C) 1982 BY MICROSOFT CORPORATION
 ; --------- --- ---- -- --------- -----------
-; 
+;
 ;         by Len Oorthuys Microsoft Corp.
 ;************************************************************************
 ;*                                                                      *
@@ -34,8 +34,6 @@ db 0o0
 ; SUBTTL  INITSA
 global INITSA
 INITSA:
-extern DW_DEBUG_INITSA_ENTRY
-	CALL	DW_DEBUG_INITSA_ENTRY
 	CALL	NODSKS
 	CALL	MAPINI ;Init the new memory map
 	MOV BX, word [TXTTAB]
@@ -45,13 +43,8 @@ extern DW_DEBUG_INITSA_ENTRY
 	MOV	AL,byte [BX+0o0] ;GET BYTE POINTED TO
 	OR	AL,AL ;IF ZERO, NO FILE SEEN
 	JZ	GREADY
-extern DW_DEBUG_INITSA_LRUN
-	CALL	DW_DEBUG_INITSA_LRUN
 	JMP	LRUN ;TRY TO RUN FILE
-GREADY:
-extern DW_DEBUG_INITSA_READY
-	CALL	DW_DEBUG_INITSA_READY
-	JMP	READY
+GREADY:	JMP	READY
 ;BASVAR - Retrieve or Modify BASIC Internal Data Locations
 ;This routine provides a method to retrieve or modify certain BASIC internal
 ;data locations.  This routine is provided as support for PEEK and

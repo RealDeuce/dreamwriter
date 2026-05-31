@@ -8,11 +8,11 @@
 ; SUBTTL  Equates and External Declarations
 ; TITLE   IBMRES - IBM compatible reserved words / MLC
 ; COMMENT *
-; 
+;
 ; --------- --- ---- -- ---------
 ; COPYRIGHT (C) 1982 BY MICROSOFT
 ; --------- --- ---- -- ---------
-; 
+;
 ; This module is used to create GW-BASICs with IBM PC compatible
 ; reserved word tokens.  The reserved word tables were created by
 ; cleaning up a copy of the tables from BINTRP.  The code and tables

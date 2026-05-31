@@ -100,11 +100,7 @@ extern GIOINI
 \tMOV\t[TOPMEM],BX
 \tMOV\tBX,KBUF-1 ;INITIALIZE KBUF-1 WITH A COLON
 \tMOV\tbyte [BX],":" ;DIRECT INPUTS RESTART OK.
-extern DW_DEBUG_PRE_STKINI
-\tCALL\tDW_DEBUG_PRE_STKINI
 \tCALL\tSTKINI ;REALLY SET UP INIT'S TEMPORARY STACK
-extern DW_DEBUG_POST_STKINI
-\tCALL\tDW_DEBUG_POST_STKINI
 """,
         1,
     )
@@ -115,22 +111,21 @@ extern DW_DEBUG_POST_STKINI
     )
     text = text.replace(
         "\tMOV\tAL,255 ;if heading is printed, display Fn keys also\n\tMOV\tbyte [KEYSW],AL\n\tCALL\tGETHED ;Get OEM specific portion of the heading",
-        "\tMOV\tAL,255 ;if heading is printed, display Fn keys also\n\tMOV\tbyte [KEYSW],AL\n\tCALL\tGETHED ;Get OEM specific portion of the heading\nextern DW_DEBUG_POST_HEADING\n\tCALL\tDW_DEBUG_POST_HEADING",
-        1,
+        "\tMOV\tAL,255 ;if heading is printed, display Fn keys also\n\tMOV\tbyte [KEYSW],AL\n\tCALL\tGETHED ;Get OEM specific portion of the heading",
     )
     text = text.replace(
         "PRNTIT:\tCALL\tSTROUT ;Print it\n\tMOV\tBX,HEDING ;GET HEADING (\"BASIC VERSION...\")\n\tCALL\tSTROUT ;PRINT IT",
-        "PRNTIT:\n\tCALL\tSTROUT ;Print it\nextern DW_DEBUG_PRE_STROUT_HEDING\n\tCALL\tDW_DEBUG_PRE_STROUT_HEDING\n\tMOV\tBX,HEDING ;GET HEADING (\"BASIC VERSION...\")\n\tCALL\tSTROUT ;PRINT IT\nextern DW_DEBUG_POST_STROUT_HEDING\n\tCALL\tDW_DEBUG_POST_STROUT_HEDING",
+        "PRNTIT:\n\tCALL\tSTROUT ;Print it\n\tMOV\tBX,HEDING ;GET HEADING (\"BASIC VERSION...\")\n\tCALL\tSTROUT ;PRINT IT",
         1,
     )
     text = text.replace(
         "\tMOV\tbyte [KEYSW],AL ;Show current status of keys\n\tCALL\tSKEYON ;Set function key display on",
-        "\tMOV\tbyte [KEYSW],AL ;Show current status of keys\nextern DW_DEBUG_PRE_SKEYON\n\tCALL\tDW_DEBUG_PRE_SKEYON\n\tCALL\tSKEYON ;Set function key display on\nextern DW_DEBUG_POST_SKEYON\n\tCALL\tDW_DEBUG_POST_SKEYON",
+        "\tMOV\tbyte [KEYSW],AL ;Show current status of keys\n\tCALL\tSKEYON ;Set function key display on",
         1,
     )
     text = text.replace(
         "\tMOV\tbyte [INITFG],AL ;Set the initialization complete flag\n;indicating errors no longer result in an exit\n;to the OS\n\tJMP\tINITSA",
-        "\tMOV\tbyte [INITFG],AL ;Set the initialization complete flag\n;indicating errors no longer result in an exit\n;to the OS\nextern DW_DEBUG_PRE_INITSA\n\tCALL\tDW_DEBUG_PRE_INITSA\n\tJMP\tINITSA",
+        "\tMOV\tbyte [INITFG],AL ;Set the initialization complete flag\n;indicating errors no longer result in an exit\n;to the OS\n\tJMP\tINITSA",
         1,
     )
     path.write_text(text)
@@ -145,8 +140,6 @@ def patch_itsa86(path: Path) -> None:
 \tCALL\tMAPINI ;Init the new memory map
 """,
         """INITSA:
-extern DW_DEBUG_INITSA_ENTRY
-\tCALL\tDW_DEBUG_INITSA_ENTRY
 \tCALL\tNODSKS
 \tCALL\tMAPINI ;Init the new memory map
 """,
@@ -160,13 +153,8 @@ GREADY:\tJMP\tREADY
 """,
         """\tOR\tAL,AL ;IF ZERO, NO FILE SEEN
 \tJZ\tGREADY
-extern DW_DEBUG_INITSA_LRUN
-\tCALL\tDW_DEBUG_INITSA_LRUN
 \tJMP\tLRUN ;TRY TO RUN FILE
-GREADY:
-extern DW_DEBUG_INITSA_READY
-\tCALL\tDW_DEBUG_INITSA_READY
-\tJMP\tREADY
+GREADY:\tJMP\tREADY
 """,
     )
     text = re.sub(

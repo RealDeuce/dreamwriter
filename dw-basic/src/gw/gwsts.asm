@@ -6,11 +6,11 @@
 %include "dwoem.inc"
 ; TITLE   GWSTS - GW-BASIC Common Statement Support
 ; COMMENT *
-; 
+;
 ; --------- --- ---- -- ---------
 ; COPYRIGHT (C) 1982 BY MICROSOFT
 ; --------- --- ---- -- ---------
-; 
+;
 ;General Feature Switches (Not OEM Switches)
 ;
 %define KANADT 0o0 ;Japanese date format("[yy]yy/mm/dd")

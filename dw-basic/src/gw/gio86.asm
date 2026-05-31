@@ -6,13 +6,13 @@
 %include "dwoem.inc"
 ; TITLE   GIO86   - BASIC-86 Interpreter Device Independent I/O Module
 ; COMMENT *
-; 
+;
 ; --------- --- ---- -- ---------
 ; COPYRIGHT (C) 1982 BY MICROSOFT
 ; --------- --- ---- -- ---------
-; 
+;
 ;         T. Corbett      Microsoft Inc.
-; 
+;
 %include "gio86u.inc"
 %define CPM86 0o0
 %define IBMCSR IBMLIK ;IBM Compatible Cursor Handling

@@ -6,11 +6,11 @@
 %include "dwoem.inc"
 ; TITLE   GIOCON - Machine Independent CONS: Device Support
 ; COMMENT *
-; 
+;
 ; --------- --- ---- -- ---------
 ; COPYRIGHT (C) 1982 BY MICROSOFT
 ; --------- --- ---- -- ---------
-; 
+;
 %include "gio86u.inc"
 %define CPM86 0o0 ;CPM86
 ;This module becomes NULL if CONSSW is 0
