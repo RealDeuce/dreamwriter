@@ -233,11 +233,11 @@ dw CLS
 extern FCERR
 dw FCERR
 %assign DOL_MOTOR 193
-extern NODSKS
-dw NODSKS
+extern BSAVE
+dw BSAVE
 %assign DOL_BSAVE 194
-extern NODSKS
-dw NODSKS
+extern BLOAD
+dw BLOAD
 %assign DOL_BLOAD 195
 extern SOUNDS
 dw SOUNDS

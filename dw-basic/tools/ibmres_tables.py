@@ -17,8 +17,6 @@ TARGET_RENAMES = {
 }
 
 DISABLED_DISPATCH = {
-    "BLOAD": "NODSKS",
-    "BSAVE": "NODSKS",
     "CHAIN": "NODSKS",
     "CHDIR": "NODSKS",
     "COM": "FCERR",
