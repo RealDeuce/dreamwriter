@@ -26,11 +26,11 @@ extern LABBCK
 extern MAKUPL
 extern NOTRFN
 extern PARCHK
-extern PENS
+extern FCERR
 extern PLOOP2
 extern PPSWRT
 extern RENCRN
-extern STRIGS
+extern FCERR
 extern TIMEF
 extern TSTANM
 extern FLGOVC
@@ -245,11 +245,21 @@ dw SOUNDS
 extern BEEPS
 dw BEEPS
 %assign DOL_BEEP 197
+%if GW_ENABLE_GRAPHICS
+extern PSET
+dw PSET
+%else
 extern FCERR
 dw FCERR
+%endif
 %assign DOL_PSET 198
+%if GW_ENABLE_GRAPHICS
+extern PRESET
+dw PRESET
+%else
 extern FCERR
 dw FCERR
+%endif
 %assign DOL_PRESET 199
 extern SCREEN
 dw SCREEN
@@ -1144,11 +1154,21 @@ extern FCERR
 dw FCERR
 %assign DOL_COM 144
 %assign DOL_COM2B 0+(0o400*0o376)+144
+%if GW_ENABLE_GRAPHICS
+extern CIRCLE
+dw CIRCLE
+%else
 extern FCERR
 dw FCERR
+%endif
 %assign DOL_CIRCLE 145
+%if GW_ENABLE_GRAPHICS
+extern DRAW
+dw DRAW
+%else
 extern FCERR
 dw FCERR
+%endif
 %assign DOL_DRAW 146
 extern PLAYS
 dw PLAYS
@@ -1177,11 +1197,11 @@ dw FCERR
 extern FCERR
 dw FCERR
 %assign DOL_ENVIRON 155
-extern VIEW_STMT
-dw VIEW_STMT
+extern FCERR
+dw FCERR
 %assign DOL_VIEW 156
-extern WINDOW_STMT
-dw WINDOW_STMT
+extern FCERR
+dw FCERR
 %assign DOL_WINDOW 157
 extern FCERR
 dw FCERR
@@ -1633,9 +1653,9 @@ NEWSTX:	CMP	AL,0o376-0o201 ;CHECK FOR NEW STATEMENT PREFIX
 	PUSH	CX ;Put the return address back on.
 GIIRET:	RET ;MID$ OR SYNTAX ERROR
 PENV:	CALL	CHRGTR
-	JMP	PENS
+	JMP	FCERR
 STRIGV:	CALL	CHRGTR
-	JMP	STRIGS
+	JMP	FCERR
 GONE4:	POP	CX ;Get rid of the return address.
 	INC	BX ;LOOK AT NEXT CHAR
 	MOV	AL,byte [BX] ;FETCH IT

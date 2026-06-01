@@ -102,11 +102,11 @@ not generic stubs.
 | --- | --- | --- |
 | `CLRSCN` | Clear LCD and shadow text, preserve caller state. | Implemented by `console_clear`. It now uses `cld` before `rep stosb`, so inherited DF cannot corrupt the shadow buffer. |
 | `SCNSWI` | Machine-independent screen size setter. | Real converted routine; `GWINI` passes 80 columns and 8 rows. |
-| `SCNCLR` | Home text/graphics cursor and refresh soft-key row. | Real converted routine; depends on `GRPINI`, `GRPSIZ`, `KEYDSP`, `CLREOL`. |
-| `GRPINI` | Center graphics cursor using physical pixel dimensions. | Real `gengrp` routine. Uses `GRPSIZ`, which returns 479x63 as max coordinates. |
-| `GRPRST` | Preserve registers and reset graphics state. | Real `gengrp` routine. Uses `GETFBC` and `SETATR`; both must return normally. |
-| `GETFBC` | Return deterministic foreground/background values. | Fixed to return foreground `AL=1`, background `BL=0`, carry clear. The previous version left `BX` undefined. |
-| `SETATR` | Accept default draw attribute during graphics reset. | Minimal success return. Safe while `PIXSIZ=0`; real pixel drawing is disabled. |
+| `SCNCLR` | Home text/graphics cursor and refresh soft-key row. | Real converted routine; depends on `GRPINI`, `KEYDSP`, and `CLREOL`. In the default flat64 profile, `GRPINI` is a no-op because graphics are disabled. |
+| `GRPINI` | Center graphics cursor using physical pixel dimensions when graphics are enabled. | The default flat64 profile links a no-op stub. `GW_ENABLE_GRAPHICS=1` links the real `gengrp` routine, which uses `GRPSIZ` for 479x63 max coordinates. |
+| `GRPRST` | Preserve registers and reset graphics state when graphics are enabled. | The default flat64 profile links a no-op stub. `GW_ENABLE_GRAPHICS=1` links the real `gengrp` routine, which uses `GETFBC` and `SETATR`. |
+| `GETFBC` | Return deterministic foreground/background values. | Returns foreground `AL=1`, background `BL=0`, carry clear. The previous version left `BX` undefined. |
+| `SETATR` | Accept default draw attribute during graphics reset. | Implemented by the DreamWriter graphics backend when `GW_ENABLE_GRAPHICS=1`; not linked into the default flat64 profile. |
 | `GWINI` | OEM startup initialization. | Clears the LCD, initializes the local cursor helper, sets 80x8 screen size, clears soft-key state, and delegates to real screen init. It preserves registers and flags so startup does not depend on hidden OEM side effects. |
 | `MSISET`/`MSIRST` | Install/restore DOS Ctrl-C and critical-error vectors while preserving registers. | Patched to `RET` for ROM CARD. The original converted body used DOS `INT 21h` vector services, which are not valid in this environment. |
 | `SCROUT` | Draw one character at 1-based `DH` column and `DL` row without changing logical cursor. | Implemented over the DreamWriter firmware text vector plus a shadow cell buffer. Returns carry clear. This is correct for startup because `ESCCTL=0` and startup only emits normal bytes. |
@@ -193,6 +193,8 @@ code. Any shim using string instructions must not inherit an unknown DF.
 - Decide whether `SETFBC`/`GETFBC` and `CSRATR` should drive real inverse-video
   state. Startup no longer depends on this, but soft-key reverse video currently
   cannot be visually faithful.
-- Keep `gengrp` linked only while its startup reset helpers are useful. If
-  graphics statements remain disabled, all drawing entry points must continue to
-  fail before reaching the pixel backend hooks.
+- The default flat64 profile builds with `GW_ENABLE_GRAPHICS=0` to preserve
+  BASIC workspace. The DreamWriter LCD graphics backend and `advgrp`/`gengrp`
+  modules remain scaffolded behind `GW_ENABLE_GRAPHICS=1`, but the default
+  64K-target image routes graphics-only entry points to GW-BASIC's normal
+  illegal-function path.

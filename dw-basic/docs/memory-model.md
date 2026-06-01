@@ -11,8 +11,9 @@ such as the DreamWriter 325.
 
 The flat64 target also has to preserve practical BASIC workspace, not merely
 link under the 64K segment limit. The wrapper currently enforces a minimum
-free-space guard with `GW_BASIC_MIN_FREE`, and that value should be treated as
-part of the target contract while startup is being stabilized.
+remaining BASIC workspace with `GW_BASIC_MIN_FREE`; those bytes are not reserved
+away from BASIC, they are the minimum program/variable/string space required
+before the loader will enter BASIC.
 
 If the full GW-BASIC feature set does not leave enough program/string space in
 flat64, feature omissions should be made as explicit flat64 policy choices.
@@ -20,6 +21,13 @@ They should be documented in this file and controlled by named build/profile
 switches rather than hidden inside converter behavior. The split128 model
 should remain the path for restoring larger feature sets on machines with more
 RAM.
+
+The default flat64 profile sets `GW_ENABLE_GRAPHICS=0`. Graphics tokens remain
+recognized for compatibility, but graphics-only entry points fail through
+GW-BASIC's normal illegal-function path and the `advgrp`/`gengrp` modules are
+not linked. `GW_ENABLE_GRAPHICS=1` keeps the current DreamWriter LCD graphics
+scaffolding buildable for larger-memory/split-model work, but it is not the
+default 64K target.
 
 The flat64 build intentionally does not preserve the original MASM CSEG/DSEG
 `ORG` layout gaps in `gwdata.asm`. In this model, those gaps would consume the
@@ -38,6 +46,9 @@ Files that currently encode flat64 policy:
   converted BASIC runs in one loaded segment.
 - `tools/gwdata_tables.py`: patches generated `gwdata.asm` table/RAM regions
   for the flat64 layout.
+- `tools/source_feature_ranges.py`: wraps generated-source symbol ranges when a
+  build profile disables an optional feature without changing the converter's
+  source-level interpretation.
 - `src/eromcard_gw.asm`: loads one overlay and jumps to `INIT` in the loaded
   segment; enforces `GW_BASIC_MIN_FREE` before entering BASIC.
 

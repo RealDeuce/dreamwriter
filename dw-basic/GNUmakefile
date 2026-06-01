@@ -19,11 +19,15 @@ GW_BASIC_MAP := $(BUILD_DIR)/gw-basic.map
 GW_BASIC_SYMBOLS := $(BUILD_DIR)/gw-basic-symbols.inc
 GW_BASIC_MIN_FREE ?= 4096
 GW_MEMORY_MODEL ?= flat64
+GW_ENABLE_GRAPHICS ?= 0
 TRUNCATE_SIZE ?= 8192
 
 ifneq ($(GW_MEMORY_MODEL),flat64)
 $(error GW_MEMORY_MODEL=$(GW_MEMORY_MODEL) is scaffolded but not implemented; see docs/memory-model.md)
 endif
+GW_GRAPHICS_MODULES := \
+	advgrp \
+	gengrp
 GW_MODULES := \
 	bimisc \
 	biprtu \
@@ -31,7 +35,6 @@ GW_MODULES := \
 	bistrs \
 	call86 \
 	fiveo \
-	gengrp \
 	gio86 \
 	giocon \
 	giokyb \
@@ -53,9 +56,12 @@ GW_MODULES := \
 	scnedt \
 	dwio \
 	dwstubs
+ifeq ($(GW_ENABLE_GRAPHICS),1)
+GW_MODULES := $(GW_GRAPHICS_MODULES) $(GW_MODULES)
+endif
 GW_GENERATED_MODULES := $(filter-out dwstubs dwio giotbl,$(GW_MODULES))
 GW_GENERATED_SOURCES := $(GW_GENERATED_MODULES:%=$(GW_SRC_DIR)/%.asm)
-GW_SIMPLE_GENERATED_SOURCES := $(filter-out $(GW_SRC_DIR)/gwdata.asm $(GW_SRC_DIR)/gwram.asm $(GW_SRC_DIR)/gwinit.asm $(GW_SRC_DIR)/gio86.asm $(GW_SRC_DIR)/ibmres.asm $(GW_SRC_DIR)/itsa86.asm $(GW_SRC_DIR)/math1.asm $(GW_SRC_DIR)/scndrv.asm,$(GW_GENERATED_SOURCES))
+GW_SIMPLE_GENERATED_SOURCES := $(filter-out $(GW_SRC_DIR)/gwdata.asm $(GW_SRC_DIR)/gwram.asm $(GW_SRC_DIR)/gwinit.asm $(GW_SRC_DIR)/gio86.asm $(GW_SRC_DIR)/gwsts.asm $(GW_SRC_DIR)/ibmres.asm $(GW_SRC_DIR)/itsa86.asm $(GW_SRC_DIR)/math1.asm $(GW_SRC_DIR)/scndrv.asm,$(GW_GENERATED_SOURCES))
 GW_OBJECTS := $(GW_MODULES:%=$(GW_BUILD_DIR)/%.obj)
 GW_INCLUDES := \
 	src/include/dwoem.inc \
@@ -63,8 +69,9 @@ GW_INCLUDES := \
 	src/include/gwerrors.inc \
 	src/include/gwtokens.inc \
 	src/include/msdosu.inc
+GW_NASM_FLAGS := -D GW_ENABLE_GRAPHICS=$(GW_ENABLE_GRAPHICS)
 
-.PHONY: all basic-card basic-payload clean card flatlink gw-basic-bin gw-objects gw-sources gw-math2-source large-smoke-card large-smoke-payload omf-unresolved truncate-card truncate-payload
+.PHONY: all basic-card basic-payload clean card flat-size-report flatlink gw-basic-bin gw-objects gw-sources gw-math2-source large-smoke-card large-smoke-payload omf-unresolved omf-unused-public truncate-card truncate-payload
 
 all: $(EROMCARD)
 
@@ -84,9 +91,10 @@ $(GW_SRC_DIR)/gwdata.asm: $(GW_REF_DIR)/gwdata.asm tools/masm2nasm.py tools/gwda
 	$(PYTHON) tools/masm2nasm.py $< $@
 	$(PYTHON) tools/gwdata_tables.py $@ $<
 
-$(GW_SRC_DIR)/gwram.asm: $(GW_REF_DIR)/gwram.asm tools/masm2nasm.py tools/gwram_tables.py | $(GW_SRC_DIR)
+$(GW_SRC_DIR)/gwram.asm: $(GW_REF_DIR)/gwram.asm tools/masm2nasm.py tools/gwram_tables.py tools/source_feature_ranges.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/masm2nasm.py $< $@
 	$(PYTHON) tools/gwram_tables.py $@
+	$(PYTHON) tools/source_feature_ranges.py $@ --range graphics_work_ram:GW_ENABLE_GRAPHICS:GRPACX:SAVLEN
 
 $(GW_SRC_DIR)/ibmres.asm: $(GW_REF_DIR)/ibmres.asm tools/masm2nasm.py tools/ibmres_tables.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/masm2nasm.py $< $@
@@ -113,6 +121,15 @@ $(GW_SRC_DIR)/gio86.asm: $(GW_REF_DIR)/gio86.asm tools/masm2nasm.py tools/flat_r
 	$(PYTHON) tools/masm2nasm.py $< $@
 	$(PYTHON) tools/flat_runtime_patches.py gio86 $@
 
+$(GW_SRC_DIR)/gwsts.asm: $(GW_REF_DIR)/gwsts.asm tools/masm2nasm.py tools/source_feature_ranges.py | $(GW_SRC_DIR)
+	$(PYTHON) tools/masm2nasm.py $< $@
+	$(PYTHON) tools/source_feature_ranges.py $@ \
+		--range graphics_line_loop:GW_ENABLE_GRAPHICS:LINLP3:VARPT2 \
+		--range com_event_traps:NMCOMT:COMS:KEYS \
+		--range pointing_devices:GW_ENABLE_POINTING_DEVICES:PENS:DATES \
+		--else-ret-stubs pointing_devices:POLPEN,POLSTR \
+		--range disabled_advanced_error_stubs:GW_KEEP_DISABLED_STUBS:PALETE:EOF
+
 $(GW_SRC_DIR)/scndrv.asm: $(GW_REF_DIR)/scndrv.asm tools/masm2nasm.py tools/flat_runtime_patches.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/masm2nasm.py $< $@
 	$(PYTHON) tools/flat_runtime_patches.py scndrv $@
@@ -121,7 +138,7 @@ $(GW_SIMPLE_GENERATED_SOURCES): $(GW_SRC_DIR)/%.asm: $(GW_REF_DIR)/%.asm tools/m
 	$(PYTHON) tools/masm2nasm.py $< $@
 
 $(GW_BUILD_DIR)/%.obj: $(GW_SRC_DIR)/%.asm $(GW_INCLUDES) | $(GW_BUILD_DIR)
-	$(NASM) -f obj -I src/include/ -o $@ $<
+	$(NASM) -f obj -I src/include/ $(GW_NASM_FLAGS) -o $@ $<
 
 $(GW_BUILD_DIR)/dwio.obj: src/include/dwapi.asm src/include/dwconsole.asm
 
@@ -158,6 +175,13 @@ truncate-card: truncate-payload
 
 omf-unresolved: gw-objects
 	$(PYTHON) tools/omf_symbols.py --unresolved $(GW_OBJECTS)
+
+omf-unused-public: gw-objects
+	$(PYTHON) tools/omf_symbols.py --unused-public-by-file --keep INIT --keep LSTVAR --keep DW_LOADER_LIMIT --keep DW_EXIT_DS --keep DW_EXIT_ES --keep DW_EXIT_SS --keep DW_EXIT_SP --keep DW_EXIT_IP --keep DW_EXIT_CS $(GW_OBJECTS)
+
+flat-size-report: basic-card
+	$(MAKE) BUILD_DIR=build-graphics GW_ENABLE_GRAPHICS=1 gw-basic-bin
+	$(PYTHON) tools/flat_build_report.py --base-map $(GW_BASIC_MAP) --optional-map graphics=build-graphics/gw-basic.map
 
 card: $(EROMCARD)
 	$(PYTHON) tools/install_eromcard.py --card-in $(CARD_IN) --card-out $(CARD_OUT) --payload $(EROMCARD)

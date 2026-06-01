@@ -57,14 +57,52 @@ LPTDSP:
     ret
 
 global DLINE
+%if GW_ENABLE_GRAPHICS
+global NREAD
+global NWRITE
+global PGINIT
+global PNTINI
+global SCANL
+global SCANR
+global TDOWNC
+global TUPC
+%endif
+%if !GW_ENABLE_GRAPHICS
 global GPUTG
+global GLINE
+global GRPINI
+global GRPRST
+global POINT
+%endif
 global LCPY
 global PEKFLT
 global POKFLT
 
 DLINE:
-GPUTG:
     jmp FCERR
+
+%if GW_ENABLE_GRAPHICS
+NREAD:
+NWRITE:
+PGINIT:
+PNTINI:
+SCANL:
+SCANR:
+TDOWNC:
+TUPC:
+    jmp FCERR
+%endif
+
+%if !GW_ENABLE_GRAPHICS
+GPUTG:
+GLINE:
+POINT:
+    jmp FCERR
+
+GRPINI:
+GRPRST:
+    ret
+%endif
 
 PEKFLT:
 POKFLT:
@@ -89,7 +127,6 @@ global FKYADV
 global FKYFMT
 global GETFBC
 global GETHED
-global GRPSIZ
 global GWINI
 global INFMAP
 global INKMAP
@@ -100,24 +137,14 @@ global PRGFIN
 global PROCHK
 global PRODIR
 global PRTMAP
+%if GW_ENABLE_POINTING_DEVICES
 global RDPEN
 global RDSTIK
 global RDTRIG
-global SCRSTT
+%endif
 global SEGINI
 global SETCBF
 global SETFBC
-global PIXSIZ
-global READC
-global FETCHC
-global STOREC
-global SETATR
-global NSETCX
-global SCALXY
-global MAPXYC
-global DOWNC
-global LEFTC
-global RIGHTC
 global SWIDTH
 global EDTMAP
 global SYSTEM
@@ -133,9 +160,10 @@ POLCOM:
 PRGFIN:
 PROCHK:
 PRODIR:
+%if GW_ENABLE_POINTING_DEVICES
 RDSTIK:
 RDTRIG:
-SCRSTT:
+%endif
 SEGINI:
 SETCBF:
 SETFBC:
@@ -616,10 +644,12 @@ dw_music_f9_isr:
     sti
     iret
 
+%if GW_ENABLE_POINTING_DEVICES
 RDPEN:
     xor bx, bx
     clc
     ret
+%endif
 
 POLLEV:
     ; No firmware interrupt flag is wired into GW-BASIC yet. Ask CHKINT to run
@@ -648,39 +678,11 @@ PRTMAP:
 .done:
     ret
 
-GRPSIZ:
-    ; Gengrp calls this during GRPINI even when graphics statements are not
-    ; available. Return the LCD pixel extent using the original BC/DE naming:
-    ; CX is X, DX is Y.
-    mov cx, 479
-    mov dx, 63
-    ret
-
-PIXSIZ:
-    ; Text-only bring-up: real graphics statements test this and raise FCERR.
-    xor al, al
-    ret
-
 GETFBC:
     ; Foreground/background color pair for GRPRST. With PIXSIZ=0 this is only
     ; used to seed gengrp state.
     mov al, 1
     xor bx, bx
-    clc
-    ret
-
-READC:
-FETCHC:
-STOREC:
-SETATR:
-NSETCX:
-SCALXY:
-MAPXYC:
-DOWNC:
-LEFTC:
-RIGHTC:
-    ; Pixel backend hooks. They should not be reached while PIXSIZ reports
-    ; text-only mode, but keep the gengrp initialization/link contract explicit.
     clc
     ret
 
@@ -783,10 +785,6 @@ SYSTME:
     sti
     hlt
     jmp .halt
-
-global SETC
-SETC:
-    jmp FCERR
 
 global DW_LOADER_LIMIT
 DW_LOADER_LIMIT:

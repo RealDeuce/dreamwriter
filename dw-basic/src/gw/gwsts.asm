@@ -428,6 +428,7 @@ EOSCH1:
 	JMP	SNERR ;Not EOS - error
 EOSCKX:	RET
 ; SUBTTL  Graphics Support Specific to the 8086
+%if GW_ENABLE_GRAPHICS ; DW-BASIC feature range graphics_line_loop: LINLP3..VARPT2
 global LINLP3
 extern MINDEL
 extern MAXDEL
@@ -445,6 +446,7 @@ LINLOP:	CALL	 word [MAXUPD+1] ;UPDATE MAJOR AXIS
 	LOOP	LINLP3 ;CONTINUE UNTIL COUNT EXHAUSTED
 	RET
 ; SUBTTL  VARPT2 - VARPTR$ Function
+%endif ; DW-BASIC feature range graphics_line_loop
 global VARPT2
 extern PTRGTN
 extern VALTYP
@@ -1050,7 +1052,7 @@ ONGOTP:	PUSH	BX ;Text pointer in case not us.
 NT2BTK:
 	CMP	AX,TOK_KEY2B
 	MOV	CX,(0o400*KEYOFF)+NMKEYT
-	JZ	ONKEYFUN ;Brif ON KEY...
+	JZ	ONFUN ;Brif ON KEY...
 	CMP	AX,DOL_COM2B
 	MOV	CX,(0o400*COMOFF)+NMCOMT
 	JZ	ONFUN ;Brif ON COM...
@@ -1068,16 +1070,6 @@ NTONPN:
 	JMP	ONGOTX
 FCERR2:	JMP	FCERR
 JERDNA:	JMP	DERDNA ;Device unavailable error if PEN
-ONKEYFUN:
-%if NMKEYF == 0
-	CALL	GETSUB ;Get KEY event no. in (x).
-	CALL	DWMAPKEY
-	JB	FCERR2
-	MOV	CL,AL ;Save Event index in [CL]
-	JMP	ONSTM
-%else
-	JMP	ONFUN
-%endif
 ONFUN:
 	CALL	GETSUB ;Get Event no. in (x).
 	DEC	AL ;Want base 0. (If not STRIG(x))
@@ -1174,6 +1166,7 @@ TSTCEV:
 	DEC	BX ;[BX]=-1 (indicates event has occured)
 TSTEVX:	RET
 ; SUBTTL COM Statement and Event Trapping
+%if NMCOMT ; DW-BASIC feature range com_event_traps: COMS..KEYS
 global COMS
 global COMTRP
 ;COM statement
@@ -1191,6 +1184,7 @@ COMTRP:	PUSH	AX
 	POP	AX
 	RET
 ; SUBTTL SOFT KEY Statement and Event Trapping
+%endif ; DW-BASIC feature range com_event_traps
 global KEYS
 extern LINPRT
 extern OUTDO
@@ -1205,29 +1199,6 @@ extern MAKINT
 ;
 KEYSTT:	MOV	CX,(0o400*KEYOFF)+NMKEYT
 	JMP	SEVSTT ;branch to common code
-
-%if NMKEYF == 0
-DWMAPKEY:
-	CMP	AL,1
-	JB	.bad
-	CMP	AL,7
-	JBE	.low_key
-	CMP	AL,DW_CURSOR_KEY_EVENT_BASE+1
-	JB	.bad
-	CMP	AL,DW_CURSOR_KEY_EVENT_BASE+4
-	JBE	.cursor_key
-.bad:
-	STC
-	RET
-.low_key:
-	DEC	AL
-	CLC
-	RET
-.cursor_key:
-	DEC	AL
-	CLC
-	RET
-%endif
 ;KEYTRP is called whenever CHGET receives a SOFTKEY from the keyboard.
 ; Entry - [AL] = Soft key id (0..NMKEYT-1)
 ; Exit  - If NZ, key was trapped and should not be expanded.
@@ -1245,21 +1216,12 @@ extern FKYADV
 KEYS:
 	CMP	AL,"("
 	JZ	KEYSTT ;set key status
-%if NMKEYF == 0
-	CMP	AL,TOK_ON
-	JZ	KEYFCE
-	CMP	AL,TOK_OFF
-	JZ	KEYFCE
-	CMP	AL,TOK_LIST
-	JZ	KEYFCE
-%else
 	CMP	AL,TOK_ON
 	JZ	KEYON ;Brif Enable Soft Key Display Line.
 	CMP	AL,TOK_OFF
 	JZ	KEYOF ;Brif Disable Soft Key Display line.
 	CMP	AL,TOK_LIST
 	JZ	KEYLSI ;Brif LIST Soft Keys.
-%endif
 	CALL	GETBYT ; else Key defn, get key number.
 	OR	AL,AL
 	JZ	KEYFCE
@@ -1309,12 +1271,6 @@ KEYOF:	MOV	AH,1 ;Prepare to inc scroll limit
 KEYOXX:	CALL	CHRGTR ;over ON/OFF token.
 	RET
 global SKEYON
-%if NMKEYF == 0
-SKEYON:
-KEYOX:
-	MOV byte [KEYSW], 0
-	RET
-%else
 SKEYON:	MOV	AH,-1 ;Prepare to dec scroll limit
 	MOV	AL,0o377
 KEYOX: ;AH=scroll limit diff., AL=new KEYSW
@@ -1327,13 +1283,9 @@ KEYOX: ;AH=scroll limit diff., AL=new KEYSW
 KEYOX1:
 	CALL	KEYDSP ;On, Display on 25th line.
 KEYXX:	RET
-%endif
 ;List Function Keys
 ;
 KEYLST:
-%if NMKEYF == 0
-	JMP	KEYOXX
-%else
 	PUSH	BX
 	MOV	SI,STRTAB ;List 10 Special Function
 	MOV	CX,NMKEYF+(STKEYF*0o400)
@@ -1371,7 +1323,6 @@ KEYLS2:
 	JNZ	KEYLS0
 	POP	BX
 	JMP	KEYOXX
-%endif
 KEYLSP:
 	PUSH	SI
 	CMP	AL,13 ;check for Carriage-Return
@@ -1388,16 +1339,9 @@ extern FKCNUM
 ;TKEYOF is called to turn function key display off
 ;
 TKEYOF:	MOV byte [KEYSW], 0 ;turn function key display switch off
-%if NMKEYF == 0
-	RET
-%endif
 ; KEYDSP -      Display Softkeys on last line of Screen.
 %assign REVNMS 1 ;Key Numbers are normal video, contents are rev-video
 KEYDSP:	PUSH	DX
-%if NMKEYF == 0
-	POP	DX
-	RET
-%endif
 	MOV	DH,1 ;Set for col = 1
 	MOV DL, byte [LINCNT] ;Set for last line
 	MOV AL, byte [KEYSW]
@@ -1543,6 +1487,7 @@ XFGBG:	CLC ;Signal text attributes
 	CALL	SETFBC ;Set forground/background attributes
 	RET
 ; SUBTTL PEN Statement and Event Trapping
+%if GW_ENABLE_POINTING_DEVICES ; DW-BASIC feature range pointing_devices: PENS..DATES
 global PENS
 global PENF
 extern MAKINT
@@ -1773,6 +1718,11 @@ STRI1:	POP	AX
 	JB	STRILP ;brif there are more triggers to poll
 	RET
 ; SUBTTL DATE - Get/Set Date.
+%else ; DW-BASIC feature range pointing_devices stubs
+POLPEN:
+POLSTR:
+	RET
+%endif ; DW-BASIC feature range pointing_devices
 global DATES
 global DATEF
 extern DAYSPM
@@ -2191,6 +2141,7 @@ int 33 ;Get Time from MS-DOS
 ; SUBTTL  Error Handlers for Features not supported in a version
 extern DERDNA
 	JMP	DERDNA ;Device unavailable error
+%if GW_KEEP_DISABLED_STUBS ; DW-BASIC feature range disabled_advanced_error_stubs: PALETE..EOF
 global PALETE
 PALETE:
 	JMP	SNERR
@@ -2220,3 +2171,4 @@ PMAP:
 ADVERR:
 	MOV	DL,ERRC_ERRADV
 	JMP	ERROR
+%endif ; DW-BASIC feature range disabled_advanced_error_stubs

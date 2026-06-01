@@ -79,7 +79,10 @@ The BASIC card image installs a small `EROMCARD.X` first-stage loader plus
 first-stage loader opens `I:GWBASIC.OVR`, reads it to `CS:0800`, checks the ROM
 CARD loader's incoming `AX` work-memory limit, then jumps into GW-BASIC. By
 default it requires the linked static image end plus 4096 bytes of free BASIC
-space; override with `GW_BASIC_MIN_FREE=...`.
+space; override with `GW_BASIC_MIN_FREE=...`. The default flat64 build disables
+graphics with `GW_ENABLE_GRAPHICS=0`; use `gmake -C dw-basic flat-size-report`
+to compare the flat image with the graphics-enabled profile and list large
+static reservations.
 
 One MAME command line for the generated card image:
 

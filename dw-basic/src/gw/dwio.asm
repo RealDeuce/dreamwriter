@@ -14,10 +14,27 @@ global SCRATR
 global SCROLL
 global SCROUT
 global SETCLR
+global SCRSTT
 global CSRDSP
 global dw_cursor_init
 global dw_cursor_pre_puts
 global dw_cursor_post_puts
+%if GW_ENABLE_GRAPHICS
+global GRPSIZ
+global GTASPC
+global PIXSIZ
+global READC
+global FETCHC
+global STOREC
+global SETATR
+global NSETCX
+global SCALXY
+global MAPXYC
+global DOWNC
+global LEFTC
+global RIGHTC
+global SETC
+%endif
 
 extern CSRX
 extern CSRY
@@ -478,6 +495,242 @@ keyinp_map:
 
 %define DWCONSOLE_NO_LOCAL_SETCSR 1
 %include "dwconsole.asm"
+
+%if GW_ENABLE_GRAPHICS
+; SCREEN modes: mode 0 is normal text, mode 1 exposes the LCD as a 480x64
+; monochrome graphics page. The generic GW-BASIC graphics code calls PIXSIZ
+; before user graphics operations, so text mode keeps those statements disabled.
+SCRSTT:
+    push ax
+    push bx
+    push cx
+    mov cl, [bx]
+    xor ch, ch
+    jcxz .ok
+    inc bx
+    cmp byte [bx], 0
+    je .validate_extra
+    mov al, [bx + 1]
+    cmp al, 1
+    ja .error
+    cmp al, [dw_graphics_mode]
+    je .validate_extra
+    mov [dw_graphics_mode], al
+    call CLRSCN
+
+.validate_extra:
+    dec cx
+    jz .ok
+.extra_loop:
+    add bx, 2
+    cmp byte [bx], 0
+    je .extra_next
+    mov al, [bx + 1]
+    or al, al
+    jnz .error
+.extra_next:
+    loop .extra_loop
+
+.ok:
+    pop cx
+    pop bx
+    pop ax
+    clc
+    ret
+
+.error:
+    pop cx
+    pop bx
+    pop ax
+    stc
+    ret
+
+GRPSIZ:
+    mov cx, 479
+    mov dx, 63
+    ret
+
+GTASPC:
+    mov bx, 0x0100
+    mov dx, 0x0100
+    ret
+
+PIXSIZ:
+    mov al, [dw_graphics_mode]
+    or al, al
+    jz .done
+    mov al, 1
+.done:
+    ret
+
+SETATR:
+    cmp al, 1
+    ja .error
+    mov [dw_graphics_attr], al
+    clc
+    ret
+.error:
+    stc
+    ret
+
+SCALXY:
+    cmp cx, 480
+    jae .outside
+    cmp dx, 64
+    jae .outside
+    stc
+    ret
+.outside:
+    clc
+    ret
+
+MAPXYC:
+    mov [dw_graphics_x], cx
+    mov [dw_graphics_y], dx
+    ret
+
+FETCHC:
+    mov al, [dw_graphics_y]
+    xor ah, ah
+    mov bx, [dw_graphics_x]
+    ret
+
+STOREC:
+    xor ah, ah
+    mov [dw_graphics_y], ax
+    mov [dw_graphics_x], bx
+    ret
+
+READC:
+    push bx
+    push cx
+    push dx
+    push es
+    xor ax, ax
+    mov es, ax
+    mov cx, [dw_graphics_x]
+    mov dx, [dw_graphics_y]
+    call lcd_get_pixel
+    pop es
+    pop dx
+    pop cx
+    pop bx
+    ret
+
+SETC:
+    push ax
+    mov al, [dw_graphics_attr]
+    call dw_graphics_put_current
+    pop ax
+    ret
+
+NSETCX:
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    mov si, bx
+    mov cx, [dw_graphics_x]
+    mov dx, [dw_graphics_y]
+    mov al, [dw_graphics_attr]
+.loop:
+    or si, si
+    jz .done
+    cmp cx, 480
+    jae .done
+    call dw_graphics_put_xy
+    inc cx
+    dec si
+    jmp .loop
+.done:
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+DOWNC:
+    inc word [dw_graphics_y]
+    ret
+
+LEFTC:
+    dec word [dw_graphics_x]
+    ret
+
+RIGHTC:
+    inc word [dw_graphics_x]
+    ret
+
+dw_graphics_put_current:
+    push cx
+    push dx
+    mov cx, [dw_graphics_x]
+    mov dx, [dw_graphics_y]
+    call dw_graphics_put_xy
+    pop dx
+    pop cx
+    ret
+
+dw_graphics_put_xy:
+    push es
+    xor bx, bx
+    mov es, bx
+    call lcd_put_pixel
+    pop es
+    ret
+
+dw_graphics_mode:
+    db 0
+dw_graphics_attr:
+    db 1
+dw_graphics_x:
+    dw 0
+dw_graphics_y:
+    dw 0
+%else
+SCRSTT:
+    push ax
+    push bx
+    push cx
+    mov cl, [bx]
+    xor ch, ch
+    jcxz .ok
+    inc bx
+    cmp byte [bx], 0
+    je .validate_extra
+    mov al, [bx + 1]
+    or al, al
+    jnz .error
+
+.validate_extra:
+    dec cx
+    jz .ok
+.extra_loop:
+    add bx, 2
+    cmp byte [bx], 0
+    je .extra_next
+    mov al, [bx + 1]
+    or al, al
+    jnz .error
+.extra_next:
+    loop .extra_loop
+
+.ok:
+    pop cx
+    pop bx
+    pop ax
+    clc
+    ret
+
+.error:
+    pop cx
+    pop bx
+    pop ax
+    stc
+    ret
+%endif
 
 dw_cursor_puts_depth:
     db 0

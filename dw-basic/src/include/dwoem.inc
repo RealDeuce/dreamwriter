@@ -17,6 +17,15 @@
 %define REALIO 1
 %define RSTLES 0
 %define SHORTJ 1
+%ifndef GW_ENABLE_GRAPHICS
+%define GW_ENABLE_GRAPHICS 0
+%endif
+%ifndef GW_KEEP_DISABLED_STUBS
+%define GW_KEEP_DISABLED_STUBS 0
+%endif
+%ifndef GW_ENABLE_POINTING_DEVICES
+%define GW_ENABLE_POINTING_DEVICES (NMPENT | NMSTRT)
+%endif
 
 ; Core interpreter policy. These are the features this port is trying to keep.
 %define GW 1

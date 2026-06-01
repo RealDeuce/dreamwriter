@@ -21,12 +21,10 @@ DISABLED_DISPATCH = {
     "BSAVE": "NODSKS",
     "CHAIN": "NODSKS",
     "CHDIR": "NODSKS",
-    "CIRCLE": "FCERR",
     "COM": "FCERR",
     "CVD": "FCERR",
     "CVI": "FCERR",
     "CVS": "FCERR",
-    "DRAW": "FCERR",
     "ENVIRON": "FCERR",
     "ERDEV": "FCERR",
     "FIELD": "NODSKS",
@@ -53,8 +51,6 @@ DISABLED_DISPATCH = {
     "PALETTE": "FCERR",
     "PEN": "FCERR",
     "PMAP": "FCERR",
-    "PRESET": "FCERR",
-    "PSET": "FCERR",
     "PUT": "NODSKS",
     "RESET": "NODSKS",
     "RMDIR": "NODSKS",
@@ -64,6 +60,20 @@ DISABLED_DISPATCH = {
     "STICK": "FCERR",
     "STRIG": "FCERR",
     "TIMER": "FCERR",
+    "VIEW": "FCERR",
+    "WINDOW": "FCERR",
+}
+
+FEATURE_DISPATCH = {
+    "CIRCLE": "GW_ENABLE_GRAPHICS",
+    "DRAW": "GW_ENABLE_GRAPHICS",
+    "PRESET": "GW_ENABLE_GRAPHICS",
+    "PSET": "GW_ENABLE_GRAPHICS",
+}
+
+SPECIAL_STATEMENT_TARGETS = {
+    "PENS": "PEN",
+    "STRIGS": "STRIG",
 }
 
 TOKEN_RENAMES = {
@@ -129,6 +139,26 @@ def dispatch_target(token: str, target: str) -> str:
     return DISABLED_DISPATCH.get(display_name(token), target_name(target))
 
 
+def dispatch_lines(token: str, target: str) -> list[str]:
+    name = display_name(token)
+    target = dispatch_target(token, target)
+    feature = FEATURE_DISPATCH.get(name)
+    if feature is None:
+        return [f"extern {target}", f"dw {target}"]
+
+    enabled_target = target_name(target)
+    disabled_target = DISABLED_DISPATCH.get(name, "FCERR")
+    return [
+        f"%if {feature}",
+        f"extern {enabled_target}",
+        f"dw {enabled_target}",
+        "%else",
+        f"extern {disabled_target}",
+        f"dw {disabled_target}",
+        "%endif",
+    ]
+
+
 def display_name(name: str) -> str:
     return TOKEN_RENAMES.get(name, name)
 
@@ -165,6 +195,13 @@ def should_drop_global(line: str) -> bool:
     return all(name in ABSOLUTE_GLOBALS or name.startswith(ABSOLUTE_GLOBAL_PREFIXES) for name in names)
 
 
+def disabled_special_target(target: str) -> str:
+    token = SPECIAL_STATEMENT_TARGETS.get(target)
+    if token is None:
+        return target
+    return DISABLED_DISPATCH.get(token, target)
+
+
 def patch_ibmres(path: Path) -> None:
     out: list[str] = []
     qq: int | None = None
@@ -181,6 +218,20 @@ def patch_ibmres(path: Path) -> None:
 
         if should_drop_global(line):
             continue
+
+        match = re.fullmatch(r"extern\s+([A-Za-z_.$?][\w.$?]*)", stripped)
+        if match:
+            target = disabled_special_target(match.group(1))
+            if target != match.group(1):
+                out.append(f"extern {target}")
+                continue
+
+        match = re.fullmatch(r"JMP\s+([A-Za-z_.$?][\w.$?]*)", stripped, re.IGNORECASE)
+        if match:
+            target = disabled_special_target(match.group(1))
+            if target != match.group(1):
+                out.append(f"\tJMP\t{target}")
+                continue
 
         match = re.fullmatch(r"%(?:define|assign)\s+QQ\s+(.+)", stripped)
         if match:
@@ -200,9 +251,7 @@ def patch_ibmres(path: Path) -> None:
             if qq is None:
                 raise ValueError("R macro before QQ initialization")
             name = match.group(1)
-            target = dispatch_target(name, name)
-            out.append(f"extern {target}")
-            out.append(f"dw {target}")
+            out.extend(dispatch_lines(name, name))
             qq += 1
             if name != "DUMMY":
                 out.append(f"%assign {token_name(name)} {qq}")
@@ -213,9 +262,7 @@ def patch_ibmres(path: Path) -> None:
             if qq is None:
                 raise ValueError("R2 macro before QQ initialization")
             name = match.group(1)
-            target = dispatch_target(name, match.group(2))
-            out.append(f"extern {target}")
-            out.append(f"dw {target}")
+            out.extend(dispatch_lines(name, match.group(2)))
             qq += 1
             if name != "DUMMY":
                 out.append(f"%assign {token_name(name)} {qq}")

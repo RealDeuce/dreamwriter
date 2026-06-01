@@ -70,6 +70,22 @@ def main() -> None:
     parser.add_argument("objects", nargs="+", type=Path)
     parser.add_argument("--unresolved", action="store_true")
     parser.add_argument("--unresolved-by-file", action="store_true")
+    parser.add_argument(
+        "--unused-public",
+        action="store_true",
+        help="list public symbols that no linked object names as an extern",
+    )
+    parser.add_argument(
+        "--unused-public-by-file",
+        action="store_true",
+        help="list public symbols by defining object when no linked object names them as an extern",
+    )
+    parser.add_argument(
+        "--keep",
+        action="append",
+        default=[],
+        help="symbol to treat as used; may be repeated",
+    )
     args = parser.parse_args()
 
     all_public: set[str] = set()
@@ -80,6 +96,23 @@ def main() -> None:
         by_file.append((obj, public, external))
         all_public |= public
         all_external |= external
+
+    kept = set(args.keep)
+
+    if args.unused_public:
+        for name in sorted(all_public - all_external - kept):
+            print(name)
+        return
+
+    if args.unused_public_by_file:
+        for obj, public, _ in by_file:
+            names = sorted(public - all_external - kept)
+            if not names:
+                continue
+            print(obj)
+            for name in names:
+                print(f"  {name}")
+        return
 
     if args.unresolved:
         for name in sorted(all_external - all_public):

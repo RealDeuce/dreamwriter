@@ -242,7 +242,7 @@ Start small:
 | Floating point/math | Keep. |
 | Sequential files | Second milestone. |
 | Random files/FIELD/GET/PUT | Defer. |
-| Graphics | Defer. |
+| Graphics | Disabled in the default flat64 profile to preserve BASIC workspace. Graphics tokens remain recognized but route to normal illegal-function errors; `SCREEN 0` remains the text/default mode. `GW_ENABLE_GRAPHICS=1` keeps the current 480x64 LCD backend scaffolding buildable for larger-memory work. |
 | COM/LPT devices | Defer. |
 | `SOUND`/`BEEP`/`PLAY` | Wired to the DreamWriter tone counter through GW-BASIC's `DONOTE` hook. Background `PLAY` uses an F9-backed queue; the tone divisor/gate is set once per note, and timer slices only advance the queue. |
 | `PEEK`/`POKE`/`INP`/`OUT` | Decide explicitly; useful on this machine, risky for users. |

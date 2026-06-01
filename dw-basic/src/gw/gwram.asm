@@ -268,6 +268,7 @@ FPDVAR equ PDIDS1 ;INI area and First Page Dependent VARiable
 ; SUBTTL  Page Independent Uninitialized RAM Location Definitions
 ;OEM Independent Graphics Locations
 ;
+%if GW_ENABLE_GRAPHICS ; DW-BASIC feature range graphics_work_ram: GRPACX..SAVLEN
 	R	GRPACX,2 ; Previous X Coordinate
 	R	GRPACY,2 ; Previous Y Coordinate
 	R	ATRBYT,1 ;Attribute Byte to Store
@@ -305,6 +306,7 @@ FPDVAR equ PDIDS1 ;INI area and First Page Dependent VARiable
 	R	QUEOUT,2
 	R	PSNLEN,2 ;Queue present length
 	R	QUELEN,2 ;Maximum queue length
+%endif ; DW-BASIC feature range graphics_work_ram
 	R	SAVLEN,2 ;used by BLOAD, BSAVE
 ;
 ;Device Variables
