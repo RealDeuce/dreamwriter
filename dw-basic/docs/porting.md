@@ -240,7 +240,7 @@ Start small:
 | Direct mode | Required. |
 | Program entry/edit/list/run | Required after direct mode. |
 | Floating point/math | Keep. |
-| Sequential files | Second milestone. |
+| Sequential files | `LOAD`/`SAVE` and sequential file dispatch are wired through `dwdisk.asm`, a DreamWriter handle-based backend over firmware `INT 21h` services. Unqualified filenames default to `I:`. |
 | Random files/FIELD/GET/PUT | Defer. |
 | Graphics | Disabled in the default flat64 profile to preserve BASIC workspace. Graphics tokens remain recognized but route to normal illegal-function errors; `SCREEN 0` remains the text/default mode. `GW_ENABLE_GRAPHICS=1` keeps the current 480x64 LCD backend scaffolding buildable for larger-memory work. |
 | COM/LPT devices | Defer. |

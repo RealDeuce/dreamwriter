@@ -84,6 +84,11 @@ graphics with `GW_ENABLE_GRAPHICS=0`; use `gmake -C dw-basic flat-size-report`
 to compare the flat image with the graphics-enabled profile and list large
 static reservations.
 
+`LOAD` and `SAVE` use the DreamWriter firmware's handle-based `INT 21h` file
+services through the local `dwdisk.asm` GIO device. Unqualified BASIC filenames
+default to drive `I:`; override the build-time default with the ASCII byte in
+`DW_DEFAULT_FILE_DRIVE` (`0x49` by default).
+
 One MAME command line for the generated card image:
 
 ```sh

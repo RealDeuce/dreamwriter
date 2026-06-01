@@ -10,6 +10,7 @@
 %include "gio86u.inc"
 
 extern CONDSP
+extern DSKDSP
 extern KYBDSP
 extern KYBINI
 extern KYBTRM
@@ -32,7 +33,7 @@ db "LPT1", DOL__LPT1
 db 0
 
 _DVPTR:
-dw _RET
+dw DSKDSP
 dw KYBDSP
 dw SCNDSP
 dw CONDSP

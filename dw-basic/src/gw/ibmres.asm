@@ -215,14 +215,14 @@ dw OPEN
 extern CLOSE
 dw CLOSE
 %assign DOL_CLOSE 187
-extern NODSKS
-dw NODSKS
+extern LOAD
+dw LOAD
 %assign DOL_LOAD 188
 extern NODSKS
 dw NODSKS
 %assign DOL_MERGE 189
-extern NODSKS
-dw NODSKS
+extern SAVE
+dw SAVE
 %assign DOL_SAVE 190
 extern COLOR
 dw COLOR

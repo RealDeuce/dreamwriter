@@ -8,28 +8,10 @@
 %include "dwoem.inc"
 
 extern FCERR
-extern DERFNF
 extern DERDNA
 extern _RET
 
-global CHNENT
-global FILIND
 global LPTDSP
-global LRUN
-global OKGETM
-global OUTLOD
-global PRGFLI
-
-CHNENT:
-FILIND:
-LRUN:
-OKGETM:
-OUTLOD:
-PRGFLI:
-    ; Program-file backends are not enabled. These entry points are reached by
-    ; LOAD/RUN/MERGE-style paths, so fail as a file lookup rather than jumping
-    ; to NODSKS, which is the startup NEW/scratch initializer.
-    jmp DERFNF
 
 LPTDSP:
     dw DERDNA        ; EOF
@@ -56,7 +38,6 @@ LPTDSP:
     mov ah, 255
     ret
 
-global DLINE
 %if GW_ENABLE_GRAPHICS
 global NREAD
 global NWRITE
@@ -77,9 +58,6 @@ global POINT
 global LCPY
 global PEKFLT
 global POKFLT
-
-DLINE:
-    jmp FCERR
 
 %if GW_ENABLE_GRAPHICS
 NREAD:
@@ -122,7 +100,6 @@ global CMPFBC
 global CSRATR
 global DONOTE
 global DWSND_ACTIVE
-global FIXINP
 global FKYADV
 global FKYFMT
 global GETFBC
@@ -133,7 +110,6 @@ global INKMAP
 global MAPSUP
 global POLCOM
 global POLLEV
-global PRGFIN
 global PROCHK
 global PRODIR
 global PRTMAP
@@ -152,12 +128,10 @@ global SYSTME
 
 CMPFBC:
 CSRATR:
-FIXINP:
 INFMAP:
 INKMAP:
 MAPSUP:
 POLCOM:
-PRGFIN:
 PROCHK:
 PRODIR:
 %if GW_ENABLE_POINTING_DEVICES

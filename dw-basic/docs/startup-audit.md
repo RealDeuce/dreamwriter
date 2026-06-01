@@ -153,18 +153,17 @@ do not change hardware state; this is acceptable for the first text-mode bringup
 but should be revisited when attributes, WIDTH, or inverse-video fidelity become
 test targets.
 
-### Deferred Non-Startup Risks
+### Non-Startup File Path
 
-The disk/program-file shim labels now jump to `DERFNF`:
+`LOAD` and `SAVE` now use the real `dskcom.asm` statement bodies and a
+DreamWriter-specific `DSKDSP` backend in `dwdisk.asm`. The backend maps GIO
+sequential/program-file operations onto the firmware's handle-oriented
+`INT 21h` services (`3C` create, `3D` open, `3E` close, `3F` read, `40` write)
+instead of the original FCB disk driver. Unqualified filenames default to
+`I:` for the ROM CARD workflow.
 
-- `CHNENT`, `FILIND`, `LRUN`, `OKGETM`, `OUTLOD`, `PRGFLI`.
-
-That is not on the current happy path because the command tail is forced empty,
-but it matters for user-visible `LOAD`, `RUN "file"`, `MERGE`, or related
-statements. Earlier bring-up code jumped these through `NODSKS`; that was wrong
-because `NODSKS` is the startup scratch routine, not a user command error path.
-`DERFNF` is the conservative disabled-backend answer until real file support is
-implemented.
+Still-deferred disk features include random files, `FIELD`/`GET`/`PUT`,
+protected saves/loads, and `MERGE`.
 
 The lightpen/joystick/trap hooks (`RDPEN`, `RDSTIK`, `RDTRIG`, `POLLEV`,
 `POLCOM`) return success/no event. They are not part of the enabled startup path

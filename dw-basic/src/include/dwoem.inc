@@ -26,6 +26,9 @@
 %ifndef GW_ENABLE_POINTING_DEVICES
 %define GW_ENABLE_POINTING_DEVICES (NMPENT | NMSTRT)
 %endif
+%ifndef DW_DEFAULT_FILE_DRIVE
+%define DW_DEFAULT_FILE_DRIVE 0x49 ; "I"
+%endif
 
 ; Core interpreter policy. These are the features this port is trying to keep.
 %define GW 1

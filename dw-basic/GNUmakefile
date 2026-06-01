@@ -20,6 +20,7 @@ GW_BASIC_SYMBOLS := $(BUILD_DIR)/gw-basic-symbols.inc
 GW_BASIC_MIN_FREE ?= 4096
 GW_MEMORY_MODEL ?= flat64
 GW_ENABLE_GRAPHICS ?= 0
+DW_DEFAULT_FILE_DRIVE ?= 0x49
 TRUNCATE_SIZE ?= 8192
 
 ifneq ($(GW_MEMORY_MODEL),flat64)
@@ -34,6 +35,7 @@ GW_MODULES := \
 	biptrg \
 	bistrs \
 	call86 \
+	dskcom \
 	fiveo \
 	gio86 \
 	giocon \
@@ -54,12 +56,13 @@ GW_MODULES := \
 	next86 \
 	scndrv \
 	scnedt \
+	dwdisk \
 	dwio \
 	dwstubs
 ifeq ($(GW_ENABLE_GRAPHICS),1)
 GW_MODULES := $(GW_GRAPHICS_MODULES) $(GW_MODULES)
 endif
-GW_GENERATED_MODULES := $(filter-out dwstubs dwio giotbl,$(GW_MODULES))
+GW_GENERATED_MODULES := $(filter-out dwstubs dwio dwdisk giotbl,$(GW_MODULES))
 GW_GENERATED_SOURCES := $(GW_GENERATED_MODULES:%=$(GW_SRC_DIR)/%.asm)
 GW_SIMPLE_GENERATED_SOURCES := $(filter-out $(GW_SRC_DIR)/gwdata.asm $(GW_SRC_DIR)/gwram.asm $(GW_SRC_DIR)/gwinit.asm $(GW_SRC_DIR)/gio86.asm $(GW_SRC_DIR)/gwsts.asm $(GW_SRC_DIR)/ibmres.asm $(GW_SRC_DIR)/itsa86.asm $(GW_SRC_DIR)/math1.asm $(GW_SRC_DIR)/scndrv.asm,$(GW_GENERATED_SOURCES))
 GW_OBJECTS := $(GW_MODULES:%=$(GW_BUILD_DIR)/%.obj)
@@ -69,7 +72,7 @@ GW_INCLUDES := \
 	src/include/gwerrors.inc \
 	src/include/gwtokens.inc \
 	src/include/msdosu.inc
-GW_NASM_FLAGS := -D GW_ENABLE_GRAPHICS=$(GW_ENABLE_GRAPHICS)
+GW_NASM_FLAGS := -D GW_ENABLE_GRAPHICS=$(GW_ENABLE_GRAPHICS) -D DW_DEFAULT_FILE_DRIVE=$(DW_DEFAULT_FILE_DRIVE)
 
 .PHONY: all basic-card basic-payload clean card flat-size-report flatlink gw-basic-bin gw-objects gw-sources gw-math2-source large-smoke-card large-smoke-payload omf-unresolved omf-unused-public truncate-card truncate-payload
 
