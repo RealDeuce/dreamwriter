@@ -141,7 +141,8 @@ keyboard table reports cursor events as `0x10..0x13`, physical `INSERT` as
 | `0x13` up | `AX=0xFF1E`, carry set |
 | `0x0D` insert | `AX=0xFF12`, carry set |
 | `0x03` CAN | `AX=0xFF1B`, carry set |
-| `0x02` ORGN | `AX=0xFF02`, carry set |
+| `0x02` ORGN | `AX=0xFF0B`, carry set |
+| Ctrl+ORGN | `AX=0xFF03`, carry set |
 | `0x0B` WP | `AX=0xFF0B`, carry set |
 | `0x7F` delete, if produced | `AX=0xFF7F`, carry set |
 | `0xDA` enter/select | `AL=0x0D`, carry clear |
@@ -153,6 +154,8 @@ than as two printable bytes.
 
 CAN is deliberately mapped to the generic ESC editor function (`0xFF1B`), not
 `0xFF03`, because `POLKEY` treats `0xFF03` as Ctrl-Break.
+DW-BASIC uses the ROM keyboard queue's modifier snapshot to map Ctrl+ORGN to
+that Ctrl-Break function while leaving plain ORGN as Home.
 For one-byte key-shaped controls such as Tab, Backspace, and Return, `POLKEY`
 also checks the trap table before queueing the normal byte. If no matching trap
 is enabled, those keys keep their ordinary `INKEY$`/line-input behavior.
@@ -168,11 +171,11 @@ checking; `KEYINP` remains nonblocking, so this only drives event polling.
 | ---: | --- | ---: |
 | `KEY(1)` | CAN/Escape | `0xFF1B` |
 | `KEY(2)` | Tab | `0x09` |
-| `KEY(3)` | ORGN | `0xFF02` |
+| `KEY(3)` | reserved | unmapped |
 | `KEY(4)` | Insert | `0xFF12` |
 | `KEY(5)` | Backspace | `0x08` |
 | `KEY(6)` | Return | `0x0D` |
-| `KEY(7)` | WP | `0xFF0B` |
+| `KEY(7)` | WP/ORGN Home | `0xFF0B` |
 | `KEY(8)..KEY(10)` | reserved | unmapped |
 | `KEY(11)` | Up | `0xFF1E` |
 | `KEY(12)` | Left | `0xFF1D` |
@@ -243,6 +246,26 @@ Start small:
 | COM/LPT devices | Defer. |
 | `SOUND`/`BEEP`/`PLAY` | Wired to the DreamWriter tone counter through GW-BASIC's `DONOTE` hook. Background `PLAY` uses an F9-backed queue; the tone divisor/gate is set once per note, and timer slices only advance the queue. |
 | `PEEK`/`POKE`/`INP`/`OUT` | Decide explicitly; useful on this machine, risky for users. |
+
+## Warm Power Resume
+
+The DreamWriter firmware's normal keyboard/status idle path is built around the
+resident applications. When it handles a power transition from that path, the
+retained resume target is one of the firmware idle routines such as
+`C000:4977`, after which warm startup re-enters the built-in application warm
+entry at `C688:000F`. That is not a valid resume path for DW-BASIC: the LCD
+contents may still look like BASIC, but execution has returned to firmware
+state rather than to the interrupted BASIC instruction.
+
+DW-BASIC therefore installs its own IRQ `FF` power handler while running. The
+handler saves the interrupted BASIC register set and original `CS:IP` into the
+firmware's full retained-context fields, stores a small BASIC resume trampoline
+as the retained target, checksums the retained context, and powers down through
+port `0x70`. On warm startup the ROM restores the saved register set and jumps
+to the trampoline; the trampoline reinstalls the IRQ `FF` hook because startup
+has rebuilt the ROM interrupt vectors, then jumps back to the original
+interrupted `CS:IP`. `SYSTEM` restores the ROM IRQ vector before returning to
+the card loader.
 
 ## NASM Conversion Rules
 

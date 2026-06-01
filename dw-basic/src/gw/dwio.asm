@@ -31,6 +31,17 @@ DW_KEY_ENTER equ 0xda
 DW_KEY_CAN equ 0x03
 DW_KEY_ORGN equ 0x02
 DW_KEY_WP equ 0x0b
+DW_PHYS_LSHIFT equ 0x00
+DW_PHYS_RSHIFT equ 0x01
+DW_PHYS_ALT equ 0x08
+DW_PHYS_CONTROL equ 0x10
+DW_PHYS_CAPS equ 0x11
+DW_PHYS_ORGN equ 0x3a
+DW_KEY_MOD_CONTROL equ 0x40
+DW_KEY_QUEUE_BASE equ 0x70a6
+DW_KEY_QUEUE_END equ 0x70e2
+DW_KEY_QUEUE_READ equ 0x70e2
+DW_KEY_QUEUE_WRITE equ 0x70e3
 
 MSU_RIGHT equ 28
 MSU_LEFT equ 29
@@ -38,7 +49,7 @@ MSU_UP equ 30
 MSU_DOWN equ 31
 MSU_INSERT equ 18
 MSU_DELETE equ 127
-MSU_BACK_WORD equ 2
+MSU_BREAK equ 3
 MSU_HOME equ 11
 MSU_ESCAPE equ 27
 
@@ -273,7 +284,7 @@ extern DWSND_ACTIVE
 KEYINP:
     push bp
     mov bp, sp
-    sub sp, 2
+    sub sp, 4
     push bx
     push cx
     push dx
@@ -283,19 +294,26 @@ KEYINP:
     push es
     mov bx, ds
     mov es, bx
+    mov byte [bp - 3], 0
 
     call DWSND_ACTIVE
     jz .rom_status
     push ds
     xor bx, bx
     mov ds, bx
-    mov al, [0x70e2]
-    cmp al, [0x70e3]
+    mov al, [DW_KEY_QUEUE_READ]
+    cmp al, [DW_KEY_QUEUE_WRITE]
     pop ds
     je .no_key
 
+    call keyinp_peek_orgn_break
+    jnc .sound_read
+    mov byte [bp - 3], 1
+.sound_read:
     mov ah, 0x08
     int 0x21
+    cmp byte [bp - 3], 0
+    jne .force_break
     xor ah, ah
     call keyinp_map
     jmp .store_result
@@ -306,10 +324,20 @@ KEYINP:
     cmp al, 0xff
     jne .no_key
 
+    call keyinp_peek_orgn_break
+    jnc .rom_read
+    mov byte [bp - 3], 1
+.rom_read:
     mov ah, 0x08
     int 0x21
+    cmp byte [bp - 3], 0
+    jne .force_break
     xor ah, ah
     call keyinp_map
+    jmp .store_result
+
+.force_break:
+    mov ax, (0xff << 8) | MSU_BREAK
     jmp .store_result
 
 .no_key:
@@ -345,6 +373,58 @@ KEYINP:
     clc
     ret
 
+keyinp_peek_orgn_break:
+    push bx
+    push dx
+    push ds
+    xor bx, bx
+    mov ds, bx
+    mov bl, [DW_KEY_QUEUE_READ]
+.scan:
+    cmp bl, [DW_KEY_QUEUE_WRITE]
+    je .not_break
+    cmp bl, DW_KEY_QUEUE_END - DW_KEY_QUEUE_BASE
+    jae .not_break
+    mov dx, [bx + DW_KEY_QUEUE_BASE]
+    cmp dl, DW_PHYS_ORGN
+    je .check_orgn
+    cmp dl, DW_PHYS_LSHIFT
+    je .next
+    cmp dl, DW_PHYS_RSHIFT
+    je .next
+    cmp dl, DW_PHYS_ALT
+    je .next
+    cmp dl, DW_PHYS_CONTROL
+    je .next
+    cmp dl, DW_PHYS_CAPS
+    je .next
+    jmp .not_break
+
+.check_orgn:
+    test dh, DW_KEY_MOD_CONTROL
+    jnz .is_break
+    jmp .not_break
+
+.next:
+    add bl, 2
+    cmp bl, DW_KEY_QUEUE_END - DW_KEY_QUEUE_BASE
+    jb .scan
+    xor bl, bl
+    jmp .scan
+
+.is_break:
+    pop ds
+    pop dx
+    pop bx
+    stc
+    ret
+.not_break:
+    pop ds
+    pop dx
+    pop bx
+    clc
+    ret
+
 keyinp_map:
     cmp al, DW_KEY_ENTER
     je .enter
@@ -361,7 +441,7 @@ keyinp_map:
     cmp al, DW_KEY_CAN
     je .escape
     cmp al, DW_KEY_ORGN
-    je .back_word
+    je .home
     cmp al, DW_KEY_WP
     je .home
     cmp al, MSU_DELETE
@@ -388,9 +468,6 @@ keyinp_map:
     ret
 .escape:
     mov ax, (0xff << 8) | MSU_ESCAPE
-    ret
-.back_word:
-    mov ax, (0xff << 8) | MSU_BACK_WORD
     ret
 .home:
     mov ax, (0xff << 8) | MSU_HOME

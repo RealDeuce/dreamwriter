@@ -8,6 +8,7 @@ local shift_trail_frames = tonumber(os.getenv("DWBASIC_INPUT_SHIFT_TRAIL_FRAMES"
 
 local ports = nil
 local socket = nil
+local socket_error_reported = false
 local buffer = ""
 local queue = {}
 local active = {}
@@ -200,6 +201,7 @@ local function init_ports()
 
 	ports = {
 		lshift = get_field("ROW0", 0x01),
+		lctrl = get_field("ROW2", 0x01),
 		enter = get_field("ROW0", 0x10),
 		left = get_field("ROW0", 0x08),
 		can = get_field("ROW1", 0x04),
@@ -211,6 +213,7 @@ local function init_ports()
 		up = get_field("ROW7", 0x08),
 		wp = get_field("ROW7", 0x10),
 		backspace = get_field("ROW9", 0x04),
+		power = get_field("power", 0x01),
 		keys = {
 			["3"] = get_field("ROW3", 0x01),
 			["2"] = get_field("ROW3", 0x02),
@@ -290,6 +293,8 @@ local function init_ports()
 		["orga"] = ports.orgn,
 		["orgn"] = ports.orgn,
 		["organizer"] = ports.orgn,
+		["power"] = ports.power,
+		["end"] = ports.power,
 	}
 end
 
@@ -368,6 +373,40 @@ local function enqueue_named_key(name)
 	end
 
 	local key = name:lower()
+	local chord = {}
+	for part in key:gmatch("[^+]+") do
+		table.insert(chord, part)
+	end
+	if #chord > 1 then
+		local modifiers = {}
+		for i = 1, #chord - 1 do
+			local modifier = chord[i]
+			if modifier == "ctrl" or modifier == "control" then
+				table.insert(modifiers, ports.lctrl)
+			elseif modifier == "shift" then
+				table.insert(modifiers, ports.lshift)
+			else
+				return false
+			end
+		end
+
+		local field = ports.named[chord[#chord]] or ports.keys[chord[#chord]]
+		if not field then
+			return false
+		end
+
+		table.insert(queue, { fields = modifiers, frames = hold_frames })
+		local fields = {}
+		for _, field in ipairs(modifiers) do
+			table.insert(fields, field)
+		end
+		table.insert(fields, field)
+		table.insert(queue, { fields = fields, frames = hold_frames })
+		table.insert(queue, { fields = modifiers, frames = hold_frames })
+		table.insert(queue, { fields = {}, frames = gap_frames })
+		return true
+	end
+
 	local field = ports.named[key]
 	if not field then
 		return false
@@ -426,8 +465,13 @@ local function read_commands()
 		socket = emu.file("rwc")
 		local err = socket:open("domain." .. socket_path)
 		if err then
-			emu.print_error("dwbasic input bridge: socket open failed: " .. tostring(err))
+			if not socket_error_reported then
+				emu.print_error("dwbasic input bridge: socket open failed: " .. tostring(err))
+				socket_error_reported = true
+			end
 			socket = nil
+		else
+			socket_error_reported = false
 		end
 		return
 	end

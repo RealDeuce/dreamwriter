@@ -145,6 +145,8 @@ SWIDTH:
 
 DW_F9_VECTOR_OFF equ 0x03e4
 DW_F9_VECTOR_SEG equ 0x03e6
+DW_FF_VECTOR_OFF equ 0x03fc
+DW_FF_VECTOR_SEG equ 0x03fe
 DW_SND_QUEUE_LEN equ 32
 DW_SND_QUEUE_MASK equ DW_SND_QUEUE_LEN - 1
 DW_SND_ENTRY_SIZE equ 4
@@ -458,6 +460,133 @@ dw_music_restore:
     popf
     ret
 
+dw_power_install:
+    pushf
+    cli
+    pusha
+    push ds
+    xor ax, ax
+    mov ds, ax
+    cmp byte [cs:dw_ff_installed], 0
+    jne .write_vector
+    mov ax, [DW_FF_VECTOR_OFF]
+    mov [cs:dw_ff_old_off], ax
+    mov ax, [DW_FF_VECTOR_SEG]
+    mov [cs:dw_ff_old_seg], ax
+    mov byte [cs:dw_ff_installed], 1
+.write_vector:
+    mov word [DW_FF_VECTOR_OFF], dw_power_ff_isr
+    push cs
+    pop ax
+    mov [DW_FF_VECTOR_SEG], ax
+    pop ds
+    popa
+    popf
+    ret
+
+dw_power_restore:
+    pushf
+    cli
+    pusha
+    push ds
+    cmp byte [cs:dw_ff_installed], 0
+    je .done
+    xor ax, ax
+    mov ds, ax
+    mov ax, [cs:dw_ff_old_off]
+    mov [DW_FF_VECTOR_OFF], ax
+    mov ax, [cs:dw_ff_old_seg]
+    mov [DW_FF_VECTOR_SEG], ax
+    mov byte [cs:dw_ff_installed], 0
+.done:
+    pop ds
+    popa
+    popf
+    ret
+
+dw_power_resume:
+    pushf
+    pop word [cs:dw_power_resume_flags]
+    cli
+    mov [cs:dw_power_resume_ax], ax
+    mov ax, cs
+    mov ss, ax
+    mov sp, [cs:dw_power_resume_sp]
+    push ds
+    push cs
+    pop ds
+    call dw_power_install
+    pop ds
+    push word [cs:dw_power_resume_flags]
+    popf
+    mov ax, [cs:dw_power_resume_ax]
+    jmp far [cs:dw_power_resume_ptr]
+
+dw_power_ff_isr:
+    push ds
+    push ax
+    push bp
+    mov bp, ds
+    xor ax, ax
+    mov ds, ax
+    mov al, 0x01
+    out 0x90, al
+
+    mov [0x6d73], bp
+    mov [0x6d67], bx
+    mov [0x6d69], cx
+    mov [0x6d6b], dx
+    mov [0x6d6d], si
+    mov [0x6d6f], di
+    mov [0x6d75], es
+    mov word [0x6d77], 0
+
+    mov bp, sp
+    mov ax, [ss:bp]
+    mov [0x6d71], ax
+    mov ax, [ss:bp + 2]
+    mov [0x6d65], ax
+    mov ax, [ss:bp + 6]
+    mov [cs:dw_power_resume_off], ax
+    mov [0x6d85], ax
+    mov word [0x6d79], dw_power_resume
+    mov ax, [ss:bp + 8]
+    mov [cs:dw_power_resume_seg], ax
+    mov [0x6d87], ax
+    push cs
+    pop ax
+    mov [0x6d7b], ax
+    lea ax, [bp + 12]
+    mov [cs:dw_power_resume_sp], ax
+    mov word [0x6d7d], 0x6c06
+    mov ax, [ss:bp + 10]
+    mov [0x6d7f], ax
+    mov word [0x6d81], 0
+
+    mov si, 0x6d65
+    mov cx, 0x000f
+    xor bx, bx
+.checksum:
+    lodsw
+    add bx, ax
+    loop .checksum
+    mov [0x6d83], bx
+
+    and byte [0x6da9], 0xfe
+    or byte [0x6d4f], 0x02
+    mov ax, [0x6d31]
+    mov [0x680b], ax
+    mov al, [0x6d4f]
+    mov [0x6d50], al
+    out 0x60, al
+    mov al, 0xff
+    out 0x52, al
+    mov al, 0x01
+    out 0x70, al
+.halt:
+    hlt
+    jmp .halt
+
 dw_music_f9_isr:
     push ax
     push ds
@@ -587,6 +716,7 @@ GWINI:
     pusha
     push ds
     push es
+    call dw_power_install
     call dw_cursor_init
     call CLRSCN
     mov al, 80
@@ -626,6 +756,7 @@ SYSTME:
     push cs
     pop ds
     call dw_music_reset
+    call dw_power_restore
     cmp byte [INITFG], 0
     je .restore
     call GIOTRM
@@ -686,6 +817,23 @@ dw_f9_installed:
 dw_f9_old_off:
     dw 0
 dw_f9_old_seg:
+    dw 0
+dw_ff_installed:
+    db 0
+dw_ff_old_off:
+    dw 0
+dw_ff_old_seg:
+    dw 0
+dw_power_resume_ptr:
+dw_power_resume_off:
+    dw 0
+dw_power_resume_seg:
+    dw 0
+dw_power_resume_sp:
+    dw 0
+dw_power_resume_ax:
+    dw 0
+dw_power_resume_flags:
     dw 0
 dw_snd_q_head:
     db 0
