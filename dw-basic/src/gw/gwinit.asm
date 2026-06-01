@@ -364,8 +364,8 @@ extern FREFLG ;Print free bytes flag
 	MOV byte [FREFLG], AL ;Clear to print free bytes message
 extern GETHED ;OEM heading retrieval routine
 extern KEYSW ;Function key on flag
-	MOV	AL,255 ;if heading is printed, display Fn keys also
-	MOV byte [KEYSW], AL
+	XOR	AL,AL ;DreamWriter has no function-key display row
+	MOV	byte [KEYSW],AL
 	CALL	GETHED ;Get OEM specific portion of the heading
 	JNZ	PRNTIT ;Always print the heading option
 	PUSH	BX ;Print heading if no program option
@@ -390,8 +390,8 @@ extern SKEYON
 	JMP	KEYSOF ;Leave keys off
 ??L005:
 	XOR	AL,AL
-	MOV byte [KEYSW], AL ;Show current status of keys
-	CALL	SKEYON ;Set function key display on
+	MOV	byte [KEYSW],AL ;Function-key display remains disabled
+	CALL	SKEYON ;No-op without soft-key slots
 KEYSOF:	MOV	AL,0o377
 	MOV byte [INITFG], AL ;Set the initialization complete flag
 ;indicating errors no longer result in an exit

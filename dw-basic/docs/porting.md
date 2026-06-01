@@ -140,6 +140,9 @@ keyboard table reports cursor events as `0x10..0x13`, physical `INSERT` as
 | `0x12` down | `AX=0xFF1F`, carry set |
 | `0x13` up | `AX=0xFF1E`, carry set |
 | `0x0D` insert | `AX=0xFF12`, carry set |
+| `0x03` CAN | `AX=0xFF1B`, carry set |
+| `0x02` ORGN | `AX=0xFF02`, carry set |
+| `0x0B` WP | `AX=0xFF0B`, carry set |
 | `0x7F` delete, if produced | `AX=0xFF7F`, carry set |
 | `0xDA` enter/select | `AL=0x0D`, carry clear |
 
@@ -147,6 +150,39 @@ Returning cursor and editor controls in the `0xFFxx` form is important:
 `POLKEY` only runs `ON KEY` trap checks for two-byte MS Universal control
 functions, and the line editor treats `AH=0xFF` as an editor operation rather
 than as two printable bytes.
+
+CAN is deliberately mapped to the generic ESC editor function (`0xFF1B`), not
+`0xFF03`, because `POLKEY` treats `0xFF03` as Ctrl-Break.
+For one-byte key-shaped controls such as Tab, Backspace, and Return, `POLKEY`
+also checks the trap table before queueing the normal byte. If no matching trap
+is enabled, those keys keep their ordinary `INKEY$`/line-input behavior.
+
+The DreamWriter build keeps `KEY(n) ON/OFF/STOP` and `ON KEY(n) GOSUB` for the
+physical navigation/application keys, but disables the soft-key display forms
+(`KEY ON`, `KEY OFF`, `KEY LIST`, and `KEY n,"..."`) because there is no
+physical function-key row to label or expand. The old soft-key string table is
+not reserved. `POLLEV` currently reports that keyboard polling is always worth
+checking; `KEYINP` remains nonblocking, so this only drives event polling.
+
+| BASIC event | Physical key | Editor/control code |
+| ---: | --- | ---: |
+| `KEY(1)` | CAN/Escape | `0xFF1B` |
+| `KEY(2)` | Tab | `0x09` |
+| `KEY(3)` | ORGN | `0xFF02` |
+| `KEY(4)` | Insert | `0xFF12` |
+| `KEY(5)` | Backspace | `0x08` |
+| `KEY(6)` | Return | `0x0D` |
+| `KEY(7)` | WP | `0xFF0B` |
+| `KEY(8)..KEY(10)` | reserved | unmapped |
+| `KEY(11)` | Up | `0xFF1E` |
+| `KEY(12)` | Left | `0xFF1D` |
+| `KEY(13)` | Right | `0xFF1C` |
+| `KEY(14)` | Down | `0xFF1F` |
+
+`POLPEN` is still compiled even when `NMPENT=0`, and `PENOFF` then aliases
+the first keyboard event slot. The DreamWriter `RDPEN` stub must therefore
+return `BX=0` for "no pen interrupt" instead of preserving an arbitrary caller
+value, or `KEY(1)` can be requested spuriously.
 
 This matches the GW-BASIC split: text scrolling is not a graphics command, but
 on a shared bitmap display it must move whatever pixels are already in the

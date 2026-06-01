@@ -106,6 +106,7 @@ db 0
 ;
 	RINIT	STRTAB,16*NMKEYF ;SOFTKEY table
 ;
+%if NMKEYF
 ;** The following line is used by a source maint. tool - do not remove
 ;** (OEM FUNCTION KEY DEFINITIONS) **************
 ;
@@ -143,6 +144,7 @@ db CR,0
 db 2 dup (?)
 ;**(END OF DEFINITIONS) *************************
 ;The preceding line is used by a source maint. tool - do not remove.
+%endif
 ;
 	RINIT	ENDTAB,0
 %define DIST ENDTAB-STRTAB-(16*NMKEYF)

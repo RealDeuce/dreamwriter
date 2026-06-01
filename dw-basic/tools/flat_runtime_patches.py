@@ -115,19 +115,28 @@ extern GIOINI
         "TBUFF equ BUF ;ROM CARD launch has no CP/M command buffer\n\tMOV\tbyte [TBUFF],0 ;ROM CARD launch has no CP/M/DOS command tail\n\tMOV\tBX,TBUFF ;POINT TO FIRST CHAR OF COMMAND BUFFER",
         1,
     )
-    text = text.replace(
-        "\tMOV\tAL,255 ;if heading is printed, display Fn keys also\n\tMOV\tbyte [KEYSW],AL\n\tCALL\tGETHED ;Get OEM specific portion of the heading",
-        "\tMOV\tAL,255 ;if heading is printed, display Fn keys also\n\tMOV\tbyte [KEYSW],AL\n\tCALL\tGETHED ;Get OEM specific portion of the heading",
+    text = re.sub(
+        r"""[ \t]*MOV[ \t]+AL,255 ;if heading is printed, display Fn keys also
+[ \t]*MOV[ \t]+byte \[KEYSW\],[ \t]*AL
+[ \t]*CALL[ \t]+GETHED ;Get OEM specific portion of the heading""",
+        "\tXOR\tAL,AL ;DreamWriter has no function-key display row\n"
+        "\tMOV\tbyte [KEYSW],AL\n"
+        "\tCALL\tGETHED ;Get OEM specific portion of the heading",
+        text,
+        count=1,
     )
     text = text.replace(
         "PRNTIT:\tCALL\tSTROUT ;Print it\n\tMOV\tBX,HEDING ;GET HEADING (\"BASIC VERSION...\")\n\tCALL\tSTROUT ;PRINT IT",
         "PRNTIT:\n\tCALL\tSTROUT ;Print it\n\tMOV\tBX,HEDING ;GET HEADING (\"BASIC VERSION...\")\n\tCALL\tSTROUT ;PRINT IT",
         1,
     )
-    text = text.replace(
-        "\tMOV\tbyte [KEYSW],AL ;Show current status of keys\n\tCALL\tSKEYON ;Set function key display on",
-        "\tMOV\tbyte [KEYSW],AL ;Show current status of keys\n\tCALL\tSKEYON ;Set function key display on",
-        1,
+    text = re.sub(
+        r"""[ \t]*MOV[ \t]+byte \[KEYSW\],[ \t]*AL ;Show current status of keys
+[ \t]*CALL[ \t]+SKEYON ;Set function key display on""",
+        "\tMOV\tbyte [KEYSW],AL ;Function-key display remains disabled\n"
+        "\tCALL\tSKEYON ;No-op without soft-key slots",
+        text,
+        count=1,
     )
     text = text.replace(
         "\tMOV\tbyte [INITFG],AL ;Set the initialization complete flag\n;indicating errors no longer result in an exit\n;to the OS\n\tJMP\tINITSA",
@@ -255,9 +264,29 @@ MSIRST:
     path.write_text(text)
 
 
+def patch_scndrv(path: Path) -> None:
+    text = path.read_text(errors="replace")
+    text = replace_once(
+        text,
+        """\tPUSH\tCX
+\tDEC\tCL ; Reserve status line
+\tMOV byte [WDOBOT], CL ; Set window bottom
+\tPOP\tCX
+""",
+        """\tPUSH\tCX
+%if NMKEYF
+\tDEC\tCL ; Reserve function-key display line
+%endif
+\tMOV byte [WDOBOT], CL ; Set window bottom
+\tPOP\tCX
+""",
+    )
+    path.write_text(text)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("module", choices=["gwinit", "itsa86", "gio86"])
+    parser.add_argument("module", choices=["gwinit", "itsa86", "gio86", "scndrv"])
     parser.add_argument("path", type=Path)
     args = parser.parse_args()
 
@@ -265,8 +294,10 @@ def main() -> None:
         patch_gwinit(args.path)
     elif args.module == "itsa86":
         patch_itsa86(args.path)
-    else:
+    elif args.module == "gio86":
         patch_gio86(args.path)
+    else:
+        patch_scndrv(args.path)
 
 
 if __name__ == "__main__":

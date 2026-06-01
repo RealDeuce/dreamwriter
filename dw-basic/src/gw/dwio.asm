@@ -28,6 +28,9 @@ DW_KEY_DOWN equ 0x12
 DW_KEY_UP equ 0x13
 DW_KEY_INSERT equ 0x0d
 DW_KEY_ENTER equ 0xda
+DW_KEY_CAN equ 0x03
+DW_KEY_ORGN equ 0x02
+DW_KEY_WP equ 0x0b
 
 MSU_RIGHT equ 28
 MSU_LEFT equ 29
@@ -35,6 +38,9 @@ MSU_UP equ 30
 MSU_DOWN equ 31
 MSU_INSERT equ 18
 MSU_DELETE equ 127
+MSU_BACK_WORD equ 2
+MSU_HOME equ 11
+MSU_ESCAPE equ 27
 
 %define DWAPI_CURSOR_AWARE 1
 %include "dwapi.asm"
@@ -334,6 +340,12 @@ keyinp_map:
     je .up
     cmp al, DW_KEY_DOWN
     je .down
+    cmp al, DW_KEY_CAN
+    je .escape
+    cmp al, DW_KEY_ORGN
+    je .back_word
+    cmp al, DW_KEY_WP
+    je .home
     cmp al, MSU_DELETE
     je .delete
     ret
@@ -355,6 +367,15 @@ keyinp_map:
     ret
 .down:
     mov ax, (0xff << 8) | MSU_DOWN
+    ret
+.escape:
+    mov ax, (0xff << 8) | MSU_ESCAPE
+    ret
+.back_word:
+    mov ax, (0xff << 8) | MSU_BACK_WORD
+    ret
+.home:
+    mov ax, (0xff << 8) | MSU_HOME
     ret
 .delete:
     mov ax, (0xff << 8) | MSU_DELETE

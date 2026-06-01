@@ -54,7 +54,7 @@ GW_MODULES := \
 	dwstubs
 GW_GENERATED_MODULES := $(filter-out dwstubs dwio giotbl,$(GW_MODULES))
 GW_GENERATED_SOURCES := $(GW_GENERATED_MODULES:%=$(GW_SRC_DIR)/%.asm)
-GW_SIMPLE_GENERATED_SOURCES := $(filter-out $(GW_SRC_DIR)/gwdata.asm $(GW_SRC_DIR)/gwram.asm $(GW_SRC_DIR)/gwinit.asm $(GW_SRC_DIR)/gio86.asm $(GW_SRC_DIR)/ibmres.asm $(GW_SRC_DIR)/itsa86.asm $(GW_SRC_DIR)/math1.asm,$(GW_GENERATED_SOURCES))
+GW_SIMPLE_GENERATED_SOURCES := $(filter-out $(GW_SRC_DIR)/gwdata.asm $(GW_SRC_DIR)/gwram.asm $(GW_SRC_DIR)/gwinit.asm $(GW_SRC_DIR)/gio86.asm $(GW_SRC_DIR)/ibmres.asm $(GW_SRC_DIR)/itsa86.asm $(GW_SRC_DIR)/math1.asm $(GW_SRC_DIR)/scndrv.asm,$(GW_GENERATED_SOURCES))
 GW_OBJECTS := $(GW_MODULES:%=$(GW_BUILD_DIR)/%.obj)
 GW_INCLUDES := \
 	src/include/dwoem.inc \
@@ -111,6 +111,10 @@ $(GW_SRC_DIR)/itsa86.asm: $(GW_REF_DIR)/itsa86.asm tools/masm2nasm.py tools/flat
 $(GW_SRC_DIR)/gio86.asm: $(GW_REF_DIR)/gio86.asm tools/masm2nasm.py tools/flat_runtime_patches.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/masm2nasm.py $< $@
 	$(PYTHON) tools/flat_runtime_patches.py gio86 $@
+
+$(GW_SRC_DIR)/scndrv.asm: $(GW_REF_DIR)/scndrv.asm tools/masm2nasm.py tools/flat_runtime_patches.py | $(GW_SRC_DIR)
+	$(PYTHON) tools/masm2nasm.py $< $@
+	$(PYTHON) tools/flat_runtime_patches.py scndrv $@
 
 $(GW_SIMPLE_GENERATED_SOURCES): $(GW_SRC_DIR)/%.asm: $(GW_REF_DIR)/%.asm tools/masm2nasm.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/masm2nasm.py $< $@

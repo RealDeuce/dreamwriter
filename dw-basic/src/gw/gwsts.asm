@@ -1050,7 +1050,7 @@ ONGOTP:	PUSH	BX ;Text pointer in case not us.
 NT2BTK:
 	CMP	AX,TOK_KEY2B
 	MOV	CX,(0o400*KEYOFF)+NMKEYT
-	JZ	ONFUN ;Brif ON KEY...
+	JZ	ONKEYFUN ;Brif ON KEY...
 	CMP	AX,DOL_COM2B
 	MOV	CX,(0o400*COMOFF)+NMCOMT
 	JZ	ONFUN ;Brif ON COM...
@@ -1068,6 +1068,16 @@ NTONPN:
 	JMP	ONGOTX
 FCERR2:	JMP	FCERR
 JERDNA:	JMP	DERDNA ;Device unavailable error if PEN
+ONKEYFUN:
+%if NMKEYF == 0
+	CALL	GETSUB ;Get KEY event no. in (x).
+	CALL	DWMAPKEY
+	JB	FCERR2
+	MOV	CL,AL ;Save Event index in [CL]
+	JMP	ONSTM
+%else
+	JMP	ONFUN
+%endif
 ONFUN:
 	CALL	GETSUB ;Get Event no. in (x).
 	DEC	AL ;Want base 0. (If not STRIG(x))
@@ -1195,6 +1205,29 @@ extern MAKINT
 ;
 KEYSTT:	MOV	CX,(0o400*KEYOFF)+NMKEYT
 	JMP	SEVSTT ;branch to common code
+
+%if NMKEYF == 0
+DWMAPKEY:
+	CMP	AL,1
+	JB	.bad
+	CMP	AL,7
+	JBE	.low_key
+	CMP	AL,DW_CURSOR_KEY_EVENT_BASE+1
+	JB	.bad
+	CMP	AL,DW_CURSOR_KEY_EVENT_BASE+4
+	JBE	.cursor_key
+.bad:
+	STC
+	RET
+.low_key:
+	DEC	AL
+	CLC
+	RET
+.cursor_key:
+	DEC	AL
+	CLC
+	RET
+%endif
 ;KEYTRP is called whenever CHGET receives a SOFTKEY from the keyboard.
 ; Entry - [AL] = Soft key id (0..NMKEYT-1)
 ; Exit  - If NZ, key was trapped and should not be expanded.
@@ -1212,12 +1245,21 @@ extern FKYADV
 KEYS:
 	CMP	AL,"("
 	JZ	KEYSTT ;set key status
+%if NMKEYF == 0
+	CMP	AL,TOK_ON
+	JZ	KEYFCE
+	CMP	AL,TOK_OFF
+	JZ	KEYFCE
+	CMP	AL,TOK_LIST
+	JZ	KEYFCE
+%else
 	CMP	AL,TOK_ON
 	JZ	KEYON ;Brif Enable Soft Key Display Line.
 	CMP	AL,TOK_OFF
 	JZ	KEYOF ;Brif Disable Soft Key Display line.
 	CMP	AL,TOK_LIST
 	JZ	KEYLSI ;Brif LIST Soft Keys.
+%endif
 	CALL	GETBYT ; else Key defn, get key number.
 	OR	AL,AL
 	JZ	KEYFCE
@@ -1267,6 +1309,12 @@ KEYOF:	MOV	AH,1 ;Prepare to inc scroll limit
 KEYOXX:	CALL	CHRGTR ;over ON/OFF token.
 	RET
 global SKEYON
+%if NMKEYF == 0
+SKEYON:
+KEYOX:
+	MOV byte [KEYSW], 0
+	RET
+%else
 SKEYON:	MOV	AH,-1 ;Prepare to dec scroll limit
 	MOV	AL,0o377
 KEYOX: ;AH=scroll limit diff., AL=new KEYSW
@@ -1279,9 +1327,13 @@ KEYOX: ;AH=scroll limit diff., AL=new KEYSW
 KEYOX1:
 	CALL	KEYDSP ;On, Display on 25th line.
 KEYXX:	RET
+%endif
 ;List Function Keys
 ;
 KEYLST:
+%if NMKEYF == 0
+	JMP	KEYOXX
+%else
 	PUSH	BX
 	MOV	SI,STRTAB ;List 10 Special Function
 	MOV	CX,NMKEYF+(STKEYF*0o400)
@@ -1319,6 +1371,7 @@ KEYLS2:
 	JNZ	KEYLS0
 	POP	BX
 	JMP	KEYOXX
+%endif
 KEYLSP:
 	PUSH	SI
 	CMP	AL,13 ;check for Carriage-Return
@@ -1335,9 +1388,16 @@ extern FKCNUM
 ;TKEYOF is called to turn function key display off
 ;
 TKEYOF:	MOV byte [KEYSW], 0 ;turn function key display switch off
+%if NMKEYF == 0
+	RET
+%endif
 ; KEYDSP -      Display Softkeys on last line of Screen.
 %assign REVNMS 1 ;Key Numbers are normal video, contents are rev-video
 KEYDSP:	PUSH	DX
+%if NMKEYF == 0
+	POP	DX
+	RET
+%endif
 	MOV	DH,1 ;Set for col = 1
 	MOV DL, byte [LINCNT] ;Set for last line
 	MOV AL, byte [KEYSW]

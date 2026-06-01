@@ -156,7 +156,9 @@ SCNSWI:	MOV byte [CRTWID], AL ; Save physical width
 	MOV byte [LINCNT], CL ; Save physical height
 	MOV byte [WDOTOP], 0o1 ; Init window top
 	PUSH	CX
-	DEC	CL ; Reserve status line
+%if NMKEYF
+	DEC	CL ; Reserve function-key display line
+%endif
 	MOV byte [WDOBOT], CL ; Set window bottom
 	POP	CX
 	MOV byte [WDOLFT], 0o1 ; Set window left

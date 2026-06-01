@@ -65,15 +65,26 @@
 %define DOL__LPT1 0o374
 %define DOL__NDEV 4
 
-; Screen/editor policy: one 80x8 LCD text page.  GW-BASIC still expects the
-; default ten soft-key string slots even when they are not displayed.
+; Screen/editor policy: one 80x8 LCD text page.  The DreamWriter has no
+; physical GW-BASIC function-key row, so do not reserve soft-key string slots.
+; Use low KEY event slots for DreamWriter key-shaped special keys, but keep the
+; classic KEY(11)..KEY(14) cursor-key trap numbering. Pure modifiers are not
+; represented by the ROM translated-key API used by KEYINP.
 %define NMLINE 8
 %define NMPAGE 1
 %define SCROLT 0
 %define FKEYON 0
 %define LABKEY 0
-%define NMKEYF 10
-%define NMKEYT 0
+%define NMKEYF 0
+%define DW_KEY_EVENT_ESCAPE 0
+%define DW_KEY_EVENT_TAB 1
+%define DW_KEY_EVENT_ORGN 2
+%define DW_KEY_EVENT_INSERT 3
+%define DW_KEY_EVENT_BACKSPACE 4
+%define DW_KEY_EVENT_RETURN 5
+%define DW_KEY_EVENT_WP 6
+%define DW_CURSOR_KEY_EVENT_BASE 10
+%define NMKEYT 14
 %define SUPRSH 0
 %define HLPEDT 0
 %define DBLCHR 0
@@ -133,7 +144,7 @@
 %define BEEPSW 0
 %define NMPENT 0
 %define NMSTRT 0
-%define NUMTRP 0
+%define NUMTRP NMKEYT
 %define LISTEN 0
 %define KEYSTA 0
 %define I8251 0

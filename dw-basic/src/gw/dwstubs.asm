@@ -141,11 +141,9 @@ INFMAP:
 INKMAP:
 MAPSUP:
 POLCOM:
-POLLEV:
 PRGFIN:
 PROCHK:
 PRODIR:
-RDPEN:
 RDSTIK:
 RDTRIG:
 SCRSTT:
@@ -155,6 +153,20 @@ SETFBC:
 SWIDTH:
 VALSC2:
     clc
+    ret
+
+RDPEN:
+    xor bx, bx
+    clc
+    ret
+
+POLLEV:
+    ; No firmware interrupt flag is wired into GW-BASIC yet. Ask CHKINT to run
+    ; POLKEY on each poll; KEYINP still performs the nonblocking keyboard test.
+    push ax
+    mov al, 1
+    or al, al
+    pop ax
     ret
 
 EDTMAP:

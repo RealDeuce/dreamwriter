@@ -73,6 +73,16 @@ def patch_gwram(path: Path) -> None:
     if "DW_BASIC_GWRAM_PDIRAM_PHASE" not in text:
         marker = '%include "gio86u.inc"\n'
         text = text.replace(marker, marker + RAM_MACROS + "\n", 1)
+    text = text.replace(
+        ';\n;** The following line is used by a source maint. tool - do not remove\n;** (OEM FUNCTION KEY DEFINITIONS) **************\n;',
+        ';\n%if NMKEYF\n;** The following line is used by a source maint. tool - do not remove\n;** (OEM FUNCTION KEY DEFINITIONS) **************\n;',
+        1,
+    )
+    text = text.replace(
+        ';**(END OF DEFINITIONS) *************************\n;The preceding line is used by a source maint. tool - do not remove.\n;',
+        ';**(END OF DEFINITIONS) *************************\n;The preceding line is used by a source maint. tool - do not remove.\n%endif\n;',
+        1,
+    )
     text = text.replace("%define FPDVAR PDIDS1", "FPDVAR equ PDIDS1")
     text = text.replace("%assign KYBQSZ 32", "KYBQSZ equ 32")
     path.write_text(text)

@@ -380,6 +380,8 @@ NOTTWO:
 	MOV	AX,DX ;Get second and third bytes
 	JMP	NOTRAP ;Go queue the second and third bytes
 QONEBT:
+	CALL	TRPCHK ;Trap key-shaped one-byte controls if enabled
+	JNZ	GETKLP ;branch if Key was trapped (don't queue)
 	JMP	QUEKEY ;else queue the key for CHSNS
 ITSCTC:
 	CALL	KYBINI ;clear keyboard queue, reset PTRFIL
@@ -468,10 +470,17 @@ PKQUE:	PUSH	SI
 ; Referenced by POLKEY
 ;
 TRPKTB:
-db 30,NMKEYF+0o0 ;ON KEY (Cursor Up)
-db 29,NMKEYF+0o1 ;ON KEY (Cursor Left)
-db 28,NMKEYF+0o2 ;ON KEY (Cursor Right)
-db 31,NMKEYF+0o3 ;ON KEY (Cursor Down)
+db 27,DW_KEY_EVENT_ESCAPE ;ON KEY(1) - CAN/Escape
+db 9,DW_KEY_EVENT_TAB ;ON KEY(2) - Tab
+db 2,DW_KEY_EVENT_ORGN ;ON KEY(3) - ORGN/Back word
+db 18,DW_KEY_EVENT_INSERT ;ON KEY(4) - Insert
+db 8,DW_KEY_EVENT_BACKSPACE ;ON KEY(5) - Backspace
+db 13,DW_KEY_EVENT_RETURN ;ON KEY(6) - Return
+db 11,DW_KEY_EVENT_WP ;ON KEY(7) - WP/Home
+db 30,DW_CURSOR_KEY_EVENT_BASE+0o0 ;ON KEY(11) - Cursor Up
+db 29,DW_CURSOR_KEY_EVENT_BASE+0o1 ;ON KEY(12) - Cursor Left
+db 28,DW_CURSOR_KEY_EVENT_BASE+0o2 ;ON KEY(13) - Cursor Right
+db 31,DW_CURSOR_KEY_EVENT_BASE+0o3 ;ON KEY(14) - Cursor Down
 db 0o0 ;end-of-table
 ; SUBTTL  Machine independent Keyboard input routines CHSNS, INKEY$
 global CHSNS
