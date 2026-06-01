@@ -369,6 +369,13 @@ wrapper. There is no direct card-type or ROM/CIS check in this routine; a card
 is accepted only to the extent that the normal file layer can find and open
 `EROMCARD.X`.
 
+Combined with the endpoint map above, the usual built-in-storage state gives a
+PCMCIA-to-built-in fallback: if `[0x6805]` is drive/endpoint `0x08`, the first
+candidate is `0x09:EROMCARD.X` on PCMCIA SRAM storage, and the fallback is
+`0x08:EROMCARD.X` in built-in RAM storage. This is why a payload downloaded into
+the in-memory filesystem can still be launched through the menu item named
+`ROM CARD`.
+
 On a successful find-first result, the loader takes the file size from the DTA
 size fields at offsets `+0x1A/+0x1C`, calls `C688:01E6` to prepare the
 execution context, and compares the 32-bit file size against the returned work

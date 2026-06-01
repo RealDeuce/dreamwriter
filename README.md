@@ -81,6 +81,7 @@ the command reference.
 | [`docs/startup-ui.md`](docs/startup-ui.md) | Cold-start UI path, inline display scripts, boot update sequence, and first menu graphic. |
 | [`docs/menu-dispatch.md`](docs/menu-dispatch.md) | Inline key dispatch tables and the shared application menu event loop. |
 | [`docs/file-system.md`](docs/file-system.md) | FILE menu storage flow, DOS-like file API wrappers, and directory/DTA evidence. |
+| [`docs/running-rom-card-binaries.md`](docs/running-rom-card-binaries.md) | Practical workflow for running arbitrary `EROMCARD.X` binaries through OTHERS -> ROM CARD. |
 | [`docs/basic-eromcard.md`](docs/basic-eromcard.md) | Feasibility notes for wrapping the DreamWriter 325 BASIC interpreter as `EROMCARD.X`. |
 | [`docs/dreamlink-protocol.md`](docs/dreamlink-protocol.md) | DreamLink RS-232 file-transfer protocol, command frames, listings, and data stream framing. |
 | [`docs/wp-editor-heap.md`](docs/wp-editor-heap.md) | Word-processor live document heap, block allocator, and cross-application use evidence. |

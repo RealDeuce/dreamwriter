@@ -535,6 +535,8 @@ writes hour/minute to `72DF`/`72E1`, forces `72E3` to zero, calls
 time state. The C000 handlers behind those wrappers update the RTC BCD shadow
 and write ports `0xD0..0xDC`; see [`hardware.md`](hardware.md).
 
+## FILE Menu And ROM CARD Storage
+
 The WP `FILE` submenu is the document storage workflow for Built-in, Card, and
 DreamLink targets. Its card path is exposed through a DOS-like file API with
 drive letters, `X:*.*`, 8.3 filenames, standard find-first DTA offsets, and
@@ -559,6 +561,12 @@ DC98:2BBE  call DC98:EF7B      ; find first EROMCARD.X
 DC98:2BCC  mov al,[es:6805]    ; fallback drive
 DC98:2BDC  call DC98:EF7B
 ```
+
+The current endpoint map identifies `0x08` as built-in RAM storage and `0x09`
+as PCMCIA SRAM storage. So when `[0x6805]` is the built-in endpoint, this lookup
+order is PCMCIA first, then in-memory storage. That fallback is the practical
+reason a downloaded `EROMCARD.X` in built-in storage can be launched through the
+`ROM CARD` menu path.
 
 If neither lookup succeeds, it displays `No ROM card is in the slot`. On a
 successful lookup, it calls `C688:01E6`, compares the returned work-memory value
