@@ -46,6 +46,7 @@ GW_MODULES := \
 	gwsts \
 	ibmres \
 	itsa86 \
+	maclng \
 	math1 \
 	next86 \
 	scndrv \

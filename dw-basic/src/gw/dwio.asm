@@ -269,6 +269,7 @@ dw_cursor_post_puts:
 ; key is ready. Normal one-byte keys return CF clear in AL. MS Universal editor
 ; controls return CF set as AX=FFxx so POLKEY can run ON KEY trapping and the
 ; screen editor can distinguish control functions from printable bytes.
+extern DWSND_ACTIVE
 KEYINP:
     push bp
     mov bp, sp
@@ -283,6 +284,23 @@ KEYINP:
     mov bx, ds
     mov es, bx
 
+    call DWSND_ACTIVE
+    jz .rom_status
+    push ds
+    xor bx, bx
+    mov ds, bx
+    mov al, [0x70e2]
+    cmp al, [0x70e3]
+    pop ds
+    je .no_key
+
+    mov ah, 0x08
+    int 0x21
+    xor ah, ah
+    call keyinp_map
+    jmp .store_result
+
+.rom_status:
     mov ah, 0x0b
     int 0x21
     cmp al, 0xff

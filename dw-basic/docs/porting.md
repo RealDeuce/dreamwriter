@@ -41,7 +41,7 @@ The first DreamWriter-specific module should provide these primitives:
 | `CLREOL` | Clear from cursor to end of line. | Implemented by blanking cells through `SCROUT`. |
 | `SETCSR` | Cursor display mode/position. | The converted GW-BASIC routine calls the DreamWriter `CSRDSP` hook. |
 | `KEYINP` | Poll for one key without blocking. | T400 keyboard vector or direct key queue. |
-| `DONOTE` | Start/stop sound. | T400 beeper port path; initially stub. |
+| `DONOTE` | Start/stop sound. | Implemented over the DreamWriter `0x50..0x52` tone-counter ports. Foreground notes block on the F9 one-shot timer for the requested duration. Background `PLAY` queues notes and temporarily owns the same timer at port `0x53` to schedule note/rest boundaries. |
 
 The first checked-in shim layer is intentionally smaller and lives in
 `src/include/dwapi.asm`:
@@ -241,7 +241,7 @@ Start small:
 | Random files/FIELD/GET/PUT | Defer. |
 | Graphics | Defer. |
 | COM/LPT devices | Defer. |
-| `SOUND`/`BEEP` | Stub first, wire later. |
+| `SOUND`/`BEEP`/`PLAY` | Wired to the DreamWriter tone counter through GW-BASIC's `DONOTE` hook. Background `PLAY` uses an F9-backed queue; the tone divisor/gate is set once per note, and timer slices only advance the queue. |
 | `PEEK`/`POKE`/`INP`/`OUT` | Decide explicitly; useful on this machine, risky for users. |
 
 ## NASM Conversion Rules

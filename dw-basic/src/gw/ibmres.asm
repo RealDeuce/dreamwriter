@@ -239,8 +239,8 @@ dw NODSKS
 extern NODSKS
 dw NODSKS
 %assign DOL_BLOAD 195
-extern FCERR
-dw FCERR
+extern SOUNDS
+dw SOUNDS
 %assign DOL_SOUND 196
 extern BEEPS
 dw BEEPS
@@ -1150,8 +1150,8 @@ dw FCERR
 extern FCERR
 dw FCERR
 %assign DOL_DRAW 146
-extern FCERR
-dw FCERR
+extern PLAYS
+dw PLAYS
 %assign DOL_PLAY 147
 extern FCERR
 dw FCERR

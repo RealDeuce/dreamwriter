@@ -140,8 +140,8 @@
 %define NCRCAS 0
 
 ; Optional hardware and event surfaces.
-%define PLAYSW 0
-%define BEEPSW 0
+%define PLAYSW 1
+%define BEEPSW 1
 %define NMPENT 0
 %define NMSTRT 0
 %define NUMTRP NMKEYT
