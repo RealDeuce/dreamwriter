@@ -17,6 +17,7 @@ global SETCLR
 global SCRSTT
 global CSRDSP
 global dw_cursor_init
+global dw_console_get_rows
 global dw_cursor_pre_puts
 global dw_cursor_post_puts
 %if GW_ENABLE_GRAPHICS
@@ -77,6 +78,7 @@ CLRSCN:
     jmp console_clear
 
 dw_cursor_init:
+    call console_detect_rows
     mov byte [console_cursor_visible], 0
     mov byte [console_cursor_col], 0
     mov byte [console_cursor_row], 0
@@ -162,7 +164,7 @@ SCRATR:
     ja .done
     cmp dl, 1
     jb .done
-    cmp dl, CONSOLE_ROWS
+    cmp dl, [console_rows]
     ja .done
     mov bl, [console_col]
     mov bh, [console_row]
@@ -215,9 +217,11 @@ CSRDSP:
     mov al, 1
 .row_1_based:
     dec al
-    cmp al, CONSOLE_ROWS - 1
+    mov dl, [console_rows]
+    dec dl
+    cmp al, dl
     jbe .row_ok
-    mov al, CONSOLE_ROWS - 1
+    mov al, dl
 .row_ok:
     mov [console_row], al
 
@@ -495,6 +499,10 @@ keyinp_map:
 
 %define DWCONSOLE_NO_LOCAL_SETCSR 1
 %include "dwconsole.asm"
+
+dw_console_get_rows:
+    mov cl, [console_rows]
+    ret
 
 %if GW_ENABLE_GRAPHICS
 ; SCREEN modes: mode 0 is normal text, mode 1 exposes the LCD as a 480x64

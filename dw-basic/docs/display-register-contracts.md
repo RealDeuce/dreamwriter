@@ -46,6 +46,20 @@ from the GW-BASIC port's point of view.
 `console_cell_xy` converts the logical cell in `console_col/console_row` to
 pixel coordinates.
 
+The console detects the display height at startup before `SCNSWI` initializes
+GW-BASIC's `LINCNT`. It reads the low-RAM far pointer at `0000:020C`
+(`DW_VEC_DISPLAY_INFO`) and inspects the target code for the ROM display-height
+literal:
+
+- `BA 80 00` (`mov dx,0080h`) means a 128-pixel panel, so BASIC uses 16 text
+  rows.
+- `BA 40 00` (`mov dx,0040h`) means a 64-pixel panel, so BASIC uses 8 text
+  rows.
+
+This is deliberately an IVT/vector-table inspection, not an `int 83h` call. If
+future code needs that ROM service, it should use a far call through the IVT
+entry rather than issuing the interrupt.
+
 - Output: `CX = x`, `DX = y`.
 - Preserves: `AX`.
 - Clobbers: `CX`, `DX`, flags.
@@ -56,7 +70,8 @@ pixel coordinates.
 - Preserves: `CX`, `DX`.
 - Relies on `dw_puts_cs_raw` and the ROM helper preserving segment registers.
 
-`console_buffer_put_at_cursor` updates the 80x8 shadow text buffer.
+`console_buffer_put_at_cursor` updates the shadow text buffer. The backing
+buffer is sized for 80x16 cells; runtime bounds use the detected row count.
 
 - Input: `AL = character`.
 - Preserves: `AX`, `BX`, `DI`.

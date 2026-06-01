@@ -682,6 +682,7 @@ extern KEYSW
 extern CSRTYP
 extern CSRFLG
 extern dw_cursor_init
+extern dw_console_get_rows
 
 GWINI:
     pushf
@@ -692,7 +693,7 @@ GWINI:
     call dw_cursor_init
     call CLRSCN
     mov al, 80
-    mov cl, 8
+    call dw_console_get_rows
     call SCNSWI
     mov byte [KEYSW], 0
     call SCNBRK

@@ -1108,8 +1108,8 @@ STMDSX:
 extern NODSKS
 dw NODSKS
 %assign DOL_FILES 129
-extern NODSKS
-dw NODSKS
+extern FIELD
+dw FIELD
 %assign DOL_FIELD 130
 extern SYSTEM
 dw SYSTEM
@@ -1117,20 +1117,20 @@ dw SYSTEM
 extern NODSKS
 dw NODSKS
 %assign DOL_NAME 132
-extern NODSKS
-dw NODSKS
+extern LSET
+dw LSET
 %assign DOL_LSET 133
-extern NODSKS
-dw NODSKS
+extern RSET
+dw RSET
 %assign DOL_RSET 134
 extern NODSKS
 dw NODSKS
 %assign DOL_KILL 135
-extern NODSKS
-dw NODSKS
+extern PUT
+dw PUT
 %assign DOL_PUT 136
-extern NODSKS
-dw NODSKS
+extern GET
+dw GET
 %assign DOL_GET 137
 extern NODSKS
 dw NODSKS
@@ -1221,23 +1221,23 @@ dw CALLSL
 ;The following are 2 byte tokens, the 1st byte is FD
 ; %assign QQ 128
 FUNDSX:
-extern FCERR
-dw FCERR
+extern CVI
+dw CVI
 %assign DOL_CVI 129
-extern FCERR
-dw FCERR
+extern CVS
+dw CVS
 %assign DOL_CVS 130
-extern FCERR
-dw FCERR
+extern CVD
+dw CVD
 %assign DOL_CVD 131
-extern FCERR
-dw FCERR
+extern MKI$
+dw MKI$
 %assign DOL_MKI$ 132
-extern FCERR
-dw FCERR
+extern MKS$
+dw MKS$
 %assign DOL_MKS$ 133
-extern FCERR
-dw FCERR
+extern MKD$
+dw MKD$
 %assign DOL_MKD$ 134
 extern FCERR
 dw FCERR

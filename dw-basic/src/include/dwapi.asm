@@ -13,6 +13,7 @@
 ; compatibility layer instead of target addresses scattered through the port.
 
 DW_VEC_PUTS equ 0x0204
+DW_VEC_DISPLAY_INFO equ 0x020c
 DW_VEC_GETKEY equ 0x0230
 
 %ifdef DWAPI_CURSOR_AWARE

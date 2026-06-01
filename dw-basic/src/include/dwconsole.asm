@@ -1,11 +1,14 @@
 ; Minimal DreamWriter text console over the firmware text vector.
 ;
-; Coordinates are logical 6x8 text cells on the 480x64 LCD.
+; Coordinates are logical 6x8 text cells. Most models expose a 480x64 LCD
+; (80x8 cells), while wider ROM support also identifies 480x128 displays
+; (80x16 cells) through the low-RAM display-info vector.
 
 CONSOLE_CELL_W equ 6
 CONSOLE_CELL_H equ 8
 CONSOLE_COLS equ 80
-CONSOLE_ROWS equ 8
+CONSOLE_DEFAULT_ROWS equ 8
+CONSOLE_MAX_ROWS equ 16
 LCD_DEFAULT_FRAMEBUFFER_BASE equ 0x1000
 LCD_STRIDE_BYTES equ 64
 LCD_VISIBLE_BYTES equ 60
@@ -18,6 +21,7 @@ CONSOLE_ATTR_DEFAULT equ 0x07
 console_clear:
     pushf
     push ax
+    push bx
     push di
     push cx
     push dx
@@ -25,7 +29,11 @@ console_clear:
     push ds
     pop es
     mov di, console_text_buffer
-    mov cx, CONSOLE_COLS * CONSOLE_ROWS
+    mov al, [console_rows]
+    xor ah, ah
+    mov bl, CONSOLE_COLS
+    mul bl
+    mov cx, ax
     mov ax, (CONSOLE_ATTR_DEFAULT << 8) | " "
     cld
     rep stosw
@@ -35,7 +43,10 @@ console_clear:
     xor cx, cx
     call dw_puts_cs_raw
     add dx, CONSOLE_CELL_H
-    cmp dx, CONSOLE_ROWS * CONSOLE_CELL_H
+    mov al, [console_rows]
+    xor ah, ah
+    shl ax, 3
+    cmp dx, ax
     jb .loop
     mov byte [console_col], 0
     mov byte [console_row], 0
@@ -44,6 +55,7 @@ console_clear:
     pop dx
     pop cx
     pop di
+    pop bx
     pop ax
     popf
     ret
@@ -52,6 +64,50 @@ console_clear:
 console_goto:
     mov [console_row], dh
     mov [console_col], dl
+    ret
+
+console_detect_rows:
+    pushf
+    push ax
+    push bx
+    push cx
+    push si
+    push ds
+    push es
+    mov byte [console_rows], CONSOLE_DEFAULT_ROWS
+    xor ax, ax
+    mov ds, ax
+    mov si, [DW_VEC_DISPLAY_INFO]
+    mov ax, [DW_VEC_DISPLAY_INFO + 2]
+    or ax, ax
+    jz .done
+    mov es, ax
+    xor bx, bx
+.scan:
+    cmp byte [es:si + bx], 0xba
+    jne .next
+    cmp word [es:si + bx + 1], 0x0080
+    je .rows16
+    cmp word [es:si + bx + 1], 0x0040
+    je .rows8
+.next:
+    inc bx
+    cmp bx, 32
+    jb .scan
+    jmp .done
+.rows16:
+    mov byte [console_rows], 16
+    jmp .done
+.rows8:
+    mov byte [console_rows], 8
+.done:
+    pop es
+    pop ds
+    pop si
+    pop cx
+    pop bx
+    pop ax
+    popf
     ret
 
 ; AX = physical offset of the currently displayed LCD framebuffer.
@@ -67,7 +123,8 @@ console_show_cursor:
     je .draw
     call console_hide_cursor
 .draw:
-    cmp byte [console_row], CONSOLE_ROWS
+    mov al, [console_rows]
+    cmp [console_row], al
     jae .done
     push ax
     push cx
@@ -173,7 +230,9 @@ console_putc:
 
 console_newline:
     mov byte [console_col], 0
-    cmp byte [console_row], CONSOLE_ROWS - 1
+    mov al, [console_rows]
+    dec al
+    cmp [console_row], al
     jae console_scroll_up
     inc byte [console_row]
     ret
@@ -184,7 +243,9 @@ console_scroll_up:
     push cx
     mov ax, 0x0102
     mov bx, 0x0101
-    mov cx, (CONSOLE_COLS << 8) | (CONSOLE_ROWS - 1)
+    mov ch, CONSOLE_COLS
+    mov cl, [console_rows]
+    dec cl
     call SCROLL
     call console_clear_bottom_row
     pop cx
@@ -233,7 +294,7 @@ SCROLL:
     add dl, cl
     jc .done
     dec dl
-    cmp dl, CONSOLE_ROWS
+    cmp dl, [console_rows]
     ja .done
 
     mov dl, bh
@@ -247,7 +308,7 @@ SCROLL:
     add dl, cl
     jc .done
     dec dl
-    cmp dl, CONSOLE_ROWS
+    cmp dl, [console_rows]
     ja .done
 
     mov [scroll_src_col], ah
@@ -296,7 +357,7 @@ SCROUT:
     ja .done
     cmp dl, 1
     jb .done
-    cmp dl, CONSOLE_ROWS
+    cmp dl, [console_rows]
     ja .done
 
     dec dh
@@ -335,7 +396,7 @@ SCRINP:
     ja .space
     cmp dl, 1
     jb .space
-    cmp dl, CONSOLE_ROWS
+    cmp dl, [console_rows]
     ja .space
 
     dec dh
@@ -367,7 +428,7 @@ CLREOL:
     push dx
     cmp dl, 1
     jb .done
-    cmp dl, CONSOLE_ROWS
+    cmp dl, [console_rows]
     ja .done
     cmp dh, 1
     jae .check_right
@@ -802,12 +863,20 @@ console_clear_bottom_row:
     push ax
     push bx
     push cx
+    push dx
     push di
     push es
     push ds
     pop es
     cld
-    mov di, console_text_buffer + (CONSOLE_COLS * (CONSOLE_ROWS - 1) * 2)
+    mov al, [console_rows]
+    dec al
+    xor ah, ah
+    mov bl, CONSOLE_COLS
+    mul bl
+    shl ax, 1
+    mov di, console_text_buffer
+    add di, ax
     mov cx, CONSOLE_COLS
     mov ax, (CONSOLE_ATTR_DEFAULT << 8) | " "
     rep stosw
@@ -817,7 +886,12 @@ console_clear_bottom_row:
     xor ax, ax
     mov es, ax
     mov di, [lcd_framebuffer_base]
-    add di, LCD_STRIDE_BYTES * CONSOLE_CELL_H * (CONSOLE_ROWS - 1)
+    mov al, [console_rows]
+    dec al
+    xor ah, ah
+    mov bx, LCD_STRIDE_BYTES * CONSOLE_CELL_H
+    mul bx
+    add di, ax
     xor ax, ax
     mov bx, CONSOLE_CELL_H
 .clear_scanline:
@@ -829,6 +903,7 @@ console_clear_bottom_row:
     pop es
 
     pop di
+    pop dx
     pop cx
     pop bx
     pop ax
@@ -1046,9 +1121,10 @@ console_cursor_display_xy:
     jb .col_ok
     mov dl, CONSOLE_COLS - 1
 .col_ok:
-    cmp dh, CONSOLE_ROWS
+    cmp dh, [console_rows]
     jb .row_ok
-    mov dh, CONSOLE_ROWS - 1
+    mov dh, [console_rows]
+    dec dh
 .row_ok:
     ret
 
@@ -1122,6 +1198,8 @@ console_cursor_logical_row:
     db 0
 console_current_attr:
     db CONSOLE_ATTR_DEFAULT
+console_rows:
+    db CONSOLE_DEFAULT_ROWS
 console_cursor_saved_cell:
     dw (CONSOLE_ATTR_DEFAULT << 8) | " "
 console_cell:
@@ -1174,4 +1252,4 @@ scroll_pixel_value:
 scroll_byte_width:
     dw 0
 console_text_buffer:
-    times CONSOLE_COLS * CONSOLE_ROWS dw (CONSOLE_ATTR_DEFAULT << 8) | " "
+    times CONSOLE_COLS * CONSOLE_MAX_ROWS dw (CONSOLE_ATTR_DEFAULT << 8) | " "

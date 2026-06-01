@@ -68,10 +68,13 @@ return to firmware data state afterward; leaving `DS=CS` can make the caller
 appear hung after the external program exits.
 
 `src/include/dwconsole.asm` is the first reusable consumer of this shim layer.
-It tracks an 80x8 logical text grid using 6x8 cells and provides `console_putc`,
-`console_puts`, `console_backspace`, `console_goto`, `console_clear`, and
-`console_read_line`. This is the intended nucleus for direct-mode BASIC console
-I/O; the ROM-card smoke program should stay a thin caller of these routines.
+It tracks an 80-column logical text grid using 6x8 cells and provides
+`console_putc`, `console_puts`, `console_backspace`, `console_goto`,
+`console_clear`, and `console_read_line`. The backing shadow buffer is sized for
+16 rows, while runtime bounds come from the ROM display-height vector at
+`0000:020C`: ROM code containing `BA 80 00` selects 16 rows and `BA 40 00`
+selects 8 rows. This is the intended nucleus for direct-mode BASIC console I/O;
+the ROM-card smoke program should stay a thin caller of these routines.
 Line editing records the input start cell and maps Backspace from the buffer
 length back to a screen cell, so wrapped input can erase the previous character
 instead of depending on whatever cursor column happens to be current.

@@ -9,37 +9,43 @@
 %include "gio86u.inc"
 %include "msdosu.inc"
 
-extern DERBFM
+extern DERBRN
 extern DERFNF
 extern DERIOE
 extern FCERR
 extern BINPSV
 extern CHRGTR
 extern CURLIN
+extern DFACLO
+extern DOL_NORMD
 extern DOL_EXPCN
 extern DOL_LOGP
+extern FAC
 extern FILDEV
 extern FILMOD
 extern FILNM
 extern GTMPRT
 extern INIFDB
+extern MOVE1
 extern SCCPTR
 extern TEMP
 extern TXTTAB
+extern VALTYP
 extern VARTAB
 extern PROFLG
 
-DW_FH equ FD_DAT
-DW_FDB_EXTRA_SIZE equ 2
+DW_HANDLE_SIZE equ 2
+DW_SEQ_HANDLE equ FDBSIZ
+DW_RND_EXTRA_SIZE equ FD_DAT - FDBSIZ + DW_HANDLE_SIZE
 
 global DSKDSP
 DSKDSP:
     dw dw_disk_eof
     dw dw_disk_loc
-    dw FCERR
+    dw dw_disk_lof
     dw dw_disk_close
     dw dw_disk_ret
-    dw FCERR
+    dw dw_disk_random
     dw dw_disk_open
     dw dw_disk_sin
     dw dw_disk_sot
@@ -63,7 +69,56 @@ dw_disk_eof:
 
 dw_disk_loc:
     xor bx, bx
+    cmp byte [F_MODE+si], MD_RND
+    jne .done
+    mov bx, word [FD_LOG+si]
+.done:
     ret
+
+dw_disk_lof:
+    push ax
+    push bx
+    push cx
+    push dx
+    call dw_load_handle
+    xor cx, cx
+    xor dx, dx
+    mov ax, 0x4201
+    int 0x21
+    jc .io_failed
+    push dx
+    push ax
+    call dw_load_handle
+    xor cx, cx
+    xor dx, dx
+    mov ax, 0x4202
+    int 0x21
+    jc .io_failed
+    mov word [dw_file_size], ax
+    mov word [dw_file_size+2], dx
+    pop dx
+    pop cx
+    call dw_load_handle
+    mov ax, 0x4200
+    int 0x21
+    jc .io_failed
+    mov dx, dw_file_size
+    mov bx, DFACLO-1
+    mov byte [bx], 0
+    inc bx
+    mov ch, 4
+    call MOVE1
+    mov byte [FAC+1], ch
+    mov word [bx], cx
+    mov word [bx+2], (128+56)*256
+    mov byte [VALTYP], 8
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    jmp DOL_NORMD
+.io_failed:
+    jmp DERIOE
 
 dw_disk_gps:
     mov ah, byte [F_POS+si]
@@ -74,14 +129,13 @@ dw_disk_gwd:
     ret
 
 dw_disk_open:
-    cmp byte [FILMOD], MD_RND
-    je .bad_mode
-
     push ax
     push bx
     push cx
     push dx
-    mov cx, DW_FDB_EXTRA_SIZE
+    cmp byte [FILMOD], MD_RND
+    je .random
+    mov cx, DW_HANDLE_SIZE
     mov ah, MD_SQI | MD_SQO | MD_APP
     mov dx, 255
     call INIFDB
@@ -109,7 +163,7 @@ dw_disk_open:
     int 0x21
     jc .io_failed
 .store_handle:
-    mov word [DW_FH+si], ax
+    call dw_store_handle
     jmp .finish_open
 .create_append:
     mov ah, 0x3c
@@ -118,7 +172,7 @@ dw_disk_open:
     int 0x21
     jc .io_failed
 .store_append_handle:
-    mov word [DW_FH+si], ax
+    call dw_store_handle
     call dw_append_seek
     mov byte [F_MODE+si], MD_SQO
 .finish_open:
@@ -129,19 +183,44 @@ dw_disk_open:
     pop bx
     pop ax
     ret
-.bad_mode:
-    jmp DERBFM
 .open_failed:
     jmp DERFNF
 .io_failed:
     jmp DERIOE
+.random:
+    or cx, cx
+    jnz .random_size
+    mov cx, DATPSC
+.random_size:
+    push cx
+    add cx, DW_RND_EXTRA_SIZE
+    mov ah, MD_SQI | MD_SQO | MD_APP | MD_RND
+    mov dx, 255
+    call INIFDB
+    pop cx
+    mov word [FD_SIZ+si], cx
+    mov word [FD_PHY+si], 0
+    mov word [FD_LOG+si], 0
+    mov byte [F_NUL5+si], 0
+    mov word [FD_OPS+si], 0
+    call dw_build_path
+    mov ax, 0x3d02
+    mov dx, dw_file_path
+    int 0x21
+    jnc .store_handle
+    mov ah, 0x3c
+    xor cx, cx
+    mov dx, dw_file_path
+    int 0x21
+    jc .io_failed
+    jmp .store_handle
 
 dw_append_seek:
     push ax
     push bx
     push cx
     push dx
-    mov bx, word [DW_FH+si]
+    call dw_load_handle
     xor cx, cx
     xor dx, dx
     mov ax, 0x4202
@@ -194,7 +273,7 @@ dw_disk_close:
     mov al, ASCCTZ
     call dw_disk_sot
 .close:
-    mov bx, word [DW_FH+si]
+    call dw_load_handle
     mov ah, 0x3e
     int 0x21
     jc .io_failed
@@ -208,7 +287,7 @@ dw_disk_sin:
     push bx
     push cx
     push dx
-    mov bx, word [DW_FH+si]
+    call dw_load_handle
     mov cx, 1
     mov dx, dw_file_byte
     mov ah, 0x3f
@@ -238,7 +317,7 @@ dw_disk_sot:
     push cx
     push dx
     mov byte [dw_file_byte], al
-    mov bx, word [DW_FH+si]
+    call dw_load_handle
     mov cx, 1
     mov dx, dw_file_byte
     mov ah, 0x40
@@ -262,7 +341,7 @@ dw_disk_bin:
     push di
     push cx
     mov di, bx
-    mov bx, word [DW_FH+si]
+    call dw_load_handle
     push dx
     pop ds
     mov dx, di
@@ -293,7 +372,7 @@ dw_disk_bot:
     push di
     push cx
     mov di, bx
-    mov bx, word [DW_FH+si]
+    call dw_load_handle
     push dx
     pop ds
     mov dx, di
@@ -313,6 +392,140 @@ dw_disk_bot:
     ret
 .io_failed:
     jmp DERIOE
+
+dw_disk_random:
+    mov byte [dw_random_op], al
+    test al, 2
+    jnz .absolute
+    mov dx, word [FD_LOG+si]
+    inc dx
+    jz .bad_record
+    jmp .record_ready
+.absolute:
+    or dx, dx
+    jz .bad_record
+.record_ready:
+    mov word [FD_LOG+si], dx
+    mov word [FD_OPS+si], 0
+    dec dx
+    mov ax, dx
+    mul word [FD_SIZ+si]
+    mov word [dw_random_offset], ax
+    mov word [dw_random_offset+2], dx
+    test byte [dw_random_op], 1
+    jz .seek_record
+    call dw_extend_to_random_offset
+.seek_record:
+    mov cx, word [dw_random_offset+2]
+    mov dx, word [dw_random_offset]
+    call dw_load_handle
+    mov ax, 0x4200
+    int 0x21
+    jc .io_failed
+    test byte [dw_random_op], 1
+    jnz .put_record
+    call dw_load_handle
+    mov cx, word [FD_SIZ+si]
+    mov dx, FD_DAT
+    add dx, si
+    mov ah, 0x3f
+    int 0x21
+    jc .io_failed
+    cmp ax, cx
+    je .done
+    ja .io_failed
+    push es
+    push ds
+    pop es
+    mov di, FD_DAT
+    add di, si
+    add di, ax
+    sub cx, ax
+    xor al, al
+    cld
+    rep stosb
+    pop es
+.done:
+    ret
+.put_record:
+    call dw_load_handle
+    mov cx, word [FD_SIZ+si]
+    mov dx, FD_DAT
+    add dx, si
+    mov ah, 0x40
+    int 0x21
+    jc .io_failed
+    cmp ax, cx
+    jne .io_failed
+    ret
+.bad_record:
+    jmp DERBRN
+.io_failed:
+    jmp DERIOE
+
+dw_extend_to_random_offset:
+    call dw_load_handle
+    xor cx, cx
+    xor dx, dx
+    mov ax, 0x4202
+    int 0x21
+    jc .io_failed
+    cmp dx, word [dw_random_offset+2]
+    jb .fill_gap
+    ja .done
+    cmp ax, word [dw_random_offset]
+    jae .done
+.fill_gap:
+    mov cx, word [dw_random_offset]
+    sub cx, ax
+    mov word [dw_gap_remaining], cx
+    mov cx, word [dw_random_offset+2]
+    sbb cx, dx
+    mov word [dw_gap_remaining+2], cx
+    mov byte [dw_file_byte], 0
+    call dw_load_handle
+.fill_loop:
+    mov cx, 1
+    mov dx, dw_file_byte
+    mov ah, 0x40
+    int 0x21
+    jc .io_failed
+    cmp ax, 1
+    jne .io_failed
+    sub word [dw_gap_remaining], 1
+    sbb word [dw_gap_remaining+2], 0
+    mov ax, word [dw_gap_remaining]
+    or ax, word [dw_gap_remaining+2]
+    jnz .fill_loop
+.done:
+    ret
+.io_failed:
+    jmp DERIOE
+
+dw_handle_ptr:
+    push ax
+    mov bx, DW_SEQ_HANDLE
+    cmp byte [F_MODE+si], MD_RND
+    jne .done
+    mov bx, FD_DAT
+    mov ax, word [FD_SIZ+si]
+    add bx, ax
+.done:
+    add bx, si
+    pop ax
+    ret
+
+dw_store_handle:
+    push bx
+    call dw_handle_ptr
+    mov word [bx], ax
+    pop bx
+    ret
+
+dw_load_handle:
+    call dw_handle_ptr
+    mov bx, word [bx]
+    ret
 
 dw_update_input_pos:
     cmp al, ASCCTZ
@@ -489,5 +702,13 @@ PROCHK:
 
 dw_file_byte:
     db 0
+dw_random_op:
+    db 0
+dw_random_offset:
+    dd 0
+dw_gap_remaining:
+    dd 0
+dw_file_size:
+    dd 0
 dw_file_path:
     times 16 db 0
