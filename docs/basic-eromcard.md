@@ -806,7 +806,7 @@ Reasons it is plausible:
   `0x0800`, but not within the ROM CARD loader's one-shot destination window at
   `0000:A4F0`.
 - A small `EROMCARD.X` first-stage loader can stay below that boundary, then
-  read `GWBASIC.OVR` to `CS:0800` through the normal file API without crossing
+  read `DW-BASIC.FLT` to `CS:0800` through the normal file API without crossing
   a 64 KiB destination-offset wrap.
 - The MAME PCMCIA bank model gives us a direct way to map the 325 high ROM into
   its original CPU addresses for a proof-of-concept run.

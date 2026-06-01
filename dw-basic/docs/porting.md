@@ -212,9 +212,9 @@ gmake -C dw-basic gw-basic-bin
 The target uses `flatlink -f bin -offset 2048 -maxfixups 10000`, producing
 `build/gw-basic.bin` and `build/gw-basic.map`. Offset `0x0800` leaves room for
 the ROM CARD header and first-stage loader in the same segment. The card build
-copies the flatlink output to `build/GWBASIC.OVR`; the file itself starts with
+copies the flatlink output to `build/DW-BASIC.FLT`; the file itself starts with
 the first byte that must be loaded at `CS:0800`. `src/eromcard_gw.asm` opens
-`I:GWBASIC.OVR`, reads it back to `CS:0800`, and jumps to the map-derived
+`I:DW-BASIC.FLT`, reads it back to `CS:0800`, and jumps to the map-derived
 `INIT` offset.
 
 The local flatlink copy has two small compatibility fixes needed by NASM's OMF
@@ -228,7 +228,7 @@ output for this source set:
 The first wrapped payload is `build/EROMCARD-GW.X`, built by
 `gmake -C dw-basic basic-payload`. It is intentionally a small first-stage
 loader: the ROM CARD entry sets `DS=CS`, checks the loader-provided work-memory
-limit against `LSTVAR + 2 + GW_BASIC_MIN_FREE`, loads `GWBASIC.OVR` while still
+limit against `LSTVAR + 2 + GW_BASIC_MIN_FREE`, loads `DW-BASIC.FLT` while still
 using the ROM loader's original stack, then switches to a private stack below the
 loader-provided limit before jumping to GW-BASIC's `INIT`. If any check fails,
 it prints an error and returns. The default reserve is 4096 bytes and can be

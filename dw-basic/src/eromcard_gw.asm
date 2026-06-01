@@ -3,7 +3,7 @@ org 0
 
 %include "build/gw-basic-symbols.inc"
 
-; Current policy is the flat64 model: load one GWBASIC.OVR into the card
+; Current policy is the flat64 model: load one DW-BASIC.FLT into the card
 ; loader's segment and enter it with CS=DS=ES=SS.  The future split128 model
 ; should choose a separate overlay/container when enough RAM is available; see
 ; docs/memory-model.md before changing this loader path.
@@ -515,22 +515,22 @@ after_verify_message:
     db "AFTER VERIFY", 13
     db "PRESS KEY", 0
 open_failed_message:
-    db "CAN NOT OPEN GWBASIC.OVR", 13
+    db "CAN NOT OPEN DW-BASIC.FLT", 13
     db "PRESS KEY TO RETURN", 0
 read_failed_message:
-    db "CAN NOT READ GWBASIC.OVR", 13
+    db "CAN NOT READ DW-BASIC.FLT", 13
     db "PRESS KEY TO RETURN", 0
 verify_failed_message:
-    db "BAD GW-BASIC.OVR LOAD", 13
+    db "BAD DW-BASIC.FLT LOAD", 13
     db "PRESS KEY TO RETURN", 0
 verified_message:
-    db "GWBASIC.OVR VERIFIED", 13
+    db "DW-BASIC.FLT VERIFIED", 13
     db "PRESS KEY TO START", 0
 overlay_path:
-    db "I:GWBASIC.OVR", 0
+    db "I:DW-BASIC.FLT", 0
 overlay_path_end:
 expected_overlay_prefix:
-    incbin "build/GWBASIC.OVR", 0, 16
+    incbin "build/DW-BASIC.FLT", 0, 16
 expected_overlay_prefix_end:
 
 %if ($ - $$) > GW_BASIC_LOAD_OFFSET

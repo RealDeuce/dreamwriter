@@ -5,7 +5,7 @@ The current DW-BASIC port targets the **flat64** memory model.
 ## flat64
 
 `flat64` is the buildable target today. The ROM card loader reads one
-`GWBASIC.OVR` file into one 64K segment and enters BASIC with
+`DW-BASIC.FLT` file into one 64K segment and enters BASIC with
 `CS=DS=ES=SS`. This keeps the startup path compatible with 64K-class machines
 such as the DreamWriter 325.
 
@@ -78,7 +78,7 @@ Likely split128 work:
 - Add a split runtime patch path instead of reusing `flat_runtime_patches.py`.
 - Define a split overlay format with code image, initialized data image, entry
   offset, and data limit metadata.
-- Update `src/eromcard_gw.asm` to choose `GWBASIC128.OVR` or equivalent when
+- Update `src/eromcard_gw.asm` to choose `DW-BASIC128.FLT` or equivalent when
   RAM allows, otherwise fall back to the flat64 overlay.
 
 Until split128 exists, ORG-gap conversion findings should be treated as known

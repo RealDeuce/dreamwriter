@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Patch converted GW-BASIC startup code for the flat64 ROM CARD model.
+"""Patch converted GW-BASIC code for the flat64 ROM CARD model.
 
-The flat64 model is the current target: one overlay is loaded into one 64K
-segment and BASIC runs with CS=DS=ES=SS.  The original GW-BASIC sources also
+The flat64 model is the current target: one overlay is loaded into a dedicated
+64K segment and BASIC runs with CS=DS=ES=SS.  The original GW-BASIC sources also
 contain split code/data startup machinery; keep split128 policy in
 docs/memory-model.md rather than deleting those original paths silently.
 """
@@ -264,6 +264,111 @@ MSIRST:
     path.write_text(text)
 
 
+def patch_bimisc(path: Path) -> None:
+    text = path.read_text(errors="replace")
+    text = replace_once(
+        text,
+        """global INITRP
+INITRP:
+extern TRPTBL
+\tMOV\tBX,TRPTBL ;HL=TRAP TABLE ADDRESS
+\tMOV\tCH,NUMTRP ;B=NUMBER OF TRAPS
+\tXOR\tAL,AL
+INITP0:\tMOV\tbyte [BX],AL ;TRAP OFF
+\tINC\tBX
+\tMOV\tbyte [BX],AL
+\tINC\tBX
+\tMOV\tbyte [BX],AL ;CLEAR GOSUB ADDR TOO!
+\tINC\tBX
+\tDEC\tCH
+\tJNZ\tINITP0
+\tMOV byte [ONGSBF], AL
+\tRET
+""",
+        """global INITRP
+INITRP:
+extern TRPTBL
+%if NUMTRP
+\tMOV\tBX,TRPTBL ;HL=TRAP TABLE ADDRESS
+\tMOV\tCH,NUMTRP ;B=NUMBER OF TRAPS
+\tXOR\tAL,AL
+INITP0:\tMOV\tbyte [BX],AL ;TRAP OFF
+\tINC\tBX
+\tMOV\tbyte [BX],AL
+\tINC\tBX
+\tMOV\tbyte [BX],AL ;CLEAR GOSUB ADDR TOO!
+\tINC\tBX
+\tDEC\tCH
+\tJNZ\tINITP0
+%else
+\tXOR\tAL,AL
+%endif
+\tMOV byte [ONGSBF], AL
+\tRET
+""",
+    )
+    text = replace_once(
+        text,
+        """GOTRP:
+\tMOV AL, byte [ONEFLG]
+\tOR\tAL,AL
+\tJZ\t$+3
+\tRET ;CAN'T TRAP FROM ERROR TRAP
+\tPUSH\tBX ;SAVE TES\bXT POINTER
+""",
+        """GOTRP:
+\tMOV AL, byte [ONEFLG]
+\tOR\tAL,AL
+\tJZ\t$+3
+\tRET ;CAN'T TRAP FROM ERROR TRAP
+%if NUMTRP == 0
+\tRET
+%endif
+\tPUSH\tBX ;SAVE TES\bXT POINTER
+""",
+    )
+    path.write_text(text)
+
+
+def patch_giokyb(path: Path) -> None:
+    text = path.read_text(errors="replace")
+    text = replace_once(
+        text,
+        """QONEBT:
+\tJMP\tQUEKEY ;else queue the key for CHSNS
+""",
+        """QONEBT:
+\tCALL\tTRPCHK ;Trap key-shaped one-byte controls if enabled
+\tJNZ\tGETKLP ;branch if Key was trapped (don't queue)
+\tJMP\tQUEKEY ;else queue the key for CHSNS
+""",
+    )
+    text = replace_once(
+        text,
+        """TRPKTB:
+db 30,NMKEYF+0o0 ;ON KEY (Cursor Up)
+db 29,NMKEYF+0o1 ;ON KEY (Cursor Left)
+db 28,NMKEYF+0o2 ;ON KEY (Cursor Right)
+db 31,NMKEYF+0o3 ;ON KEY (Cursor Down)
+db 0o0 ;end-of-table
+""",
+        """TRPKTB:
+db 27,DW_KEY_EVENT_ESCAPE ;ON KEY(1) - CAN/Escape
+db 9,DW_KEY_EVENT_TAB ;ON KEY(2) - Tab
+db 18,DW_KEY_EVENT_INSERT ;ON KEY(4) - Insert
+db 8,DW_KEY_EVENT_BACKSPACE ;ON KEY(5) - Backspace
+db 13,DW_KEY_EVENT_RETURN ;ON KEY(6) - Return
+db 11,DW_KEY_EVENT_WP ;ON KEY(7) - WP/ORGN Home
+db 30,DW_CURSOR_KEY_EVENT_BASE+0o0 ;ON KEY(11) - Cursor Up
+db 29,DW_CURSOR_KEY_EVENT_BASE+0o1 ;ON KEY(12) - Cursor Left
+db 28,DW_CURSOR_KEY_EVENT_BASE+0o2 ;ON KEY(13) - Cursor Right
+db 31,DW_CURSOR_KEY_EVENT_BASE+0o3 ;ON KEY(14) - Cursor Down
+db 0o0 ;end-of-table
+""",
+    )
+    path.write_text(text)
+
+
 def patch_scndrv(path: Path) -> None:
     text = path.read_text(errors="replace")
     text = replace_once(
@@ -286,11 +391,18 @@ def patch_scndrv(path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("module", choices=["gwinit", "itsa86", "gio86", "scndrv"])
+    parser.add_argument(
+        "module",
+        choices=["bimisc", "giokyb", "gwinit", "itsa86", "gio86", "scndrv"],
+    )
     parser.add_argument("path", type=Path)
     args = parser.parse_args()
 
-    if args.module == "gwinit":
+    if args.module == "bimisc":
+        patch_bimisc(args.path)
+    elif args.module == "giokyb":
+        patch_giokyb(args.path)
+    elif args.module == "gwinit":
         patch_gwinit(args.path)
     elif args.module == "itsa86":
         patch_itsa86(args.path)

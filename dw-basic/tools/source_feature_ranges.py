@@ -23,6 +23,7 @@ class FeatureRange:
     feature: str
     start: str
     end: str
+    occurrence: str
 
 
 @dataclass(frozen=True)
@@ -45,11 +46,12 @@ def symbol_line_re(symbol: str) -> re.Pattern[str]:
 
 def parse_range(text: str) -> FeatureRange:
     parts = text.split(":")
-    if len(parts) != 4:
+    if len(parts) not in {4, 5}:
         raise argparse.ArgumentTypeError(
-            "ranges must be NAME:FEATURE:START_SYMBOL:END_SYMBOL"
+            "ranges must be NAME:FEATURE:START_SYMBOL:END_SYMBOL[:OCCURRENCE]"
         )
-    name, feature, start, end = parts
+    name, feature, start, end = parts[:4]
+    occurrence = parts[4] if len(parts) == 5 else "1"
     for label, value in (
         ("NAME", name),
         ("FEATURE", feature),
@@ -57,9 +59,11 @@ def parse_range(text: str) -> FeatureRange:
     ):
         if not re.fullmatch(IDENT_RE, value):
             raise argparse.ArgumentTypeError(f"{label} is not a NASM identifier: {value}")
-    if end != "EOF" and not re.fullmatch(IDENT_RE, end):
-        raise argparse.ArgumentTypeError(f"END_SYMBOL is not a NASM identifier or EOF: {end}")
-    return FeatureRange(name=name, feature=feature, start=start, end=end)
+        if end != "EOF" and not re.fullmatch(IDENT_RE, end):
+            raise argparse.ArgumentTypeError(f"END_SYMBOL is not a NASM identifier or EOF: {end}")
+    if occurrence != "all" and not re.fullmatch(r"[1-9]\d*", occurrence):
+        raise argparse.ArgumentTypeError("OCCURRENCE must be a positive integer or all")
+    return FeatureRange(name=name, feature=feature, start=start, end=end, occurrence=occurrence)
 
 
 def parse_ret_stubs(text: str) -> RetStubs:
@@ -78,9 +82,10 @@ def parse_ret_stubs(text: str) -> RetStubs:
     return RetStubs(range_name=range_name, labels=labels)
 
 
-def find_symbol_line(lines: list[str], symbol: str) -> int:
+def find_symbol_line(lines: list[str], symbol: str, start_at: int = 0) -> int:
     pattern = symbol_line_re(symbol)
-    for index, line in enumerate(lines):
+    for index in range(start_at, len(lines)):
+        line = lines[index]
         stripped = line.strip()
         declaration = re.fullmatch(r"(?:global|extern)\s+(.+)", stripped)
         if declaration:
@@ -92,31 +97,55 @@ def find_symbol_line(lines: list[str], symbol: str) -> int:
     raise SystemExit(f"symbol not found for feature range: {symbol}")
 
 
+def find_range_occurrences(lines: list[str], feature_range: FeatureRange) -> list[tuple[int, int]]:
+    ranges: list[tuple[int, int]] = []
+    start_at = 0
+    while start_at < len(lines):
+        try:
+            start = find_symbol_line(lines, feature_range.start, start_at)
+        except SystemExit:
+            break
+        end = len(lines) if feature_range.end == "EOF" else find_symbol_line(
+            lines, feature_range.end, start + 1
+        )
+        if end <= start:
+            raise SystemExit(
+                f"invalid feature range {feature_range.name}: "
+                f"{feature_range.end} is not after {feature_range.start}"
+            )
+        ranges.append((start, end))
+        start_at = end
+        if feature_range.occurrence != "all":
+            wanted = int(feature_range.occurrence)
+            if len(ranges) == wanted:
+                return [ranges[-1]]
+    if feature_range.occurrence == "all" and ranges:
+        return ranges
+    raise SystemExit(
+        f"symbol range occurrence not found for feature range "
+        f"{feature_range.name}: {feature_range.start}..{feature_range.end}"
+    )
+
+
 def apply_range(lines: list[str], feature_range: FeatureRange, ret_stubs: list[RetStubs]) -> list[str]:
     start_marker = f"; DW-BASIC feature range {feature_range.name}:"
     if any(start_marker in line for line in lines):
         return lines
-
-    start = find_symbol_line(lines, feature_range.start)
-    end = len(lines) if feature_range.end == "EOF" else find_symbol_line(lines, feature_range.end)
-    if end <= start:
-        raise SystemExit(
-            f"invalid feature range {feature_range.name}: "
-            f"{feature_range.end} is not after {feature_range.start}"
-        )
 
     begin = (
         f"%if {feature_range.feature} ; DW-BASIC feature range "
         f"{feature_range.name}: {feature_range.start}..{feature_range.end}"
     )
     finish = f"%endif ; DW-BASIC feature range {feature_range.name}"
-    stub_lines: list[str] = []
-    for stubs in ret_stubs:
-        if stubs.range_name == feature_range.name:
-            stub_lines.append(f"%else ; DW-BASIC feature range {feature_range.name} stubs")
-            stub_lines.extend(f"{label}:" for label in stubs.labels)
-            stub_lines.append("\tRET")
-    return lines[:start] + [begin] + lines[start:end] + stub_lines + [finish] + lines[end:]
+    for start, end in reversed(find_range_occurrences(lines, feature_range)):
+        stub_lines: list[str] = []
+        for stubs in ret_stubs:
+            if stubs.range_name == feature_range.name:
+                stub_lines.append(f"%else ; DW-BASIC feature range {feature_range.name} stubs")
+                stub_lines.extend(f"{label}:" for label in stubs.labels)
+                stub_lines.append("\tRET")
+        lines = lines[:start] + [begin] + lines[start:end] + stub_lines + [finish] + lines[end:]
+    return lines
 
 
 def patch_file(path: Path, ranges: list[FeatureRange], ret_stubs: list[RetStubs]) -> None:

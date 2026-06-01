@@ -475,12 +475,14 @@ db 1 ;STORE HERE THE NUMBER OF NULLS
 global MSDCCF
 ; MSDCCF:
 db 0 ;Ctl-C flag set by Ctl-C int handler
+%if GW_KEEP_DOS_VECTOR_WRAPPERS ; DW-BASIC feature range dos_vector_save_slots: CTLCAD..LSTCHR
 global CTLCAD
 ; CTLCAD:
 resb 4 ;Store pre-BASIC CTL-C int vector
 global DINTAD
 ; DINTAD:
 resb 4 ;Store BASIC Disk error int vector
+%endif ; DW-BASIC feature range dos_vector_save_slots
 global LSTCHR
 ; LSTCHR:
 db 0 ;used by SCNSOT to remember last chr out
@@ -650,12 +652,14 @@ db 1 ;STORE HERE THE NUMBER OF NULLS
 global MSDCCF
 MSDCCF:
 db 0 ;Ctl-C flag set by Ctl-C int handler
+%if GW_KEEP_DOS_VECTOR_WRAPPERS ; DW-BASIC feature range dos_vector_save_slots: CTLCAD..LSTCHR
 global CTLCAD
 CTLCAD:
 resb 4 ;Store pre-BASIC CTL-C int vector
 global DINTAD
 DINTAD:
 resb 4 ;Store BASIC Disk error int vector
+%endif ; DW-BASIC feature range dos_vector_save_slots
 global LSTCHR
 LSTCHR:
 db 0 ;used by SCNSOT to remember last chr out

@@ -64,7 +64,7 @@ That writes:
 
 ```text
 dw-basic/build/EROMCARD-GW.X
-dw-basic/build/GWBASIC.OVR
+dw-basic/build/DW-BASIC.FLT
 ```
 
 Install that payload into a formatted SRAM image:
@@ -74,9 +74,9 @@ gmake -C dw-basic basic-card
 ```
 
 The BASIC card image installs a small `EROMCARD.X` first-stage loader plus
-`GWBASIC.OVR`. `flatlink -offset 2048` gives the overlay addresses starting at
+`DW-BASIC.FLT`. `flatlink -offset 2048` gives the overlay addresses starting at
 `0x0800`; the overlay file itself starts with the first byte to load there. The
-first-stage loader opens `I:GWBASIC.OVR`, reads it to `CS:0800`, checks the ROM
+first-stage loader opens `I:DW-BASIC.FLT`, reads it to `CS:0800`, checks the ROM
 CARD loader's incoming `AX` work-memory limit, then jumps into GW-BASIC. By
 default it requires the linked static image end plus 4096 bytes of free BASIC
 space; override with `GW_BASIC_MIN_FREE=...`. The default flat64 build disables

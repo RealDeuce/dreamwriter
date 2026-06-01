@@ -1988,6 +1988,7 @@ NFRFDB:	XOR	AX,AX
 	MOV word [PTRFIL], AX ;future I/O will use Keyboard/CRT
 RET45:	RET
 ; SUBTTL  MSDOS   Abort/Initialization/Termination Processing
+%if GW_KEEP_DOS_VECTOR_WRAPPERS ; DW-BASIC feature range dos_vector_wrappers: DINTAD..EOF
 extern DINTAD
 extern CTLCAD ;MSDOS Ctl-C and disk error vector
 extern MSDCCF ;MSDOS control C flag
@@ -2020,13 +2021,36 @@ MSCTLC:	MOV byte [MSDCCF], 0o377 ;Record control-C event for POLKEY
 ;         The current addresses are saved for restoration upon termination
 ;         All registers preserved.
 ;
-MSISET:
-; ROM CARD build has no DOS vector API. The original routine installs Ctrl-C
-; and critical-error vectors through INT 21h, which is not a valid contract
-; here. Preserve the caller-visible all-registers-preserved behavior by
-; returning directly.
+MSISET:	PUSH	AX
+	PUSH	DX
+	PUSH	ES
+	MOV	AX,36 ;MSDOS fatal error interrupt
+	MOV	BX,DINTAD ;Get save location for fatal error
+	CALL	SAVVEC
+	DEC	AX ;MSDOS Ctl-C interrupt
+	MOV	BX,CTLCAD ;Get save location
+	CALL	SAVVEC
+	PUSH	CS
+	POP	ES ;BASIC code segment to ES
+	MOV	DX,MSCTLC ;BASIC Ctl-C handler address
+	CALL	SETVEC ;BASIC Ctl-C handler vector set
+	INC	AX ;MSDOS fatal error interrupt
+	MOV	DX,ERRC_DSKERR
+	CALL	SETVEC ;BASIC fatal error handler vector set
+	POP	ES
+	POP	DX
+	POP	AX
 	RET
-MSIRST:
+MSIRST:	PUSH	AX
+	PUSH	ES
+	MOV	AX,36 ;MSDOS fatal error interrupt
+	LES DX, [DINTAD] ;Get MSDOS fatal error handler add/par
+	CALL	SETVEC
+	DEC	AX ;MSDOS Ctl-C interrupt
+	LES DX, [CTLCAD] ;Get MSDOS Ctl-C handler add/par
+	CALL	SETVEC
+	POP	ES
+	POP	AX
 	RET
 ;SAVVEC - Get and store an interrupt vector
 ;ENTRY  - AX = interrupt
@@ -2079,3 +2103,8 @@ GETVEC:	PUSH	AX
 	POP	BX
 	POP	AX
 	RET
+%else ; DW-BASIC feature range dos_vector_wrappers stubs
+MSISET:
+MSIRST:
+	RET
+%endif ; DW-BASIC feature range dos_vector_wrappers

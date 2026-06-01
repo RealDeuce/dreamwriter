@@ -15,7 +15,7 @@ USR, and sound/play are disabled.
   - saves the ROM loader stack.
   - reserves a private wrapper stack and computes `basic_limit`.
   - displays `LOADING DW-BASIC` via `print_message -> dw_puts_cs`.
-  - `open_overlay -> ROM vector 0x0244` opens `I:GWBASIC.OVR`.
+  - `open_overlay -> ROM vector 0x0244` opens `I:DW-BASIC.FLT`.
   - `read_overlay -> ROM vector 0x0248` reads the overlay at
     `GW_BASIC_LOAD_OFFSET`.
   - `close_overlay -> ROM vector 0x0250`.

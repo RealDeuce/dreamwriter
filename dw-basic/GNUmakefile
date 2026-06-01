@@ -6,7 +6,7 @@ CARD_IN ?= /tmp/dw-card-1m.bin
 CARD_OUT ?= /tmp/dw-card-1m-dw-basic.bin
 EROMCARD := $(BUILD_DIR)/EROMCARD.X
 GW_EROMCARD := $(BUILD_DIR)/EROMCARD-GW.X
-GW_BASIC_OVR := $(BUILD_DIR)/GWBASIC.OVR
+DW_BASIC_FLT := $(BUILD_DIR)/DW-BASIC.FLT
 FLATLINK_DIR ?= ../third_party/flatlink
 FLATLINK ?= $(FLATLINK_DIR)/flatlink
 GW_BASIC_LOAD_OFFSET ?= 2048
@@ -20,6 +20,7 @@ GW_BASIC_SYMBOLS := $(BUILD_DIR)/gw-basic-symbols.inc
 GW_BASIC_MIN_FREE ?= 4096
 GW_MEMORY_MODEL ?= flat64
 GW_ENABLE_GRAPHICS ?= 0
+GW_KEEP_DOS_VECTOR_WRAPPERS ?= 0
 DW_DEFAULT_FILE_DRIVE ?= 0x49
 TRUNCATE_SIZE ?= 8192
 
@@ -64,7 +65,7 @@ GW_MODULES := $(GW_GRAPHICS_MODULES) $(GW_MODULES)
 endif
 GW_GENERATED_MODULES := $(filter-out dwstubs dwio dwdisk giotbl,$(GW_MODULES))
 GW_GENERATED_SOURCES := $(GW_GENERATED_MODULES:%=$(GW_SRC_DIR)/%.asm)
-GW_SIMPLE_GENERATED_SOURCES := $(filter-out $(GW_SRC_DIR)/gwdata.asm $(GW_SRC_DIR)/gwram.asm $(GW_SRC_DIR)/gwinit.asm $(GW_SRC_DIR)/gio86.asm $(GW_SRC_DIR)/gwsts.asm $(GW_SRC_DIR)/ibmres.asm $(GW_SRC_DIR)/itsa86.asm $(GW_SRC_DIR)/math1.asm $(GW_SRC_DIR)/scndrv.asm,$(GW_GENERATED_SOURCES))
+GW_SIMPLE_GENERATED_SOURCES := $(filter-out $(GW_SRC_DIR)/bimisc.asm $(GW_SRC_DIR)/giokyb.asm $(GW_SRC_DIR)/gwdata.asm $(GW_SRC_DIR)/gwram.asm $(GW_SRC_DIR)/gwinit.asm $(GW_SRC_DIR)/gio86.asm $(GW_SRC_DIR)/gwsts.asm $(GW_SRC_DIR)/ibmres.asm $(GW_SRC_DIR)/itsa86.asm $(GW_SRC_DIR)/math1.asm $(GW_SRC_DIR)/scndrv.asm,$(GW_GENERATED_SOURCES))
 GW_OBJECTS := $(GW_MODULES:%=$(GW_BUILD_DIR)/%.obj)
 GW_INCLUDES := \
 	src/include/dwoem.inc \
@@ -72,7 +73,7 @@ GW_INCLUDES := \
 	src/include/gwerrors.inc \
 	src/include/gwtokens.inc \
 	src/include/msdosu.inc
-GW_NASM_FLAGS := -D GW_ENABLE_GRAPHICS=$(GW_ENABLE_GRAPHICS) -D DW_DEFAULT_FILE_DRIVE=$(DW_DEFAULT_FILE_DRIVE)
+GW_NASM_FLAGS := -D GW_ENABLE_GRAPHICS=$(GW_ENABLE_GRAPHICS) -D GW_KEEP_DOS_VECTOR_WRAPPERS=$(GW_KEEP_DOS_VECTOR_WRAPPERS) -D DW_DEFAULT_FILE_DRIVE=$(DW_DEFAULT_FILE_DRIVE)
 
 .PHONY: all basic-card basic-payload clean card flat-size-report flatlink gw-basic-bin gw-objects gw-sources gw-math2-source large-smoke-card large-smoke-payload omf-unresolved omf-unused-public truncate-card truncate-payload
 
@@ -90,9 +91,15 @@ $(GW_BUILD_DIR):
 $(GW_SRC_DIR):
 	mkdir -p $(GW_SRC_DIR)
 
-$(GW_SRC_DIR)/gwdata.asm: $(GW_REF_DIR)/gwdata.asm tools/masm2nasm.py tools/gwdata_tables.py | $(GW_SRC_DIR)
+$(GW_SRC_DIR)/gwdata.asm: $(GW_REF_DIR)/gwdata.asm tools/masm2nasm.py tools/gwdata_tables.py tools/source_feature_ranges.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/masm2nasm.py $< $@
 	$(PYTHON) tools/gwdata_tables.py $@ $<
+	$(PYTHON) tools/source_feature_ranges.py $@ \
+		--range dos_vector_save_slots:GW_KEEP_DOS_VECTOR_WRAPPERS:CTLCAD:LSTCHR:all
+
+$(GW_SRC_DIR)/bimisc.asm: $(GW_REF_DIR)/bimisc.asm tools/masm2nasm.py tools/flat_runtime_patches.py | $(GW_SRC_DIR)
+	$(PYTHON) tools/masm2nasm.py $< $@
+	$(PYTHON) tools/flat_runtime_patches.py bimisc $@
 
 $(GW_SRC_DIR)/gwram.asm: $(GW_REF_DIR)/gwram.asm tools/masm2nasm.py tools/gwram_tables.py tools/source_feature_ranges.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/masm2nasm.py $< $@
@@ -120,9 +127,15 @@ $(GW_SRC_DIR)/itsa86.asm: $(GW_REF_DIR)/itsa86.asm tools/masm2nasm.py tools/flat
 	$(PYTHON) tools/masm2nasm.py $< $@
 	$(PYTHON) tools/flat_runtime_patches.py itsa86 $@
 
-$(GW_SRC_DIR)/gio86.asm: $(GW_REF_DIR)/gio86.asm tools/masm2nasm.py tools/flat_runtime_patches.py | $(GW_SRC_DIR)
+$(GW_SRC_DIR)/gio86.asm: $(GW_REF_DIR)/gio86.asm tools/masm2nasm.py tools/source_feature_ranges.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/masm2nasm.py $< $@
-	$(PYTHON) tools/flat_runtime_patches.py gio86 $@
+	$(PYTHON) tools/source_feature_ranges.py $@ \
+		--range dos_vector_wrappers:GW_KEEP_DOS_VECTOR_WRAPPERS:DINTAD:EOF \
+		--else-ret-stubs dos_vector_wrappers:MSISET,MSIRST
+
+$(GW_SRC_DIR)/giokyb.asm: $(GW_REF_DIR)/giokyb.asm tools/masm2nasm.py tools/flat_runtime_patches.py | $(GW_SRC_DIR)
+	$(PYTHON) tools/masm2nasm.py $< $@
+	$(PYTHON) tools/flat_runtime_patches.py giokyb $@
 
 $(GW_SRC_DIR)/gwsts.asm: $(GW_REF_DIR)/gwsts.asm tools/masm2nasm.py tools/source_feature_ranges.py | $(GW_SRC_DIR)
 	$(PYTHON) tools/masm2nasm.py $< $@
@@ -162,13 +175,13 @@ gw-basic-bin: $(GW_BASIC_BIN)
 $(GW_BASIC_SYMBOLS): $(GW_BASIC_BIN) tools/map_to_nasm.py
 	$(PYTHON) tools/map_to_nasm.py $(GW_BASIC_MAP) $@ INIT LSTVAR DW_LOADER_LIMIT DW_EXIT_DS DW_EXIT_ES DW_EXIT_SS DW_EXIT_SP DW_EXIT_IP DW_EXIT_CS
 
-$(GW_BASIC_OVR): $(GW_BASIC_BIN) | $(BUILD_DIR)
+$(DW_BASIC_FLT): $(GW_BASIC_BIN) | $(BUILD_DIR)
 	cp $< $@
 
-$(GW_EROMCARD): src/eromcard_gw.asm $(GW_BASIC_OVR) $(GW_BASIC_SYMBOLS) | $(BUILD_DIR)
-	$(NASM) -f bin -D GW_BASIC_MIN_FREE=$(GW_BASIC_MIN_FREE) -D GW_BASIC_LOAD_OFFSET=$(GW_BASIC_LOAD_OFFSET) -D GW_OVR_SIZE=$$(stat -f %z $(GW_BASIC_OVR)) -o $@ $<
+$(GW_EROMCARD): src/eromcard_gw.asm $(DW_BASIC_FLT) $(GW_BASIC_SYMBOLS) | $(BUILD_DIR)
+	$(NASM) -f bin -D GW_BASIC_MIN_FREE=$(GW_BASIC_MIN_FREE) -D GW_BASIC_LOAD_OFFSET=$(GW_BASIC_LOAD_OFFSET) -D GW_OVR_SIZE=$$(stat -f %z $(DW_BASIC_FLT)) -o $@ $<
 
-basic-payload: $(GW_EROMCARD) $(GW_BASIC_OVR)
+basic-payload: $(GW_EROMCARD) $(DW_BASIC_FLT)
 
 truncate-payload: $(GW_EROMCARD)
 	dd if=$(GW_EROMCARD) of=$(EROMCARD) bs=1 count=$(TRUNCATE_SIZE)
@@ -195,8 +208,8 @@ large-smoke-payload: $(GW_EROMCARD) src/eromcard.asm src/gw/dwio.asm src/include
 large-smoke-card: large-smoke-payload
 	$(PYTHON) tools/install_eromcard.py --card-in $(CARD_IN) --card-out $(CARD_OUT) --payload $(EROMCARD)
 
-basic-card: $(GW_EROMCARD) $(GW_BASIC_OVR)
-	$(PYTHON) tools/install_eromcard.py --card-in $(CARD_IN) --card-out $(CARD_OUT) --payload $(GW_EROMCARD) --extra GWBASIC.OVR=$(GW_BASIC_OVR)
+basic-card: $(GW_EROMCARD) $(DW_BASIC_FLT)
+	$(PYTHON) tools/install_eromcard.py --card-in $(CARD_IN) --card-out $(CARD_OUT) --payload $(GW_EROMCARD) --extra DW-BASIC.FLT=$(DW_BASIC_FLT)
 
 clean:
 	rm -rf $(BUILD_DIR)
