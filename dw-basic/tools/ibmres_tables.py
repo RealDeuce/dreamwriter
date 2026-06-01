@@ -17,7 +17,6 @@ TARGET_RENAMES = {
 }
 
 DISABLED_DISPATCH = {
-    "CHAIN": "NODSKS",
     "CHDIR": "NODSKS",
     "COM": "FCERR",
     "CVD": "FCERR",
@@ -37,7 +36,6 @@ DISABLED_DISPATCH = {
     "LCOPY": "FCERR",
     "LPOS": "FCERR",
     "LSET": "NODSKS",
-    "MERGE": "NODSKS",
     "MKD$": "FCERR",
     "MKDIR": "NODSKS",
     "MKI$": "FCERR",

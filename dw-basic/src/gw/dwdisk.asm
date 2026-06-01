@@ -13,10 +13,21 @@ extern DERBFM
 extern DERFNF
 extern DERIOE
 extern FCERR
+extern BINPSV
+extern CHRGTR
+extern CURLIN
+extern DOL_EXPCN
+extern DOL_LOGP
 extern FILDEV
 extern FILMOD
 extern FILNM
+extern GTMPRT
 extern INIFDB
+extern SCCPTR
+extern TEMP
+extern TXTTAB
+extern VARTAB
+extern PROFLG
 
 DW_FH equ FD_DAT
 DW_FDB_EXTRA_SIZE equ 2
@@ -65,26 +76,32 @@ dw_disk_gwd:
 dw_disk_open:
     cmp byte [FILMOD], MD_RND
     je .bad_mode
-    cmp byte [FILMOD], MD_APP
-    je .bad_mode
 
     push ax
     push bx
     push cx
     push dx
     mov cx, DW_FDB_EXTRA_SIZE
-    mov ah, MD_SQI | MD_SQO
+    mov ah, MD_SQI | MD_SQO | MD_APP
     mov dx, 255
     call INIFDB
     call dw_build_path
     mov al, byte [FILMOD]
     cmp al, MD_SQO
     je .create
+    cmp al, MD_APP
+    je .append
     mov ax, 0x3d00
     mov dx, dw_file_path
     int 0x21
     jc .open_failed
     jmp .store_handle
+.append:
+    mov ax, 0x3d02
+    mov dx, dw_file_path
+    int 0x21
+    jnc .store_append_handle
+    jmp .create_append
 .create:
     mov ah, 0x3c
     xor cx, cx
@@ -93,6 +110,18 @@ dw_disk_open:
     jc .io_failed
 .store_handle:
     mov word [DW_FH+si], ax
+    jmp .finish_open
+.create_append:
+    mov ah, 0x3c
+    xor cx, cx
+    mov dx, dw_file_path
+    int 0x21
+    jc .io_failed
+.store_append_handle:
+    mov word [DW_FH+si], ax
+    call dw_append_seek
+    mov byte [F_MODE+si], MD_SQO
+.finish_open:
     mov byte [F_ORCT+si], 1
     mov byte [F_BREM+si], 0
     pop dx
@@ -104,6 +133,54 @@ dw_disk_open:
     jmp DERBFM
 .open_failed:
     jmp DERFNF
+.io_failed:
+    jmp DERIOE
+
+dw_append_seek:
+    push ax
+    push bx
+    push cx
+    push dx
+    mov bx, word [DW_FH+si]
+    xor cx, cx
+    xor dx, dx
+    mov ax, 0x4202
+    int 0x21
+    jc .io_failed
+    or ax, dx
+    jz .done
+    mov cx, 0xffff
+    mov dx, 0xffff
+    mov ax, 0x4201
+    int 0x21
+    jc .io_failed
+    mov cx, 1
+    mov dx, dw_file_byte
+    mov ah, 0x3f
+    int 0x21
+    jc .io_failed
+    cmp ax, 1
+    jne .seek_end
+    cmp byte [dw_file_byte], ASCCTZ
+    jne .seek_end
+    mov cx, 0xffff
+    mov dx, 0xffff
+    mov ax, 0x4201
+    int 0x21
+    jc .io_failed
+    jmp .done
+.seek_end:
+    xor cx, cx
+    xor dx, dx
+    mov ax, 0x4202
+    int 0x21
+    jc .io_failed
+.done:
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
 .io_failed:
     jmp DERIOE
 
@@ -301,9 +378,113 @@ dw_build_path:
     ret
 
 global PROLOD
+global PROCHK
+global PRODIR
 global PROSAV
-PROLOD:
 PROSAV:
+    call CHRGTR
+    mov word [TEMP], bx
+    call SCCPTR
+    call dw_pro_encode
+    mov al, 254
+    call BINPSV
+    call dw_pro_decode
+    jmp GTMPRT
+
+dw_pro_ret:
+    ret
+
+DW_PRO_N1 equ 11
+DW_PRO_N2 equ 13
+
+dw_pro_encode:
+    mov cx, DW_PRO_N1 + (DW_PRO_N2 * 256)
+    mov bx, word [TXTTAB]
+    mov dx, bx
+.loop:
+    mov bx, word [VARTAB]
+    cmp bx, dx
+    je dw_pro_ret
+    mov bx, DOL_EXPCN
+    mov al, cl
+    cbw
+    add bx, ax
+    mov si, dx
+    mov al, byte [si]
+    sub al, ch
+    xor al, byte [cs:bx]
+    push ax
+    mov bx, DOL_LOGP
+    mov al, ch
+    cbw
+    add bx, ax
+    pop ax
+    xor al, byte [cs:bx]
+    add al, cl
+    mov di, dx
+    mov byte [di], al
+    inc dx
+    dec cl
+    jnz .count2
+    mov cl, DW_PRO_N1
+.count2:
+    dec ch
+    jnz .loop
+    mov ch, DW_PRO_N2
+    jmp .loop
+
+PROLOD:
+dw_pro_decode:
+    mov cx, DW_PRO_N1 + (DW_PRO_N2 * 256)
+    mov bx, word [TXTTAB]
+    mov dx, bx
+.loop:
+    mov bx, word [VARTAB]
+    cmp bx, dx
+    je dw_pro_ret
+    mov bx, DOL_LOGP
+    mov al, ch
+    cbw
+    add bx, ax
+    mov si, dx
+    mov al, byte [si]
+    sub al, cl
+    xor al, byte [cs:bx]
+    push ax
+    mov bx, DOL_EXPCN
+    mov al, cl
+    cbw
+    add bx, ax
+    pop ax
+    xor al, byte [cs:bx]
+    add al, ch
+    mov di, dx
+    mov byte [di], al
+    inc dx
+    dec cl
+    jnz .count2
+    mov cl, DW_PRO_N1
+.count2:
+    dec ch
+    jnz .loop
+    mov ch, DW_PRO_N2
+    jmp .loop
+
+PRODIR:
+    push bx
+    mov bx, word [CURLIN]
+    inc bx
+    pop bx
+    jz PROCHK
+    ret
+
+PROCHK:
+    pushf
+    cmp byte [PROFLG], 0
+    jne .protected
+    popf
+    ret
+.protected:
     jmp FCERR
 
 dw_file_byte:

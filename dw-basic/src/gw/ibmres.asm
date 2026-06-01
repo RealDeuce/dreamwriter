@@ -218,8 +218,8 @@ dw CLOSE
 extern LOAD
 dw LOAD
 %assign DOL_LOAD 188
-extern NODSKS
-dw NODSKS
+extern MERGE
+dw MERGE
 %assign DOL_MERGE 189
 extern SAVE
 dw SAVE
@@ -1138,8 +1138,8 @@ dw NODSKS
 extern BASIC_COMMON
 dw BASIC_COMMON
 %assign DOL_COMMON 139
-extern NODSKS
-dw NODSKS
+extern CHAIN
+dw CHAIN
 %assign DOL_CHAIN 140
 extern DATES
 dw DATES
