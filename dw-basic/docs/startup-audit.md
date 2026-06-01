@@ -62,7 +62,7 @@ USR, and sound/play are disabled.
   - `REASON` validates available memory.
 - Startup display:
   - sets `KEYSW=255`.
-  - `GETHED` returns the empty OEM heading string with Z set.
+  - `GETHED` returns the DreamWriter OEM heading string with Z clear.
   - `STROUT` prints the OEM heading string, then the Microsoft heading.
   - `SKEYON`
     - sets `KEYSW=255`.
@@ -116,7 +116,7 @@ not generic stubs.
 | `KEYINP` | Poll keyboard. Z set means no key; C set means two-byte/control key. Preserve non-result registers. | Implemented over DreamWriter INT 21h key status/read calls, setting `ES=DS` for the firmware calls and preserving the non-result registers that `POLKEY` does not save. |
 | `FKYADV` | Select/confirm a soft-key page and return NZ if displayable. | Minimal one-page implementation. It preserves registers and intentionally returns NZ. |
 | `FKYFMT` | Return `BX` pointing to key count, chars per key, and first key number. | Returns 10 keys, 6 chars/key, first key 1; this matches `GETFMT`'s table layout. |
-| `GETHED` | Return OEM heading pointer in `BX`; Z set controls heading behavior. | Returns an empty string and Z set, so the Microsoft heading is still printed, without clobbering unrelated registers. |
+| `GETHED` | Return OEM heading pointer in `BX`; Z set controls heading behavior. | Returns `DW-BASIC for DreamWriters` and Z clear, so the OEM heading prints directly above the Microsoft heading without clobbering unrelated registers. |
 | `SYSTME` | Exit to host/system. | Currently halts forever. Not on the successful startup-to-READY path, but `SYSTEM` will not return to the ROM CARD menu yet. |
 
 ## Stub Audit

@@ -270,11 +270,11 @@ GWINI:
     ret
 
 GETHED:
-    mov bx, .empty_heading
+    mov bx, .heading
     cmp byte [bx], 0
     ret
-.empty_heading:
-    db 0
+.heading:
+    db "DW-BASIC for DreamWriters", 0
 
 extern CLSALL
 extern GIOTRM
