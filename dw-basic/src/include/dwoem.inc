@@ -8,6 +8,8 @@
 %ifndef DW_BASIC_DWOEM_INC
 %define DW_BASIC_DWOEM_INC
 
+%include "dwloader.inc"
+
 ; Target shape.
 %define DW_TARGET_DREAMWRITER 1
 %define I8086 1

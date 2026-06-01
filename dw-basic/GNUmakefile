@@ -9,7 +9,12 @@ GW_EROMCARD := $(BUILD_DIR)/EROMCARD-GW.X
 DW_BASIC_FLT := $(BUILD_DIR)/DW-BASIC.FLT
 FLATLINK_DIR ?= ../third_party/flatlink
 FLATLINK ?= $(FLATLINK_DIR)/flatlink
+GW_BASIC_SEPARATE_SEGMENT ?= 1
+ifeq ($(GW_BASIC_SEPARATE_SEGMENT),1)
+GW_BASIC_LOAD_OFFSET ?= 0
+else
 GW_BASIC_LOAD_OFFSET ?= 2048
+endif
 FLATLINK_FLAGS ?= -f bin -offset $(GW_BASIC_LOAD_OFFSET) -maxfixups 10000
 GW_REF_DIR ?= ../gw-basic
 GW_SRC_DIR := src/gw
@@ -173,13 +178,13 @@ $(GW_BASIC_BIN): $(GW_OBJECTS) $(FLATLINK) | $(BUILD_DIR)
 gw-basic-bin: $(GW_BASIC_BIN)
 
 $(GW_BASIC_SYMBOLS): $(GW_BASIC_BIN) tools/map_to_nasm.py
-	$(PYTHON) tools/map_to_nasm.py $(GW_BASIC_MAP) $@ INIT LSTVAR DW_LOADER_LIMIT DW_EXIT_DS DW_EXIT_ES DW_EXIT_SS DW_EXIT_SP DW_EXIT_IP DW_EXIT_CS
+	$(PYTHON) tools/map_to_nasm.py $(GW_BASIC_MAP) $@ INIT LSTVAR
 
 $(DW_BASIC_FLT): $(GW_BASIC_BIN) | $(BUILD_DIR)
 	cp $< $@
 
 $(GW_EROMCARD): src/eromcard_gw.asm $(DW_BASIC_FLT) $(GW_BASIC_SYMBOLS) | $(BUILD_DIR)
-	$(NASM) -f bin -D GW_BASIC_MIN_FREE=$(GW_BASIC_MIN_FREE) -D GW_BASIC_LOAD_OFFSET=$(GW_BASIC_LOAD_OFFSET) -D GW_OVR_SIZE=$$(stat -f %z $(DW_BASIC_FLT)) -o $@ $<
+	$(NASM) -f bin -D GW_BASIC_SEPARATE_SEGMENT=$(GW_BASIC_SEPARATE_SEGMENT) -D GW_BASIC_MIN_FREE=$(GW_BASIC_MIN_FREE) -D GW_BASIC_LOAD_OFFSET=$(GW_BASIC_LOAD_OFFSET) -D GW_OVR_SIZE=$$(stat -f %z $(DW_BASIC_FLT)) -o $@ $<
 
 basic-payload: $(GW_EROMCARD) $(DW_BASIC_FLT)
 
@@ -193,7 +198,7 @@ omf-unresolved: gw-objects
 	$(PYTHON) tools/omf_symbols.py --unresolved $(GW_OBJECTS)
 
 omf-unused-public: gw-objects
-	$(PYTHON) tools/omf_symbols.py --unused-public-by-file --keep INIT --keep LSTVAR --keep DW_LOADER_LIMIT --keep DW_EXIT_DS --keep DW_EXIT_ES --keep DW_EXIT_SS --keep DW_EXIT_SP --keep DW_EXIT_IP --keep DW_EXIT_CS $(GW_OBJECTS)
+	$(PYTHON) tools/omf_symbols.py --unused-public-by-file --keep INIT --keep LSTVAR $(GW_OBJECTS)
 
 flat-size-report: basic-card
 	$(MAKE) BUILD_DIR=build-graphics GW_ENABLE_GRAPHICS=1 gw-basic-bin

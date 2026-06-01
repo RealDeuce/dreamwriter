@@ -734,50 +734,11 @@ SYSTME:
     je .restore
     call GIOTRM
 .restore:
-    cli
-    mov ax, [DW_EXIT_SP]
-    or ax, ax
-    jz .halt
-    mov ax, [DW_EXIT_ES]
-    mov es, ax
-    mov ax, [DW_EXIT_SS]
-    mov ss, ax
-    mov sp, [DW_EXIT_SP]
-    mov bp, sp
-    mov ax, [DW_EXIT_IP]
-    mov [bp], ax
-    mov ax, [DW_EXIT_CS]
-    mov [bp+2], ax
-    mov ax, [DW_EXIT_DS]
-    mov ds, ax
-    sti
-    retf
+    jmp DW_LOADER_SEGMENT:DW_LOADER_EXIT_THUNK_OFFSET
 .halt:
     sti
     hlt
     jmp .halt
-
-global DW_LOADER_LIMIT
-DW_LOADER_LIMIT:
-    dw 0
-global DW_EXIT_DS
-DW_EXIT_DS:
-    dw 0
-global DW_EXIT_ES
-DW_EXIT_ES:
-    dw 0
-global DW_EXIT_SS
-DW_EXIT_SS:
-    dw 0
-global DW_EXIT_SP
-DW_EXIT_SP:
-    dw 0
-global DW_EXIT_IP
-DW_EXIT_IP:
-    dw 0
-global DW_EXIT_CS
-DW_EXIT_CS:
-    dw 0
 
 %include "dwapi.asm"
 

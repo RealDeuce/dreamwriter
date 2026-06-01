@@ -13,15 +13,17 @@ USR, and sound/play are disabled.
 - ROM loader calls `entry`.
 - `entry`
   - saves the ROM loader stack.
-  - reserves a private wrapper stack and computes `basic_limit`.
+  - computes the paragraph-aligned BASIC segment immediately after the loader,
+    reserves a private wrapper stack, and computes `basic_limit`.
   - displays `LOADING DW-BASIC` via `print_message -> dw_puts_cs`.
   - `open_overlay -> ROM vector 0x0244` opens `I:DW-BASIC.FLT`.
-  - `read_overlay -> ROM vector 0x0248` reads the overlay at
-    `GW_BASIC_LOAD_OFFSET`.
+  - `read_overlay -> ROM vector 0x0248` reads the overlay into the loader
+    segment at the physical address that BASIC will later see as offset zero.
   - `close_overlay -> ROM vector 0x0250`.
   - `verify_overlay` checks the first 16 overlay bytes against the built file.
-  - stores `basic_limit` in `DW_LOADER_LIMIT`.
-  - sets `SS:SP` to the BASIC work area and jumps to `GW_INIT`.
+  - publishes `basic_limit`, the BASIC segment, and the exit thunk pointer in
+    the fixed loader ABI table at `0A4F:0010`.
+  - sets `DS=ES=SS` to the BASIC segment and far-enters `GW_INIT`.
 
 `INIT` (`src/gw/gwinit.asm`)
 
@@ -55,7 +57,7 @@ USR, and sound/play are disabled.
       - `CONS` no-op init.
     - `FINPRT` resets `PTRFIL` to the keyboard/screen console.
 - Memory setup:
-  - sets `MEMSIZ` and `MAXMEM` from `DW_LOADER_LIMIT`.
+  - sets `MEMSIZ` and `MAXMEM` from `0A4F:DW_LOADER_ABI_LIMIT`.
   - forces an empty command tail at `CPMWRM+128`.
   - computes `TXTTAB`, `STKLOW`, `FILTAB`, `FRETOP`, `TOPMEM`, and the final
     BASIC stack.

@@ -2,19 +2,27 @@ bits 16
 org 0
 
 %include "build/gw-basic-symbols.inc"
+%include "src/include/dwloader.inc"
 
-; Current policy is the flat64 model: load one DW-BASIC.FLT into the card
-; loader's segment and enter it with CS=DS=ES=SS.  The future split128 model
-; should choose a separate overlay/container when enough RAM is available; see
-; docs/memory-model.md before changing this loader path.
+; Current policy is the flat64 model: load one DW-BASIC.FLT after this
+; first-stage loader and enter that same physical image through an offset-zero
+; segment with CS=DS=ES=SS.  The loader segment remains resident and exposes a
+; small fixed ABI table for values BASIC must read after the segment switch.
 
 GW_WRAPPER_STACK_SIZE equ 0x0400
 GW_OVR_READ_CHUNK equ 0x0200
 %ifndef GW_BASIC_MIN_FREE
 GW_BASIC_MIN_FREE equ 4096
 %endif
+%ifndef GW_BASIC_SEPARATE_SEGMENT
+GW_BASIC_SEPARATE_SEGMENT equ 1
+%endif
 %ifndef GW_BASIC_LOAD_OFFSET
+%if GW_BASIC_SEPARATE_SEGMENT
+GW_BASIC_LOAD_OFFSET equ 0
+%else
 GW_BASIC_LOAD_OFFSET equ 0x0800
+%endif
 %endif
 %ifndef GW_OVR_SIZE
 %error "GW_OVR_SIZE must be defined"
@@ -27,7 +35,50 @@ GW_BASIC_REQUIRED_SIZE equ GW_LSTVAR + 2 + GW_BASIC_MIN_FREE
     dw 0xA4F0
     dw 0x1997
     dw entry
-    dw 0x0A4F
+    dw DW_LOADER_SEGMENT
+
+entry:
+    jmp entry_code
+
+times DW_LOADER_ABI_OFFSET - ($ - $$) db 0
+
+loader_abi:
+    dw DW_LOADER_ABI_MAGIC_VALUE
+    dw DW_LOADER_ABI_VERSION_VALUE
+loader_abi_limit:
+    dw 0
+loader_abi_basic_segment:
+    dw 0
+loader_abi_basic_stack_top:
+    dw 0
+loader_abi_exit_thunk:
+    dw DW_LOADER_EXIT_THUNK_OFFSET
+    dw DW_LOADER_SEGMENT
+loader_abi_end:
+
+%if (loader_abi_end - loader_abi) != DW_LOADER_ABI_SIZE
+%error "DW loader ABI table size does not match dwloader.inc"
+%endif
+
+times DW_LOADER_EXIT_THUNK_OFFSET - ($ - $$) db 0
+
+loader_exit_thunk:
+%if (loader_exit_thunk - $$) != DW_LOADER_EXIT_THUNK_OFFSET
+%error "DW loader exit thunk offset does not match dwloader.inc"
+%endif
+    push cs
+    pop ds
+    cli
+    mov ax, [old_es]
+    mov es, ax
+    mov ax, [old_ds]
+    mov bx, [old_ss]
+    mov cx, [old_sp]
+    mov ds, ax
+    mov ss, bx
+    mov sp, cx
+    sti
+    retf
 
 %macro restore_loader_stack 0
     push cs
@@ -40,12 +91,12 @@ GW_BASIC_REQUIRED_SIZE equ GW_LSTVAR + 2 + GW_BASIC_MIN_FREE
     sti
 %endmacro
 
-entry:
+entry_code:
     mov bx, ax
     mov ax, ds
-    mov [old_ds], ax
+    mov [cs:old_ds], ax
     mov ax, es
-    mov [old_es], ax
+    mov [cs:old_es], ax
     mov ax, cs
     mov ds, ax
     mov [old_sp], sp
@@ -58,10 +109,36 @@ entry:
     mov [old_cs], ax
     mov [stack_top], bx
 
+%if GW_BASIC_SEPARATE_SEGMENT
+    mov ax, loader_end + 15
+    mov cl, 4
+    shr ax, cl
+    mov [basic_segment_delta], ax
+    mov dx, cs
+    add dx, ax
+    mov [basic_segment], dx
+    mov [loader_abi_basic_segment], dx
+    shl ax, cl
+    mov [basic_load_offset], ax
+
     mov ax, bx
+    sub ax, [basic_load_offset]
+    jc not_enough_memory
+    mov [basic_stack_top], ax
+    mov [loader_abi_basic_stack_top], ax
+%else
+    mov ax, cs
+    mov [basic_segment], ax
+    mov [loader_abi_basic_segment], ax
+    mov word [basic_load_offset], GW_BASIC_LOAD_OFFSET
+    mov ax, bx
+    mov [basic_stack_top], ax
+    mov [loader_abi_basic_stack_top], ax
+%endif
     sub ax, GW_WRAPPER_STACK_SIZE
     jc not_enough_memory
     mov [basic_limit], ax
+    mov [loader_abi_limit], ax
     cmp ax, GW_BASIC_REQUIRED_SIZE
     jb not_enough_memory
 
@@ -82,26 +159,20 @@ entry:
     jc verify_failed
     mov ax, cs
     mov ds, ax
-    mov ax, [basic_limit]
-    mov [GW_DW_LOADER_LIMIT], ax
-    mov ax, [old_ds]
-    mov [GW_DW_EXIT_DS], ax
-    mov ax, [old_es]
-    mov [GW_DW_EXIT_ES], ax
-    mov ax, [old_ss]
-    mov [GW_DW_EXIT_SS], ax
-    mov ax, [old_sp]
-    mov [GW_DW_EXIT_SP], ax
-    mov ax, [old_ip]
-    mov [GW_DW_EXIT_IP], ax
-    mov ax, [old_cs]
-    mov [GW_DW_EXIT_CS], ax
     cli
-    mov ax, cs
+    mov ax, [basic_segment]
+    mov ds, ax
+    mov es, ax
     mov ss, ax
-    mov sp, [stack_top]
+    mov sp, [cs:basic_stack_top]
     sti
+%if GW_BASIC_SEPARATE_SEGMENT
+    push ax
+    push word GW_INIT
+    retf
+%else
     jmp GW_INIT
+%endif
 
 not_enough_memory:
     call snapshot_not_enough_state
@@ -152,13 +223,15 @@ open_overlay:
     ret
 
 read_overlay:
-    ; DS=CS is the destination segment for the ROM read wrapper. Fetch the
-    ; vector through ES=0 so DS remains the buffer segment.
+    ; Keep the ROM read wrapper's proven current-segment destination contract:
+    ; DS=CS, BX=offset.  In separate-segment mode that offset is the paragraph-
+    ; aligned loader end; BASIC later sees the same physical bytes at
+    ; basic_segment:0000.
     push es
     push si
     mov ax, cs
     mov ds, ax
-    mov bx, GW_BASIC_LOAD_OFFSET
+    mov bx, [basic_load_offset]
     mov si, GW_OVR_SIZE
     mov word [read_count], 0
 .loop:
@@ -222,7 +295,7 @@ verify_overlay:
     mov ds, ax
     mov es, ax
     mov si, expected_overlay_prefix
-    mov di, GW_BASIC_LOAD_OFFSET
+    mov di, [basic_load_offset]
     mov cx, expected_overlay_prefix_end - expected_overlay_prefix
     cld
     repe cmpsb
@@ -414,6 +487,14 @@ basic_limit:
     dw 0
 stack_top:
     dw 0
+basic_stack_top:
+    dw 0
+basic_segment_delta:
+    dw 0
+basic_segment:
+    dw 0
+basic_load_offset:
+    dw 0
 file_handle:
     dw 0
 read_count:
@@ -533,6 +614,14 @@ expected_overlay_prefix:
     incbin "build/DW-BASIC.FLT", 0, 16
 expected_overlay_prefix_end:
 
+loader_end:
+LOADER_END_OFFSET equ loader_end - $$
+%if GW_BASIC_SEPARATE_SEGMENT
+%if (((LOADER_END_OFFSET + 15) / 16) * 16) + GW_OVR_SIZE > 0x10000
+%error "EROMCARD.X loader plus DW-BASIC.FLT crosses segment boundary"
+%endif
+%else
 %if ($ - $$) > GW_BASIC_LOAD_OFFSET
 %error "EROMCARD.X loader overlaps GW-BASIC overlay load offset"
+%endif
 %endif

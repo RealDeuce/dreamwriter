@@ -79,7 +79,6 @@ INIT:
 ; of CODESG for this to work.  No error will be generated, so be careful.
 ;
 extern BEGDSG ;Beg. of the data segment, offset from CS
-extern DW_LOADER_LIMIT
 ; Flat ROM CARD build: code and data labels are linked in one segment.
 ; Keep DS/ES/SS in the loaded segment instead of computing an EXE-style DSEG.
 push cs
@@ -174,7 +173,11 @@ extern TEMPPT
 ;       /C:<COM INPUT QUEUE SIZE>
 ;
 extern CPMMEM
-	MOV	BX,word [DW_LOADER_LIMIT] ;ROM CARD approved work-area byte limit
+	push ds
+	mov bx,DW_LOADER_SEGMENT
+	mov ds,bx
+	MOV	BX,word [DW_LOADER_ABI_LIMIT] ;ROM CARD approved work-area byte limit
+	pop ds
 	MOV	[MEMSIZ],BX ;USE AS DEFAULT
 	MOV	[MAXMEM],BX ;set MAX DS size for CLEAR statement
 extern DSEGZ

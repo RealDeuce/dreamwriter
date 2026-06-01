@@ -39,7 +39,6 @@ db 0o216, 0o332 ;MOV  DS,DX  SET UP SEG REGS
 db 0o216, 0o302 ;MOV  ES,DX
 """,
         """extern BEGDSG ;Beg. of the data segment, offset from CS
-extern DW_LOADER_LIMIT
 ; Flat ROM CARD build: code and data labels are linked in one segment.
 ; Keep DS/ES/SS in the loaded segment instead of computing an EXE-style DSEG.
 push cs
@@ -59,7 +58,11 @@ extern SEGOFF
 \s*MOV\s+\[MAXMEM\],\s*BX ;set MAX DS size for CLEAR statement
 """,
         """extern CPMMEM
-\tMOV\tBX,word [DW_LOADER_LIMIT] ;ROM CARD approved work-area byte limit
+\tpush ds
+\tmov bx,DW_LOADER_SEGMENT
+\tmov ds,bx
+\tMOV\tBX,word [DW_LOADER_ABI_LIMIT] ;ROM CARD approved work-area byte limit
+\tpop ds
 \tMOV\t[MEMSIZ],BX ;USE AS DEFAULT
 \tMOV\t[MAXMEM],BX ;set MAX DS size for CLEAR statement
 """,

@@ -295,7 +295,7 @@ def main() -> None:
 
     print(f"Base map: {base.path}")
     print(f"  image bytes: {base.image_size}")
-    for symbol in ("INIT", "DW_LOADER_LIMIT", "LSTVAR"):
+    for symbol in ("INIT", "LSTVAR"):
         if symbol in base.symbols:
             print(f"  {symbol}: 0x{base.symbols[symbol]:04X}")
     print()

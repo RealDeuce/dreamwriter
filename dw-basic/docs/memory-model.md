@@ -5,9 +5,11 @@ The current DW-BASIC port targets the **flat64** memory model.
 ## flat64
 
 `flat64` is the buildable target today. The ROM card loader reads one
-`DW-BASIC.FLT` file into one 64K segment and enters BASIC with
+`DW-BASIC.FLT` file into memory immediately after the first-stage loader, then
+enters the same physical image through an offset-zero segment with
 `CS=DS=ES=SS`. This keeps the startup path compatible with 64K-class machines
-such as the DreamWriter 325.
+such as the DreamWriter 325 while avoiding the wasted offset gap that came from
+linking the overlay at `0800h`.
 
 The flat64 target also has to preserve practical BASIC workspace, not merely
 link under the 64K segment limit. The wrapper currently enforces a minimum
@@ -40,10 +42,12 @@ source relied on startup copying ROM constants into RAM.
 
 Files that currently encode flat64 policy:
 
-- `GNUmakefile`: `GW_MEMORY_MODEL ?= flat64`; other values are reserved but
-  rejected until implemented.
+- `GNUmakefile`: `GW_BASIC_SEPARATE_SEGMENT ?= 1` links `DW-BASIC.FLT` at
+  offset zero and has the loader enter it through a paragraph-aligned segment
+  after the loader.
 - `tools/flat_runtime_patches.py`: patches startup and memory-map code so the
-  converted BASIC runs in one loaded segment.
+  converted BASIC runs in one loaded segment and reads its memory limit through
+  the fixed loader ABI.
 - `tools/gwdata_tables.py`: patches generated `gwdata.asm` table/RAM regions
   for the flat64 layout.
 - `tools/source_feature_ranges.py`: wraps generated-source symbol ranges when a
@@ -51,6 +55,9 @@ Files that currently encode flat64 policy:
   source-level interpretation.
 - `src/eromcard_gw.asm`: loads one overlay and jumps to `INIT` in the loaded
   segment; enforces `GW_BASIC_MIN_FREE` before entering BASIC.
+- `src/include/dwloader.inc`: defines the fixed loader ABI at `0A4F:0010`.
+  BASIC reads the approved work-area limit from that table, and `SYSTEM`
+  far-jumps to the loader-resident exit thunk at `0A4F:0030`.
 
 ## split128
 

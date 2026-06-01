@@ -459,9 +459,10 @@ Finding:
 
 Intentional ROM-card deltas reviewed: source EXE/DSEG setup is replaced by
 flat `DS=ES=CS` setup, source `CPMMEM`/`SEGOFF` sizing is replaced by
-`DW_LOADER_LIMIT`, the converted code forces an empty command tail, and
-`CALL MAPCLC` is commented/no-op for ROM-card startup. After accounting for
-those, no ordinary instruction-level conversion defects were found.
+the fixed loader ABI limit at `0A4F:DW_LOADER_ABI_LIMIT`, the converted code
+forces an empty command tail, and `CALL MAPCLC` is commented/no-op for ROM-card
+startup. After accounting for those, no ordinary instruction-level conversion
+defects were found.
 
 Non-functional mismatches: converted lines 1-2 add warnings, MASM structural
 directives are commented/omitted, and several comments are reflowed or detached
