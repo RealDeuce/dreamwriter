@@ -7,10 +7,10 @@ built-in-storage state, this does not require a PCMCIA card: the loader tries
 the PCMCIA SRAM endpoint first, then falls back to built-in RAM storage.
 
 This is not a PC DOS `.COM` or `.EXE` path. The firmware uses the storage layer
-to find a file named exactly `EROMCARD.X`, reads that file into RAM at physical
-address `0x0A4F0`, validates a small DreamWriter header, and calls the far entry
-pointer stored in the file header. The loader behavior and failure strings are
-tracked in [`file-system.md`](file-system.md#rom-card-loader).
+to find a file named exactly `EROMCARD.X`, reads that file into RAM at a
+ROM-specific load address, may validate a small DreamWriter header, and calls the
+far entry pointer stored in the file header. The T400 2.1 loader behavior and
+failure strings are tracked in [`file-system.md`](file-system.md#rom-card-loader).
 
 ## User-Facing Flow
 
@@ -38,7 +38,31 @@ endpoint map is in [`file-system.md`](file-system.md#ioctl-and-endpoint-status).
 
 ## File Format
 
-The minimum loaded image is:
+The minimum loaded image is ROM-version specific. These are the ROM CARD
+envelopes observed in the ROMs currently under `../roms`:
+
+| ROM | Selector byte | Load / call-through | Header word 0 | Header word 1 | Status | Example |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| `dator3000.ic303` | `[6005]` | read/call `0x09C00` | `0x1210` | `0x1992` | supported, entry `09C0:0008` | [`EROMCARD-MEMCHECK-dator3000.ic303.X`](../examples/eromcard/EROMCARD-MEMCHECK-dator3000.ic303.X) |
+| `dr3_1_02uk.ic303` | `[6005]` | read/call `0x09C00` | `0x1210` | `0x1992` | supported, entry `09C0:0008` | [`EROMCARD-MEMCHECK-dr3_1_02uk.ic303.X`](../examples/eromcard/EROMCARD-MEMCHECK-dr3_1_02uk.ic303.X) |
+| `dr3_1_03.ic303` | `[6005]` | read/call `0x09C00` | `0x1210` | `0x1992` | supported, entry `09C0:0008` | [`EROMCARD-MEMCHECK-dr3_1_03.ic303.X`](../examples/eromcard/EROMCARD-MEMCHECK-dr3_1_03.ic303.X) |
+| `drwrt200.bin` | `[1005]` | read/call `0x0CA00` | not checked | not checked | supported, entry `0CA0:0008` | [`EROMCARD-MEMCHECK-drwrt200.bin.X`](../examples/eromcard/EROMCARD-MEMCHECK-drwrt200.bin.X) |
+| `nakajima_es.ic303` | `[6005]` | read/call `0x09C00` | `0x1210` | `0x1992` | supported, entry `09C0:0008` | [`EROMCARD-MEMCHECK-nakajima_es.ic303.X`](../examples/eromcard/EROMCARD-MEMCHECK-nakajima_es.ic303.X) |
+| `nts_325_basic.ic303` | `[6005]` | read/call `0x09C00` | `0x1210` | `0x1992` | supported, entry `09C0:0008` | [`EROMCARD-MEMCHECK-nts_325_basic.ic303.X`](../examples/eromcard/EROMCARD-MEMCHECK-nts_325_basic.ic303.X) |
+| `t100_2.3.ic303` | none found | none found | none found | none found | unsupported | none |
+| `t4_ir_2.1.ic303` | `[6805]` | read/call `0x0A4F0` | `0xA4F0` | `0x1997` | supported, entry `0A4F:0008` | [`EROMCARD-MEMCHECK-t4_ir_2.1.ic303.X`](../examples/eromcard/EROMCARD-MEMCHECK-t4_ir_2.1.ic303.X) |
+| `t4_ir_3.1_e588.ic303` | `[1005]` | read `0x0A4F0`, call `[0x0CA04]` | not checked | not checked | 1 MiB ROM, unsupported | none |
+| `t4_ir_35ba308.ic303` | `[1005]` | read `0x0A4F0`, call `[0x0CA04]` | not checked | not checked | 1 MiB ROM, unsupported | none |
+| `wales210.ic303` | `[6005]` | read/call `0x09C00` | `0x1210` | `0x1992` | supported, entry `09C0:0008` | [`EROMCARD-MEMCHECK-wales210.ic303.X`](../examples/eromcard/EROMCARD-MEMCHECK-wales210.ic303.X) |
+
+The 512 KiB ROM CARD-capable families are now covered by the checked-in
+examples. `drwrt200.bin` is a supported 1 MiB exception because its loader reads
+and calls through the same `0x0CA00` base. The 1 MiB T400 ROM CARD loaders have
+different call-through behavior and their display/API state has not been fully
+understood, so this repository does not currently ship supported `EROMCARD.X`
+examples for those ROMs.
+
+For the T400 2.1 ROM, the checked header is:
 
 ```text
 +0x00  word 0xA4F0
@@ -47,9 +71,9 @@ The minimum loaded image is:
 +0x08  first byte available for code/data if the entry points here
 ```
 
-Common tiny payloads point the entry at `0A4F:0008`, because the whole file is
-loaded at physical `0x0A4F0`. The loader currently validates only the first two
-words before calling the far pointer.
+For the `0x09C00` loader family, use `0x1210, 0x1992` and an entry segment
+matching the `0x09C00` handoff address. The checked loaders currently validate
+only the first two words before calling the far pointer.
 
 See also:
 
@@ -64,19 +88,20 @@ See also:
 
 ## Entry ABI And Constraints
 
-The loader calls the entry with a far call through `[0xA4F4]`.
+The supported loaders call the entry with a far call through the ROM-specific
+pointer, such as `[0xA4F4]`, `[0x9C04]`, or `[0xCA04]`.
 
 Known constraints:
 
 | Item | Constraint |
 | --- | --- |
 | Name | The executable must be named `EROMCARD.X` in 8.3 form. |
-| Size | The file must fit within the loader's available work-memory limit, returned by `C688:01E6` as `[7A54] * 0x80`. Oversized files show `Inadequate work memory`. |
-| Load address | The entire file is copied to physical `0x0A4F0`; it is not executed in place from card storage. |
-| Header | Words at file offsets `+0x00/+0x02` must be `0xA4F0, 0x1997`. |
+| Size | The file must fit within the loader's available work-memory limit. Oversized files show `Inadequate work memory`. |
+| Load address | The entire file is copied to the ROM-specific load address; it is not executed in place from card storage. |
+| Header | Words at file offsets `+0x00/+0x02` must match the ROM-specific header when the loader checks them. |
 | Entry | File offset `+0x04` holds the far pointer the firmware calls. |
 | Return | A normal payload can return with `retf`; the firmware then runs the ROM CARD cleanup path. |
-| `AX` | The entry sees `AX = [7A54] * 0x80`, the byte work-memory limit used for the size check. |
+| `AX` | The entry sees the byte work-memory limit used for the size check. |
 | `DS` | Preserve the caller's `DS` before returning. The firmware expects its data segment to survive the external program. |
 
 Payloads may use the T400's DOS-like `INT 21h` file services and the low-RAM
@@ -86,13 +111,14 @@ services. Keep ROM-specific calls behind a small shim when possible; the current
 
 ## Emulator Installation
 
-Given a formatted SRAM card image:
+Given a formatted SRAM card image, install the matching example as
+`EROMCARD.X`:
 
 ```sh
 python3 dw-basic/tools/install_eromcard.py \
   --card-in /tmp/dw-card-1m.bin \
   --card-out /tmp/dw-card-1m-test.bin \
-  --payload examples/eromcard/EROMCARD-MEMCHECK.X
+  --payload examples/eromcard/EROMCARD-MEMCHECK-t4_ir_2.1.ic303.X
 ```
 
 Boot the card image in MAME:
@@ -107,20 +133,22 @@ Then choose `OTHERS` -> `ROM CARD`.
 
 ## Example Payload
 
-[`../examples/eromcard/EROMCARD-MEMCHECK.X`](../examples/eromcard/EROMCARD-MEMCHECK.X)
-is a checked-in example copied from `dw-basic/build/EROMCARD-MEMCHECK.X`.
+The `EROMCARD-MEMCHECK-*.X` files under
+[`../examples/eromcard`](../examples/eromcard) are checked-in examples copied
+from the shared `dw-basic/src/eromcard_memcheck.asm` source with the matching
+ROM CARD envelope selected at build time.
 
 It displays the ROM CARD launch state, including the incoming `AX`, entry `DS`,
-`[7A54]`, and the computed byte limit, waits for one key, then returns to the
-firmware. This makes it useful for testing that the file was found, loaded,
-called, and able to return cleanly.
+`AX / 0x80`, and the byte limit, then waits until the blocking key-read API
+returns ASCII Space before returning to the firmware. This makes stale menu
+handoff keys harmless without using the nonblocking key-status wrapper.
 
-Current captured artifact:
+Current envelope sizes and hashes:
 
 ```text
-size:   999 bytes
-sha256: 12afddf0b6eecaa26f24e852260a9da071be360ed2a01671c5cbc8c40fddf550
-header: f0 a4 97 19 08 00 4f 0a
+0x0A4F0 / 0xA4F0,0x1997: 378 bytes, 977cd0f0ce738fe182409fe6c86631d1b48bfc3b67bf15d6b06f46ce199a7e38
+0x09C00 / 0x1210,0x1992: 378 bytes, c6b928201ae7399cc9f8eb856c645f0ad8a8b683d3f9a73ed41050345b465555
+0x0CA00 direct / local marker: 378 bytes, aa0ea8782813eef6f27ea095e1735881e886080bf3bf156fd6a632d7bc25dd46
 ```
 
 When installed, the payload file still needs to be named `EROMCARD.X`; the

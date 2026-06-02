@@ -13,6 +13,11 @@ from pathlib import Path
 SECTOR_SIZE = 0x80
 ROOT_ENTRY_SIZE = 0x20
 ROOT_SECTORS = 4
+VALID_EROMCARD_HEADERS = {
+    (0, 0xA4F0, 0x1997): "T400 2.1",
+    (0, 0x1210, 0x1992): "T400 3.1",
+    (0, 0xCA00, 0x1997): "T200 1 MiB call-through",
+}
 
 
 def read_word(data: bytes | bytearray, offset: int) -> int:
@@ -155,7 +160,12 @@ def main() -> None:
 
     if read_word(card, 0) != 0x1997 or read_word(card, 2) != 0x0126:
         raise ValueError("input does not look like a formatted DreamWriter SRAM card")
-    if len(payload) < 8 or read_word(payload, 0) != 0xA4F0 or read_word(payload, 2) != 0x1997:
+    if not any(
+        len(payload) >= offset + 8
+        and read_word(payload, offset) == word0
+        and read_word(payload, offset + 2) == word1
+        for offset, word0, word1 in VALID_EROMCARD_HEADERS
+    ):
         raise ValueError("payload does not look like a DreamWriter EROMCARD.X image")
 
     geometry = read_word(card, 4)
