@@ -256,8 +256,15 @@ Cold boot clears `[6D81]`, performs setup, and jumps into the main firmware:
 ```asm
 C000:00E1  mov word [6D81],0000
 ...
+C000:00FA  call C000:4811       ; built-in store validation/init
 C000:011A  jmp far C688:000B
 ```
+
+`C000:4811` selects built-in store `08` and calls `C000:045A` to validate the
+DreamWriter volume header/checksum at segment `1800`. If validation fails, it
+calls the private format/init service through `INT 21h` with
+`AH=FF/BL=A5/DL=08`. This is the cold/reset path that produces the visible
+`INITIALIZING` RAM-store initialization screen.
 
 The warm path can reach the diagnostic gate, and one non-diagnostic warm branch
 jumps to the second application entry:

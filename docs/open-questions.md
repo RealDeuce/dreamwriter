@@ -6,17 +6,21 @@
 2. Name more service IDs in the banked spell/grammar/linguistic dispatcher at
    `3000:4AA6`. Confirmed so far: startup IDs `0x00`, `0x01`, `0x3C`, `0x3D`
    and diagnostic `Q/R` IDs `0x58`, `0x59`.
-3. Trace the text rendering routine that consumes the `0x580B6` glyph table and
-   confirm the exact role of the candidate width/metadata table at `0x58000`.
-4. Confirm how the renderer selects the bold glyph run at `0x586B6`, the
-   small/down-shifted glyph run at `0x58CB6`, and the small-bold run at
-   `0x592B6`, the narrow run at `0x598B6`, and the narrow-bold run at
-   `0x59EB6`, the narrow-small run at `0x5A4B6`, and the narrow-small-bold run
-   at `0x5AAB6`.
+3. Finish naming the `C000:5AD6` text-rendering state and confirm the exact
+   role of the candidate width/metadata table at `0x58000`. The main font
+   bases and the `F8/F9` and `FA..FD` style-state paths are now identified;
+   the remaining uncertainty is the width/advance metadata and some display
+   state names.
+4. Extend the renderer font-family table beyond the confirmed main and narrow
+   families, and tie each `[70F4]` family value to a user-visible screen or
+   resource.
 5. Identify the consumer and code mapping for the sparse/remapped glyph sets at
    `0x5B0B6`, `0x5B6B6`, `0x5BCB6`, and `0x5C2B6`.
-6. Confirm whether the dense tables after `F8DC:000D` are glyph data, boot
-   graphics, or another packed resource.
+6. Confirm the consumer for the high-ROM resource prelude immediately after the
+   reset trampoline at `0x78DD0`. The current region map classifies this area
+   as probable alternate Typin' Time/alarm bitmap and display-script resources,
+   followed by the alternate high-ROM typing-practice text copy at
+   `0x78FC5..0x7B71C`.
 7. Classify the code or packed data beginning around `0x5C98E`, immediately
    after the MAME-declared glyph stream.
 8. Refine the friendly names and calling conventions for the remaining
@@ -25,15 +29,18 @@
    need better high-level names.
 9. Identify the encoding and consumer for the candidate status/icon resource
    cluster around `0x55110..0x552AC`.
-10. Confirm how the startup banner resource at `0x53888..0x539AA` is selected.
-   The manual and `mame/nakajies.cpp` TODO indicate boot should display the
-   version/copyright notice, while the current emulated path appears to show
-   only `INITIALIZING` before the menu. No direct `mov si,D008/D012/D02A`
-   reference has been found yet.
-11. Determine whether the missing startup banner is tied to hard V20 reset
-   versus retained-RAM wake paths. The auto power-off timeout now confirms one
-   retained transition route through `C000:035D` and `out 0x70,0x01`, while IRQ
-   `F8` uses a separate suspend/save route ending in `out 0xDD,0xF8`.
+10. Confirm how the startup banner resource at `0x53888..0x539AA` is selected
+   and how long each line is meant to remain visible. `INITIALIZING` is now
+   traced to the cold retained-RAM/init path: reset branches to `C000:00E1`
+   when `C688:0053` or `C000:47D3` rejects retained warm state, and
+   `C000:4811` invokes built-in store initialization if the `1800:` volume
+   header/checksum fails. No direct `mov si,D008/D012/D02A` reference has been
+   found yet for the resource stream itself.
+11. Determine whether the startup copyright banner timing/visibility differs
+   between hard V20 reset and retained-RAM wake paths. The auto power-off
+   timeout now confirms one retained transition route through `C000:035D` and
+   `out 0x70,0x01`, while IRQ `F8` uses a separate suspend/save route ending in
+   `out 0xDD,0xF8`.
 12. Confirm the physical power-button and power-management wiring. Current
     firmware evidence suggests IRQ `F8`, IRQ `FF`, the auto-off timeout path,
     and external reset/wake hardware are related, but MAME exposes only
@@ -86,10 +93,10 @@
 24. Decode the low-number `FF` display sub-opcodes, especially `FF 04` at
     `C000:60AF` and `FF 06` at `C000:605F`, which are distinct from the
     positioned `FF 40`/`42`/`44` drawing group.
-25. Continue naming the `DC98:124C` horizontal icon menu call sites and their
-    handlers. The compact 40x40 icon/label table consumer is now identified;
-    remaining work is to name each wrapper, its return-key dispatch, and the
-    submenu-specific handler targets.
+25. Continue naming the remaining `DC98:124C` horizontal icon menu return
+    handlers. The compact 40x40 icon/label table consumer and the major
+    WP/Organizer wrappers are identified; remaining work is to give stable
+    semantic names to submenu-specific handler targets.
 26. Confirm the physical RTC chip and alarm wiring. MAME maps ports
     `0xD0..0xDF` to a Ricoh `RP5C01`, and the observed `0xDD..0xDF` control
     writes now match that device's mode/test/reset registers. The remaining

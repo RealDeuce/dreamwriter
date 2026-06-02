@@ -1,5 +1,28 @@
 # Startup UI Trace
 
+## Reset Cold/Warm Selection
+
+After the reset trampoline reaches `C000:0000`, the ROM decides whether retained
+RAM still describes a warm state. This is the branch that selects the cold
+startup/init path versus the retained/warm path:
+
+```asm
+C000:0090  call far C688:0053   ; retained/warm RAM signature check
+C000:0095  jc C000:00E1         ; cold boot if signature mismatch
+C000:0097  call C000:47D3       ; validate warm state
+C000:009A  jc C000:00E1         ; cold boot if invalid
+```
+
+`C688:0053` compares `[6800..6803]` with the bytes at `C688:009D`
+(`32 31 42 41`, ASCII `21BA`) and compares `[6804]` with the byte at
+`C688:D005` (`55`). On any mismatch it rewrites the expected bytes and returns
+carry, so the first reset after uninitialized or lost retained RAM enters the
+cold path at `C000:00E1`.
+
+The second check, `C000:47D3`, validates the warm-state marker at `[6D33]`,
+the active drive byte at `[6806]`, and related warm UI state. It returns carry
+when that retained state is not usable, also forcing `C000:00E1`.
+
 ## Cold Boot Path Into Application UI
 
 The cold boot path still starts in `C000`, then transfers into the main
@@ -15,6 +38,29 @@ C000:00FA  call C000:4811
 C000:00FD  call far DC98:539E
 C000:011A  jmp far C688:000B
 ```
+
+The cold path calls `C000:4811` before entering the main application. That
+routine selects built-in store `08`, validates the DreamWriter volume header and
+checksum at segment `1800`, and initializes the store if the check fails:
+
+```asm
+C000:4811  mov byte [6806],08
+C000:4816  mov byte [6D35],08
+C000:481B  call C000:045A       ; validate built-in store
+C000:481E  jz C000:482B         ; already valid
+C000:4820  mov bl,A5
+C000:4822  mov dl,08
+C000:4824  mov ah,FF
+C000:4826  call far C000:47D0   ; INT 21h AH=FF, built-in format/init
+```
+
+`C000:045A` checks header words `1997`, `0126`, and geometry `0005`, then
+compares the stored checksum at `1800:0006` with the word sum over
+`1800:0008..7FFF`. When that validation fails, `AH=FF/BL=A5/DL=08` reaches the
+built-in formatter at `C000:2C93`, which writes the DreamWriter header, clears
+and verifies the 160 KiB store, initializes the FAT/root structures, and writes
+the final checksum/header state. The visible `INITIALIZING` screen is therefore
+the cold/retained-RAM-init path, not an unexplained MAME reset artifact.
 
 `DC98:539E` is an application/subsystem initializer. It calls several local
 initializers and writes a simple magic/version marker:
@@ -486,9 +532,8 @@ tables at `C688:9A90..9AF5`; it is not the CPU idle instruction.
 
 ## Startup Banner Resource Block
 
-The manual and the local `mame/nakajies.cpp` TODO both indicate that boot should
-show version/copyright messages. The ROM has exactly that resource block
-immediately before the first menu resource:
+The ROM has a startup display resource block with `INITIALIZING` and the
+version/copyright messages immediately before the first menu resource:
 
 ```text
 file 0x53885 / C688:D005: three-byte resource prefix before the banner stream
@@ -508,22 +553,18 @@ filesystem formatter's built-in geometry: five 32 KiB units starting at segment
 for CPU `0x20000..0x3FFFF`; see [`file-system.md`](file-system.md) and
 [`banking.md`](banking.md).
 
-This makes the current emulated startup behavior suspicious: if it shows only
-`INITIALIZING` before reaching the two-button menu, MAME may be taking the wrong
-reset/retained-RAM path, skipping a timing/input wait, or missing a hardware
-condition that selects the banner screen. The direct consumer for this resource
-block has not been confirmed. Static search did not find a simple `mov si,D008`,
-`mov si,D012`, or `mov si,D02A` reference; it may be reached through an indexed
-resource table or through an inline-script/data pointer decoded by `C688:0240`.
+The reason `INITIALIZING` appears before the menu is now accounted for by the
+reset cold/warm decision and the built-in RAM-store validation described above.
+When retained RAM does not contain the expected warm signature/state, startup
+branches to `C000:00E1`; if the built-in volume header/checksum then fails,
+`C000:4811` invokes the built-in format/init service.
 
-The V20 hard reset mapping itself does not currently look like the likely cause.
-MAME reset maps the final ROM bank everywhere, executes the reset vector at file
-`0x7FFF0`, then the trampoline maps `C0000..DFFFF` to file `0x40000..0x5FFFF`
-before jumping to `C000:0000`. A more plausible split is hard reset versus the
-product's normal power/wake path: IRQ `F8` saves a retained resume context under
-`6D65..6D87`, and IRQ `FF` can set warm/diagnostic state before writing port
-`0x70` and looping. The real device may show the copyright banner during a
-retained-RAM wake path that MAME reset does not reproduce.
+The direct consumer for the `0x53888..0x539AA` resource block has not been
+confirmed. Static search did not find a simple `mov si,D008`, `mov si,D012`, or
+`mov si,D02A` reference; it may be reached through an indexed resource table or
+through an inline-script/data pointer decoded by `C688:0240`. The remaining UI
+question is the exact selector/timing for the copyright lines, not why the
+`INITIALIZING` branch is reached.
 
 Good next breakpoints/watchpoints:
 

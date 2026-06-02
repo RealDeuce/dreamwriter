@@ -38,8 +38,12 @@ endpoint map is in [`file-system.md`](file-system.md#ioctl-and-endpoint-status).
 
 ## File Format
 
-The minimum loaded image is ROM-version specific. These are the ROM CARD
-envelopes observed in the ROMs currently under `../roms`:
+The minimum loaded image is ROM-version specific. The T400 2.1 row below is
+audited from `t4_ir_2.1.ic303` and the local disassembly notes. The other rows
+are comparative results from external ROM images under `../roms`; keep them
+separate from T400 source-of-truth claims unless those images are rechecked.
+
+These are the ROM CARD envelopes observed so far:
 
 | ROM | Selector byte | Load / call-through | Header word 0 | Header word 1 | Status | Example |
 | --- | ---: | ---: | ---: | ---: | --- | --- |

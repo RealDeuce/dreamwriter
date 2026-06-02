@@ -516,6 +516,14 @@ enter normally in MAME. This confirms the earlier Scheduler return-to-menu
 symptom was caused by the common storage backing, not by the Scheduler UI path
 itself.
 
+The same built-in initialization path is reached automatically during cold
+startup. Reset enters `C000:00E1` when the retained warm signature/state checks
+fail, then `C000:4811` selects built-in store `08` and calls `C000:045A` to
+validate the DreamWriter header/checksum at segment `1800`. If that check
+fails, `C000:4811` invokes `INT 21h` with `AH=FF/BL=A5/DL=08`, which reaches
+the built-in formatter at `C000:2C93`. This is the ROM path behind the boot-time
+`INITIALIZING` RAM-store screen.
+
 ## Native Format Evidence
 
 The lower `INT 21h` handlers implement FAT12-style structures directly, not just

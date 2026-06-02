@@ -23,7 +23,7 @@ tools/rom2.py strings --start 0x40000 --end 0x80000 -n 8
 | ---: | ---: | --- |
 | `0x514FF` | `0xD14FF` | `:MERGE.FIL` filename copied during the WP print/merge path. |
 | `0x516BA` | `0xD16BA` | `H:ADDRESS.ODB` path opened by `C688:AD5C`; address-book handler anchor. |
-| `0x53892` | `0xD3892` | `INITIALIZING`. |
+| `0x53892` | `0xD3892` | `INITIALIZING`; tied to the cold retained-RAM/init path and built-in store formatter when the `1800:` volume header/checksum is invalid. |
 | `0x538AA` | `0xD38AA` | Word processor / linguistic technology startup banner. |
 | `0x538E9` | `0xD38E9` | NER / Proximity startup copyright banner. |
 | `0x53935` | `0xD3935` | mikrolab / Merriam-Webster startup copyright banner. |

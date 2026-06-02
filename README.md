@@ -12,6 +12,11 @@ This repo is for mapping and tooling around the T400 2.1 ROM. MAME also has a
 between 2.1 and 3.1. Comparative notes may reference other DreamWriter ROMs, but
 those addresses are explicitly labeled as non-T400.
 
+Unless a page explicitly says it is comparative, treat `t4_ir_2.1.ic303` plus
+the disassembly helpers in `tools/` as the source of truth. The first-pass
+machine-readable split is [`docs/rom-regions.tsv`](docs/rom-regions.tsv);
+topic pages should agree with that map or explain why they are provisional.
+
 ## MAME
 
 Machine:
@@ -82,16 +87,16 @@ the command reference.
 | [`docs/menu-dispatch.md`](docs/menu-dispatch.md) | Inline key dispatch tables and the shared application menu event loop. |
 | [`docs/file-system.md`](docs/file-system.md) | FILE menu storage flow, DOS-like file API wrappers, and directory/DTA evidence. |
 | [`docs/running-rom-card-binaries.md`](docs/running-rom-card-binaries.md) | Practical workflow for running arbitrary `EROMCARD.X` binaries through OTHERS -> ROM CARD. |
-| [`docs/basic-eromcard.md`](docs/basic-eromcard.md) | Feasibility notes for wrapping the DreamWriter 325 BASIC interpreter as `EROMCARD.X`. |
+| [`docs/basic-eromcard.md`](docs/basic-eromcard.md) | Comparative feasibility notes for wrapping the DreamWriter 325 BASIC interpreter as T400 `EROMCARD.X`; depends on a non-T400 source ROM. |
 | [`docs/dreamlink-protocol.md`](docs/dreamlink-protocol.md) | DreamLink RS-232 file-transfer protocol, command frames, listings, and data stream framing. |
 | [`docs/wp-editor-heap.md`](docs/wp-editor-heap.md) | Word-processor live document heap, block allocator, and cross-application use evidence. |
 | [`docs/diagnostics.md`](docs/diagnostics.md) | Diagnostic chord, command loop, banner/help strings, and warm IRQ entry. |
-| [`docs/hardware.md`](docs/hardware.md) | Keyboard, LCD/framebuffer, I/O ports, serial, printer, PCMCIA, sound, and low RAM state. |
+| [`docs/hardware.md`](docs/hardware.md) | Keyboard, LCD/framebuffer, I/O ports, serial, printer, PCMCIA, sound, RTC, power, and low RAM state. |
 | [`docs/hardware-confirmation.md`](docs/hardware-confirmation.md) | Board-inspection checklist for confirming clocks, devices, ports, and status wiring. |
 | [`docs/fonts.md`](docs/fonts.md) | Main glyph table, width table candidates, and font variants. |
 | [`docs/bitmaps.md`](docs/bitmaps.md) | Confirmed LCD bitmap icons and candidate UI/icon resources. |
 | [`docs/strings.md`](docs/strings.md) | String/resource landmarks for application-level mapping. |
-| [`docs/open-questions.md`](docs/open-questions.md) | Working hypotheses and traces still worth resolving. |
+| [`docs/open-questions.md`](docs/open-questions.md) | Unresolved questions after the current ROM/tooling audit. |
 | [`docs/reference/csimon.pdf`](docs/reference/csimon.pdf) | CSi-Mon User's Guide v5.0, useful background for the high-ROM `CSiMON-88` monitor code. |
 | [`docs/reference/dreamlink-manual.pdf`](docs/reference/dreamlink-manual.pdf) | DreamLink PC software manual; documents FILE -> STORE/RECALL transfer flow, host-side file format selection, and print-through mode. |
 | [`docs/reference/dreamwriter-t400-manual.pdf`](docs/reference/dreamwriter-t400-manual.pdf) | DreamWriter T400 user manual; broad user-facing reference, currently missing pages 10 and 11 in the source copy. |
@@ -122,10 +127,16 @@ Cold boot goes to `C00E1` and then into the main firmware:
 ```asm
 C00E1  mov word [6d81],0000
 ...
+C00FA  call C4811           ; built-in store validation/init
+...
 C011A  jmp far C688:000B
 ```
 
 In MAME, a normal reset takes the cold path: `C0095 -> C00E1`, not `C0142`.
+That is the expected route to the `INITIALIZING` screen when retained RAM is not
+recognized. `C4811` selects built-in store `08`, checks the DreamWriter header
+and checksum at segment `1800`, and invokes `INT 21h` service
+`AH=FF/BL=A5/DL=08` to initialize the 160 KiB built-in store if the check fails.
 
 ## Diagnostic Entry
 
@@ -319,10 +330,23 @@ The `FILE` menu storage paths distinguish built-in RAM, card storage, and
 DreamLink transfer. The local storage layer is FAT12-derived but uses a custom
 volume header/geometry block; see [`docs/file-system.md`](docs/file-system.md).
 
+## Audit Notes
+
+The README and topic indexes were last reconciled against
+`tools/rom2.py verify`, `docs/rom-regions.tsv`, direct string scans,
+positioned bitmap-record scans, and the code-only I/O summary on 2026-06-02.
+
+Items that still cannot be answered from the T400 2.1 ROM alone are kept in
+[`docs/open-questions.md`](docs/open-questions.md). Comparative files such as
+[`docs/basic-eromcard.md`](docs/basic-eromcard.md) and the non-T400 rows in
+[`docs/running-rom-card-binaries.md`](docs/running-rom-card-binaries.md) require
+the external ROM images named in those pages.
+
 ## Open Questions
 
-- Physical power/wake path and why MAME reset shows `INITIALIZING` instead of
-  the documented copyright banner.
+- Physical power/wake path and the exact selector/timing for the startup
+  copyright banner. The `INITIALIZING` path is now traced to the cold
+  retained-RAM/init branch.
 - Board-level wiring for port `0xA0` battery, card, and printer-status bits.
 - `EROMCARD.X` candidate-drive mapping and whether a loaded stub can execute
   further code from PCMCIA memory.
@@ -379,8 +403,8 @@ bpset c1240     ; diagnostic gate
 bpset c1252     ; diagnostic chord compare
 ```
 
-The next useful work is not more manual breakpoint poking. Start building a
-small mapping tool:
+The next useful tooling work is a recursive pass beyond the current
+range-oriented helpers:
 
 - load the ROM and define named segments/windows,
 - seed known entry points,
