@@ -12,6 +12,7 @@ CONSOLE_MAX_ROWS equ 16
 LCD_DEFAULT_FRAMEBUFFER_BASE equ 0x1000
 LCD_STRIDE_BYTES equ 64
 LCD_VISIBLE_BYTES equ 60
+
 CONSOLE_ATTR_UNDERLINE equ 0x01
 CONSOLE_ATTR_BOLD equ 0x08
 CONSOLE_ATTR_INVERSE equ 0x70
@@ -550,55 +551,15 @@ console_scroll_pixel_rect:
     jmp .done
 
 .bit_rect:
-    ; Future optimization: when source and destination columns differ by a
-    ; multiple of four cells, their 6-pixel cell origins have the same bit
-    ; alignment. That can copy whole middle bytes with masked edge bytes instead
-    ; of falling all the way back to per-pixel movement.
-    mov ax, [scroll_dst_pixel_y]
-    cmp ax, [scroll_src_pixel_y]
-    ja .backward
-    jb .forward
-    mov ax, [scroll_dst_pixel_x]
-    cmp ax, [scroll_src_pixel_x]
-    ja .backward
+    mov ax, [scroll_src_pixel_x]
+    xor ax, [scroll_dst_pixel_x]
+    test al, 7
+    jnz .bitfield_rect
+    call scroll_aligned_rect
+    jmp .done
 
-.forward:
-    xor ax, ax
-    mov es, ax
-    mov word [scroll_work_y], 0
-.forward_y:
-    mov ax, [scroll_work_y]
-    cmp ax, [scroll_pixel_height]
-    jae .done
-    mov word [scroll_work_x], 0
-.forward_x:
-    mov ax, [scroll_work_x]
-    cmp ax, [scroll_pixel_width]
-    jae .forward_next_y
-    call scroll_copy_pixel
-    inc word [scroll_work_x]
-    jmp .forward_x
-.forward_next_y:
-    inc word [scroll_work_y]
-    jmp .forward_y
-
-.backward:
-    xor ax, ax
-    mov es, ax
-    mov ax, [scroll_pixel_height]
-    mov [scroll_work_y], ax
-.backward_y:
-    cmp word [scroll_work_y], 0
-    je .done
-    dec word [scroll_work_y]
-    mov ax, [scroll_pixel_width]
-    mov [scroll_work_x], ax
-.backward_x:
-    cmp word [scroll_work_x], 0
-    je .backward_y
-    dec word [scroll_work_x]
-    call scroll_copy_pixel
-    jmp .backward_x
+.bitfield_rect:
+    call scroll_bitfield_rect
 
 .done:
     pop es
@@ -759,6 +720,439 @@ scroll_prepare_pixel_rect:
     xor ah, ah
     shl ax, 3
     mov [scroll_pixel_height], ax
+    ret
+
+; Tier 2: same bit alignment (src_x%8 == dst_x%8). Copy middle bytes with
+; rep movsb; mask first and last bytes to preserve surrounding pixels.
+scroll_aligned_rect:
+    pushf
+    pusha
+    push ds
+    push es
+
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+
+    mov ax, [scroll_dst_pixel_y]
+    cmp ax, [scroll_src_pixel_y]
+    ja .backward
+    jb .forward
+    mov ax, [scroll_dst_pixel_x]
+    cmp ax, [scroll_src_pixel_x]
+    ja .backward
+
+.forward:
+    cld
+    call .setup_src_row
+    mov si, ax
+    call .setup_dst_row
+    mov di, ax
+    call .setup_masks
+    mov bx, [scroll_pixel_height]
+
+.fwd_row:
+    push si
+    push di
+    call .copy_row_masked
+    pop di
+    pop si
+    add si, LCD_STRIDE_BYTES
+    add di, LCD_STRIDE_BYTES
+    dec bx
+    jnz .fwd_row
+    jmp .done
+
+.backward:
+    cld
+    mov ax, [scroll_src_pixel_y]
+    add ax, [scroll_pixel_height]
+    dec ax
+    call .setup_row_at_y
+    mov si, ax
+    mov ax, [scroll_dst_pixel_y]
+    add ax, [scroll_pixel_height]
+    dec ax
+    call .setup_row_at_y_dst
+    mov di, ax
+    call .setup_masks
+    mov bx, [scroll_pixel_height]
+
+.bwd_row:
+    push si
+    push di
+    call .copy_row_masked
+    pop di
+    pop si
+    sub si, LCD_STRIDE_BYTES
+    sub di, LCD_STRIDE_BYTES
+    dec bx
+    jnz .bwd_row
+
+.done:
+    pop es
+    pop ds
+    popa
+    popf
+    ret
+
+.setup_src_row:
+    mov ax, [scroll_src_pixel_y]
+    shl ax, 6
+    push bx
+    mov bx, [scroll_src_pixel_x]
+    shr bx, 3
+    add ax, bx
+    pop bx
+    add ax, [lcd_framebuffer_base]
+    ret
+
+.setup_dst_row:
+    mov ax, [scroll_dst_pixel_y]
+    shl ax, 6
+    push bx
+    mov bx, [scroll_dst_pixel_x]
+    shr bx, 3
+    add ax, bx
+    pop bx
+    add ax, [lcd_framebuffer_base]
+    ret
+
+.setup_row_at_y:
+    shl ax, 6
+    push bx
+    mov bx, [scroll_src_pixel_x]
+    shr bx, 3
+    add ax, bx
+    pop bx
+    add ax, [lcd_framebuffer_base]
+    ret
+
+.setup_row_at_y_dst:
+    shl ax, 6
+    push bx
+    mov bx, [scroll_dst_pixel_x]
+    shr bx, 3
+    add ax, bx
+    pop bx
+    add ax, [lcd_framebuffer_base]
+    ret
+
+.setup_masks:
+    mov ax, [scroll_dst_pixel_x]
+    and al, 7
+    mov [scroll_left_shift], al
+    mov ax, [scroll_dst_pixel_x]
+    add ax, [scroll_pixel_width]
+    and al, 7
+    mov [scroll_right_bits], al
+    mov ax, [scroll_pixel_width]
+    add ax, [scroll_dst_pixel_x]
+    dec ax
+    shr ax, 3
+    mov cx, [scroll_dst_pixel_x]
+    shr cx, 3
+    sub ax, cx
+    mov [scroll_byte_span], ax
+    ret
+
+.copy_row_masked:
+    mov cx, [scroll_byte_span]
+    mov al, [scroll_left_shift]
+    or al, al
+    jz .no_left_edge
+    push cx
+    mov ah, 0xFF
+    mov cl, al
+    shr ah, cl
+    mov al, [si]
+    mov cl, [di]
+    and al, ah
+    not ah
+    and cl, ah
+    or al, cl
+    mov [di], al
+    inc si
+    inc di
+    pop cx
+    dec cx
+    jz .right_edge
+.no_left_edge:
+    push cx
+    mov al, [scroll_right_bits]
+    or al, al
+    jz .mid_full
+    dec cx
+.mid_full:
+    shr cx, 1
+    rep movsw
+    jnc .mid_even
+    movsb
+.mid_even:
+    pop cx
+.right_edge:
+    mov al, [scroll_right_bits]
+    or al, al
+    jz .row_done
+    mov cl, al
+    mov ah, 0xFF
+    shl ah, cl
+    not ah
+    mov al, [si]
+    mov cl, [di]
+    and al, ah
+    not ah
+    and cl, ah
+    or al, cl
+    mov [di], al
+.row_done:
+    ret
+
+; Tier 3: different bit alignment. Shift-merge byte loop: each destination
+; byte is assembled from two adjacent source bytes with SHL/SHR/OR.
+; dst_byte[n] = (src_byte[n] << shift_l) | (src_byte[n+1] >> shift_r)
+; where shift_l = (src_bit - dst_bit) & 7 for a leftward scroll.
+scroll_bitfield_rect:
+    pushf
+    pusha
+    push es
+
+    call scroll_aligned_rect.setup_masks
+    call .sm_setup_shifts
+
+    mov ax, [scroll_dst_pixel_y]
+    cmp ax, [scroll_src_pixel_y]
+    ja .sm_backward
+    jb .sm_forward
+    mov ax, [scroll_dst_pixel_x]
+    cmp ax, [scroll_src_pixel_x]
+    ja .sm_backward
+
+.sm_forward:
+    cld
+    call scroll_aligned_rect.setup_dst_row
+    mov di, ax
+    ; SI = DI + signed_pixel_offset/8 (arithmetic shift for negative offsets).
+    mov ax, [scroll_src_pixel_x]
+    sub ax, [scroll_dst_pixel_x]
+    sar ax, 3
+    mov si, di
+    add si, ax
+    mov bx, [scroll_pixel_height]
+    xor ax, ax
+    mov es, ax
+    jmp .sm_row_loop
+
+.sm_backward:
+    cld
+    ; Backward: start SI/DI at the RIGHTMOST byte of the last row.
+    ; Compute DI from dst, then SI = DI - byte_delta.
+    mov ax, [scroll_dst_pixel_y]
+    add ax, [scroll_pixel_height]
+    dec ax
+    call scroll_aligned_rect.setup_row_at_y_dst
+    add ax, [scroll_byte_span]
+    mov di, ax                        ; DI = last dest byte of last row
+    mov ax, [scroll_src_pixel_x]
+    sub ax, [scroll_dst_pixel_x]
+    sar ax, 3
+    mov si, di
+    add si, ax                        ; SI = DI + signed(src-dst)/8
+    mov bx, [scroll_pixel_height]
+    xor ax, ax
+    mov es, ax
+    jmp .sm_bwd_row_loop
+
+.sm_bwd_row_loop:
+    push si
+    push di
+    call .sm_copy_row_bwd
+    pop di
+    pop si
+    sub si, LCD_STRIDE_BYTES
+    sub di, LCD_STRIDE_BYTES
+    dec bx
+    jnz .sm_bwd_row_loop
+    jmp .sm_done
+
+.sm_row_loop:
+    push si
+    push di
+    call .sm_copy_row
+    pop di
+    pop si
+    add si, LCD_STRIDE_BYTES
+    add di, LCD_STRIDE_BYTES
+    dec bx
+    jnz .sm_row_loop
+
+.sm_done:
+    pop es
+    popa
+    popf
+    ret
+
+; Copy one row with bit-shift across byte boundaries.
+; SI=src row byte, DI=dst row byte (in segment 0 via ES).
+; Uses scroll_left_shift (src_bit), scroll_right_bits (end_bit),
+; scroll_byte_span, scroll_src_pixel_x, scroll_dst_pixel_x.
+; The shift amount is (dst_bit - src_bit) & 7 or (src_bit - dst_bit) & 7
+; depending on direction; we compute both complementary shifts.
+; TODO: in text mode, redrawing from the shadow text buffer may be faster
+; than shifting framebuffer bits. dwconsole does not currently track
+; text-vs-graphics mode.
+
+; Compute shift amounts from source/destination pixel bit offsets.
+; Called once before the row loop; results go into scroll_shift_l/r.
+.sm_setup_shifts:
+    mov ax, [scroll_src_pixel_x]
+    sub ax, [scroll_dst_pixel_x]
+    and al, 7
+    mov [scroll_shift_l], al
+    neg al
+    add al, 8
+    and al, 7
+    mov [scroll_shift_r], al
+    ret
+
+.sm_copy_row:
+    push dx
+    push bp
+
+    mov bp, [scroll_byte_span]
+    inc bp
+    cmp bp, 1
+    jbe .sm_row_done
+
+    ; Initial carry: first source byte shifted left.
+    mov al, [es:si]
+    inc si
+    mov cl, [scroll_shift_l]
+    shl al, cl
+    mov ah, al                        ; AH = (src[0] << shift_l)
+
+    ; First dest byte: merge carry with next source byte.
+    mov al, [es:si]
+    inc si
+    mov dl, al                        ; save for next carry
+    mov cl, [scroll_shift_r]
+    shr al, cl                        ; low bits from src[1]
+    or al, ah                         ; dst[0] = carry | (src[1] >> shift_r)
+    ; Mask: preserve bits left of dst_pixel_x within this byte.
+    mov cl, [scroll_left_shift]
+    or cl, cl
+    jz .sm_first_full
+    mov ch, 0xFF
+    shr ch, cl
+    and al, ch
+    not ch
+    and ch, [es:di]
+    or al, ch
+.sm_first_full:
+    mov [es:di], al
+    inc di
+    dec bp
+    jz .sm_row_done
+
+    ; Carry for next byte: (src[1] << shift_l)
+    mov al, dl
+    mov cl, [scroll_shift_l]
+    shl al, cl
+    mov ah, al
+
+    ; Middle bytes: dst[n] = (src[n] << shift_l) | (src[n+1] >> shift_r)
+.sm_middle:
+    or bp, bp
+    jz .sm_row_done
+    cmp bp, 1
+    je .sm_last_byte
+    mov al, [es:si]
+    inc si
+    mov dl, al
+    mov cl, [scroll_shift_r]
+    shr al, cl
+    or al, ah
+    mov [es:di], al
+    inc di
+    mov al, dl
+    mov cl, [scroll_shift_l]
+    shl al, cl
+    mov ah, al
+    dec bp
+    jmp .sm_middle
+
+.sm_last_byte:
+    mov al, [es:si]
+    mov cl, [scroll_shift_r]
+    shr al, cl
+    or al, ah
+    ; Mask: preserve bits right of the scroll region end (MSB-first).
+    ; scroll_right_bits = number of pixels in the last partial byte.
+    ; Those pixels occupy the TOP right_bits bits of the byte.
+    mov cl, [scroll_right_bits]
+    or cl, cl
+    jz .sm_last_full
+    neg cl
+    add cl, 8                         ; CL = 8 - right_bits
+    mov ch, 0xFF
+    shl ch, cl                        ; CH = write mask (top right_bits bits)
+    and al, ch
+    not ch
+    and ch, [es:di]
+    or al, ch
+.sm_last_full:
+    mov [es:di], al
+
+.sm_row_done:
+    pop bp
+    pop dx
+    ret
+
+; Right-to-left row copy for backward (insert) scrolls.
+; SI/DI point to the LAST byte of the source/dest row region.
+; Processes from right to left to avoid overlap corruption.
+.sm_copy_row_bwd:
+    push dx
+    push bp
+
+    mov bp, [scroll_byte_span]
+    inc bp
+    cmp bp, 1
+    jbe .sm_bwd_done
+    cmp bp, LCD_VISIBLE_BYTES + 1
+    ja .sm_bwd_done                   ; safety bound
+
+    ; Initial carry: the byte at SI+1 provides the low bits for the
+    ; rightmost destination byte.
+    inc si
+    mov al, [es:si]
+    dec si
+    mov cl, [scroll_shift_r]
+    shr al, cl
+    mov ah, al
+
+    ; Process all bytes right to left.
+    ; dst[n] = (src[n] << shift_l) | carry
+    ; carry  = src[n] >> shift_r
+.sm_bwd_byte:
+    mov al, [es:si]
+    dec si
+    mov dl, al
+    mov cl, [scroll_shift_l]
+    shl al, cl
+    or al, ah
+    mov [es:di], al
+    dec di
+    mov al, dl
+    mov cl, [scroll_shift_r]
+    shr al, cl
+    mov ah, al
+    dec bp
+    jnz .sm_bwd_byte
+
+.sm_bwd_done:
+    pop bp
+    pop dx
     ret
 
 scroll_copy_pixel:
@@ -1238,5 +1632,15 @@ scroll_pixel_value:
     db 0
 scroll_byte_width:
     dw 0
+scroll_left_shift:
+    db 0
+scroll_right_bits:
+    db 0
+scroll_byte_span:
+    dw 0
+scroll_shift_l:
+    db 0
+scroll_shift_r:
+    db 0
 console_text_buffer:
     times CONSOLE_COLS * CONSOLE_MAX_ROWS dw (CONSOLE_ATTR_DEFAULT << 8) | " "
