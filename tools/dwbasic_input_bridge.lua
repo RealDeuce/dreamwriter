@@ -21,6 +21,12 @@ local watch_count = 0
 local watch_start = tonumber(os.getenv("DWBASIC_WATCH_START") or "")
 local watch_end = tonumber(os.getenv("DWBASIC_WATCH_END") or "")
 local watch_limit = tonumber(os.getenv("DWBASIC_WATCH_LIMIT") or "16")
+local read_tap = nil
+local read_count = 0
+local read_start = tonumber(os.getenv("DWBASIC_READ_START") or "")
+local read_end = tonumber(os.getenv("DWBASIC_READ_END") or "")
+local read_limit = tonumber(os.getenv("DWBASIC_READ_LIMIT") or "16")
+local hex_to_string = nil
 
 local function find_cpu()
 	if cpu then
@@ -65,6 +71,22 @@ local function get_program_space()
 	return program_space
 end
 
+local function get_debugger()
+	local debugger = manager.machine.debugger
+	if not debugger then
+		error("MAME debugger is not enabled; launch with -debug")
+	end
+	return debugger
+end
+
+local function get_cpu_debug()
+	local device = find_cpu()
+	if not device or not device.debug then
+		error("missing CPU debugger interface")
+	end
+	return device.debug
+end
+
 local function read_hex(start_address, length)
 	local space = get_program_space()
 	local values = {}
@@ -72,6 +94,22 @@ local function read_hex(start_address, length)
 		values[#values + 1] = string.format("%02X", space:read_u8(start_address + offset))
 	end
 	return table.concat(values)
+end
+
+local function parse_number(text)
+	if not text then
+		return nil
+	end
+	if text:match("^0[xX][0-9a-fA-F]+$") then
+		return tonumber(text)
+	end
+	if text:match("^[0-9a-fA-F]+[hH]$") then
+		return tonumber(text:sub(1, -2), 16)
+	end
+	if text:match("^[0-9a-fA-F]+$") and text:match("[a-fA-F]") then
+		return tonumber(text, 16)
+	end
+	return tonumber(text)
 end
 
 local function read_u8(address)
@@ -90,12 +128,56 @@ local function cpu_item(name)
 	return item.value
 end
 
+local function cpu_state_value(device, names)
+	for _, name in ipairs(names) do
+		local item = device.state[name]
+		if item then
+			return item.value
+		end
+	end
+	return nil
+end
+
+local normalized_cpu_state = {
+	{ "CS", { "CS", "PS" } },
+	{ "IP", { "IP", "PC" } },
+	{ "DS", { "DS", "DS0" } },
+	{ "ES", { "ES", "DS1" } },
+	{ "SS", { "SS" } },
+	{ "SP", { "SP" } },
+	{ "AX", { "AX", "AW" } },
+	{ "BX", { "BX", "BW" } },
+	{ "CX", { "CX", "CW" } },
+	{ "DX", { "DX", "DW" } },
+	{ "SI", { "SI", "IX" } },
+	{ "DI", { "DI", "IY" } },
+	{ "FLAGS", { "FLAGS", "PSW", "CURFLAGS" } },
+}
+
 local function basic_hex_line(offset, length)
-	local segment = cpu_item("DS1") or cpu_item("DS") or cpu_item("PS")
+	local segment = cpu_item("DS0") or cpu_item("DS") or cpu_item("PS")
 	if not segment then
 		return "ERR missing BASIC segment"
 	end
 	return "OK MEM " .. read_hex(segment * 16 + offset, length)
+end
+
+local function bus_hex_line(address, length)
+	if not address or not length then
+		return "ERR BUSMEM needs address and length"
+	end
+	return "OK BUSMEM " .. read_hex(address, length)
+end
+
+local function linear_hex_line(segment, offset, length)
+	if not segment or not offset or not length then
+		return "ERR LINEARMEM needs segment offset and length"
+	end
+	return "OK LINEARMEM " .. read_hex(segment * 16 + offset, length)
+end
+
+local function loader_abi_line()
+	return "OK LOADERABI " .. read_hex(0x0a4f0 + 0x0010, 14)
 end
 
 local function kbd_state_line()
@@ -117,31 +199,96 @@ local function cpu_state_line()
 	if not device then
 		return "ERR missing CPU device"
 	end
-	local names = { "PC", "CURPC", "GENPC", "CS", "IP", "SS", "SP", "DS", "ES", "AX", "BX", "CX", "DX", "FLAGS" }
 	local values = {}
-	local seen = {}
-	for _, name in ipairs(names) do
-		local item = device.state[name]
-		if item then
-			values[#values + 1] = string.format("%s=%X", name, item.value)
-			seen[name] = true
+	for _, entry in ipairs(normalized_cpu_state) do
+		local value = cpu_state_value(device, entry[2])
+		if value then
+			values[#values + 1] = string.format("%s=%X", entry[1], value)
 		end
-	end
-	local extra = {}
-	for name, item in pairs(device.state) do
-		if not seen[name] then
-			extra[#extra + 1] = string.format("%s=%X", tostring(name), item.value)
-		end
-	end
-	table.sort(extra)
-	for _, value in ipairs(extra) do
-		values[#values + 1] = value
 	end
 	return "OK CPU " .. table.concat(values, " ")
 end
 
+local function debug_state_line()
+	local debugger = get_debugger()
+	return "OK DBG state=" .. debugger.execution_state .. " " .. cpu_state_line():sub(8)
+end
+
+local function debug_console_command(hex_payload)
+	local command = hex_to_string(hex_payload)
+	get_debugger():command(command)
+	return "OK DBG"
+end
+
+local function debug_batch_command(hex_payload)
+	local commands = hex_to_string(hex_payload)
+	local debugger = get_debugger()
+	debugger.execution_state = "stop"
+	for line in commands:gmatch("[^\n]+") do
+		line = line:gsub("\r$", "")
+		if line:match("%S") then
+			debugger:command(line)
+		end
+	end
+	get_cpu_debug():go(0xffffffff)
+	return "OK DBG BATCH"
+end
+
+local function debug_breakpoint_line(payload)
+	local address_text, cond_text, action_hex = payload:match("^(%S+)%s*(%S*)%s*(.*)$")
+	local address = parse_number(address_text)
+	if not address then
+		return "ERR DBGBP needs address"
+	end
+	local condition = ""
+	if cond_text and cond_text ~= "" and cond_text ~= "-" then
+		condition = cond_text
+	end
+	local action = ""
+	if action_hex and action_hex ~= "" then
+		action = hex_to_string(action_hex)
+	end
+	local index = get_cpu_debug():bpset(address, condition, action)
+	return "OK DBG BP " .. tostring(index)
+end
+
+local function debug_breakpoint_clear_line(payload)
+	local index = parse_number(payload)
+	if index then
+		if get_cpu_debug():bpclear(index) then
+			return "OK DBG BPCLEAR " .. tostring(index)
+		end
+		return "ERR unknown breakpoint " .. tostring(index)
+	end
+	get_cpu_debug():bpclear()
+	return "OK DBG BPCLEAR all"
+end
+
+local function debug_step_line(payload)
+	local count = parse_number(payload) or 1
+	get_cpu_debug():step(count)
+	return "OK DBG STEP " .. tostring(count)
+end
+
+local function debug_log_line(payload, use_error_log)
+	local count = parse_number(payload) or 20
+	local debugger = get_debugger()
+	local log = use_error_log and debugger.errorlog or debugger.consolelog
+	local first = math.max(1, #log - count + 1)
+	local lines = {}
+	for index = first, #log do
+		local ok, line = pcall(function()
+			return log[index]
+		end)
+		if ok and line then
+			line = tostring(line):gsub("\r", ""):gsub("\n", "\\n")
+			lines[#lines + 1] = line
+		end
+	end
+	return "OK DBGLOG " .. table.concat(lines, "\30")
+end
+
 local function watch_state_line(offset, data, mask)
-	local names = { "PC", "CURPC", "GENPC", "CS", "IP", "DS", "ES", "SS", "SP", "AX", "BX", "CX", "DX" }
 	local values = {
 		string.format("addr=%05X", offset),
 		string.format("data=%X", data),
@@ -149,14 +296,32 @@ local function watch_state_line(offset, data, mask)
 	}
 	local device = find_cpu()
 	if device then
-		for _, name in ipairs(names) do
-			local item = device.state[name]
-			if item then
-				values[#values + 1] = string.format("%s=%X", name, item.value)
+		for _, entry in ipairs(normalized_cpu_state) do
+			local value = cpu_state_value(device, entry[2])
+			if value then
+				values[#values + 1] = string.format("%s=%X", entry[1], value)
 			end
 		end
 	end
 	return "WATCH " .. table.concat(values, " ")
+end
+
+local function read_state_line(offset, data, mask)
+	local values = {
+		string.format("addr=%05X", offset),
+		string.format("data=%X", data),
+		string.format("mask=%X", mask),
+	}
+	local device = find_cpu()
+	if device then
+		for _, entry in ipairs(normalized_cpu_state) do
+			local value = cpu_state_value(device, entry[2])
+			if value then
+				values[#values + 1] = string.format("%s=%X", entry[1], value)
+			end
+		end
+	end
+	return "READ " .. table.concat(values, " ")
 end
 
 local function install_watch()
@@ -176,6 +341,25 @@ local function install_watch()
 		end
 	end)
 	emu.print_error(string.format("dwbasic watch installed %05X-%05X", watch_start, watch_end))
+end
+
+local function install_read_watch()
+	if read_tap or not read_start or not read_end then
+		return
+	end
+	local space = get_program_space()
+	read_tap = space:install_read_tap(read_start, read_end, "dwbasic-read-watch", function(offset, data, mask)
+		read_count = read_count + 1
+		local line = read_state_line(offset, data, mask)
+		emu.print_error(line)
+		if socket then
+			socket:write("EVT " .. line .. "\n")
+		end
+		if read_limit > 0 and read_count >= read_limit then
+			read_tap:remove()
+		end
+	end)
+	emu.print_error(string.format("dwbasic read watch installed %05X-%05X", read_start, read_end))
 end
 
 local function get_port(name)
@@ -274,6 +458,8 @@ local function init_ports()
 		["down"] = ports.down,
 		["tab"] = ports.tab,
 		["insert"] = ports.insert,
+		["space"] = ports.keys[" "],
+		["spc"] = ports.keys[" "],
 		["backspace"] = ports.backspace,
 		["back_space"] = ports.backspace,
 		["cancel"] = ports.can,
@@ -322,7 +508,7 @@ local shifted_chars = {
 	["~"] = "`",
 }
 
-local function hex_to_string(hex)
+function hex_to_string(hex)
 	return (hex:gsub("..", function(pair)
 		return string.char(tonumber(pair, 16))
 	end))
@@ -443,13 +629,43 @@ local function handle_line(line)
 		socket:write(kbd_state_line() .. "\n")
 	elseif command == "CPUSTATE" then
 		socket:write(cpu_state_line() .. "\n")
+	elseif command == "DBGSTATE" then
+		socket:write(debug_state_line() .. "\n")
+	elseif command == "DBGGO" then
+		get_cpu_debug():go(0xffffffff)
+		socket:write("OK DBG GO\n")
+	elseif command == "DBGSTOP" then
+		get_debugger().execution_state = "stop"
+		socket:write("OK DBG STOP\n")
+	elseif command == "DBGSTEP" then
+		socket:write(debug_step_line(payload) .. "\n")
+	elseif command == "DBGLOG" then
+		socket:write(debug_log_line(payload, false) .. "\n")
+	elseif command == "DBGERRLOG" then
+		socket:write(debug_log_line(payload, true) .. "\n")
+	elseif command == "DBGBP" then
+		socket:write(debug_breakpoint_line(payload) .. "\n")
+	elseif command == "DBGBPCLEAR" then
+		socket:write(debug_breakpoint_clear_line(payload) .. "\n")
+	elseif command == "DBGCMD" then
+		socket:write(debug_console_command(payload) .. "\n")
+	elseif command == "DBGBATCH" then
+		socket:write(debug_batch_command(payload) .. "\n")
 	elseif command == "MEM" then
 		local offset_text, length_text = payload:match("^(%S+)%s+(%S+)$")
 		if not offset_text then
 			socket:write("ERR MEM needs offset and length\n")
 		else
-			socket:write(basic_hex_line(tonumber(offset_text), tonumber(length_text)) .. "\n")
+			socket:write(basic_hex_line(parse_number(offset_text), parse_number(length_text)) .. "\n")
 		end
+	elseif command == "BUSMEM" or command == "PHYSMEM" then
+		local address_text, length_text = payload:match("^(%S+)%s+(%S+)$")
+		socket:write(bus_hex_line(parse_number(address_text), parse_number(length_text)) .. "\n")
+	elseif command == "LINEARMEM" or command == "SEGMEM" then
+		local segment_text, offset_text, length_text = payload:match("^(%S+)%s+(%S+)%s+(%S+)$")
+		socket:write(linear_hex_line(parse_number(segment_text), parse_number(offset_text), parse_number(length_text)) .. "\n")
+	elseif command == "LOADERABI" then
+		socket:write(loader_abi_line() .. "\n")
 	elseif command == "SNAP" then
 		manager.machine.video:snapshot()
 		socket:write("OK SNAP\n")
@@ -517,6 +733,7 @@ end
 
 local function process_frame()
 	install_watch()
+	install_read_watch()
 	read_commands()
 
 	if step then

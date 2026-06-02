@@ -142,6 +142,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--card-in", default="/tmp/dw-card-1m.bin")
     parser.add_argument("--card-out", default="/tmp/dw-card-1m-dw-basic.bin")
+    parser.add_argument(
+        "--store-offset",
+        default="0",
+        help="byte offset of the DreamWriter filesystem inside the input/output image",
+    )
     parser.add_argument("--payload", default="build/EROMCARD.X")
     parser.add_argument(
         "--extra",
@@ -155,7 +160,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    card = bytearray(Path(args.card_in).read_bytes())
+    image = bytearray(Path(args.card_in).read_bytes())
+    store_offset = int(args.store_offset, 0)
+    if store_offset < 0 or store_offset >= len(image):
+        raise ValueError(f"--store-offset {args.store_offset!r} is outside the input image")
+    card = image[store_offset:]
     payload = Path(args.payload).read_bytes()
 
     if read_word(card, 0) != 0x1997 or read_word(card, 2) != 0x0126:
@@ -178,7 +187,8 @@ def main() -> None:
         extra_payload = Path(path).read_bytes()
         install_file(card, geometry, name, extra_payload)
         installed.append(f"{name} ({len(extra_payload)} bytes)")
-    Path(args.card_out).write_bytes(card)
+    image[store_offset:] = card
+    Path(args.card_out).write_bytes(image)
     print(f"installed {', '.join(installed)} into {args.card_out}")
 
 

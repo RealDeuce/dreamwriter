@@ -20,6 +20,7 @@ def main() -> None:
     parser.add_argument("math1", type=Path)
     parser.add_argument("math2", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--conditional-segments", action="store_true")
     args = parser.parse_args()
 
     combined = (
@@ -33,7 +34,7 @@ def main() -> None:
         tmp_path = Path(tmp.name)
         tmp.write(combined)
     try:
-        masm2nasm.convert_file(tmp_path, args.output)
+        masm2nasm.convert_file(tmp_path, args.output, conditional_segments=args.conditional_segments)
         lines = args.output.read_text(errors="replace").splitlines()
         lines[0] = "; Auto-converted mechanically from combined math1.asm + math2.asm"
         args.output.write_text("\n".join(lines) + "\n")

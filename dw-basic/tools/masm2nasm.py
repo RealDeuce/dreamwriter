@@ -15,6 +15,10 @@ from pathlib import Path
 
 COMMENT_BLOCK_RE = re.compile(r"^\s*COMMENT\s+(.).*")
 CURRENT_RADIX = 10
+CONDITIONAL_SEGMENTS = False
+CURRENT_SEGMENT = "CSEG"
+DSEG_ACTIVE_HAS_OUTPUT = False
+DECLARED_SEGMENTS: set[str] = set()
 DATA_SYMBOLS: set[str] = set()
 ASSIGNMENT_COUNTS: dict[str, int] = {}
 REGISTERS = {
@@ -631,6 +635,14 @@ def convert_octal_byte(text: str) -> str:
     return convert_expr(text)
 
 
+def split_segment_directive(name: str) -> str:
+    class_name = "DATA" if name == "DSEG" else "CODE"
+    if name in DECLARED_SEGMENTS:
+        return f"segment {name}"
+    DECLARED_SEGMENTS.add(name)
+    return f"segment {name} class={class_name} use16"
+
+
 def wrap_memory_destination(match: re.Match[str]) -> str:
     op = match.group(1)
     operand = match.group(2)
@@ -640,15 +652,29 @@ def wrap_memory_destination(match: re.Match[str]) -> str:
 
 
 def convert_instruction(code: str) -> str:
+    global CURRENT_SEGMENT, DSEG_ACTIVE_HAS_OUTPUT
     stripped = code.strip()
     if not stripped:
         return code
 
     # Segment boilerplate.
     upper = stripped.upper()
-    if upper.endswith("SEGMENT PUBLIC 'CODESG'") or upper.endswith("SEGMENT PUBLIC 'DATASG'"):
+    if upper.endswith("SEGMENT PUBLIC 'CODESG'"):
+        CURRENT_SEGMENT = "CSEG"
+        if CONDITIONAL_SEGMENTS:
+            return "%if GW_BASIC_SPLIT_LOAD\n" + split_segment_directive("CSEG") + "\n%endif"
+        return ""
+    if upper.endswith("SEGMENT PUBLIC 'DATASG'"):
+        CURRENT_SEGMENT = "DSEG"
+        DSEG_ACTIVE_HAS_OUTPUT = False
         return ""
     if upper.endswith("ENDS"):
+        ended_segment = upper.split()[0] if upper.split() else CURRENT_SEGMENT
+        if CONDITIONAL_SEGMENTS and ended_segment == "DSEG" and DSEG_ACTIVE_HAS_OUTPUT:
+            CURRENT_SEGMENT = "CSEG"
+            return "%if GW_BASIC_SPLIT_LOAD\n" + split_segment_directive("CSEG") + "\n%endif"
+        if ended_segment == "DSEG":
+            CURRENT_SEGMENT = "CSEG"
         return ""
     if upper.startswith("ASSUME"):
         return ""
@@ -659,33 +685,51 @@ def convert_instruction(code: str) -> str:
     if upper.startswith(".RADIX"):
         return "; " + stripped
 
+    segment_prefix = ""
+    dseg_deferred_non_output = (
+        re.match(r"^(EXTERN|EXTRN|GLOBAL|PUBLIC)\b", stripped, flags=re.I)
+        or upper in {"ENDIF", "ELSE", "ENDM"}
+        or re.match(r"^(IF|IFE|IFN|INCLUDE)\b", stripped, flags=re.I)
+        or re.match(r"[A-Za-z_.$?][\w.$?]*\s+MACRO\b", stripped, flags=re.I)
+        or re.match(r"^[A-Za-z_.$?][\w.$?]*\s+EQU\b", stripped, flags=re.I)
+        or re.match(r"^[A-Za-z_.$?][\w.$?]*\s*=", stripped)
+    )
+    if (
+        CONDITIONAL_SEGMENTS
+        and CURRENT_SEGMENT == "DSEG"
+        and not DSEG_ACTIVE_HAS_OUTPUT
+        and not dseg_deferred_non_output
+    ):
+        DSEG_ACTIVE_HAS_OUTPUT = True
+        segment_prefix = "%if GW_BASIC_SPLIT_LOAD\n" + split_segment_directive("DSEG") + "\n%endif\n"
+
     if upper == "ENDIF":
-        return "%endif"
+        return segment_prefix + "%endif"
     if upper == "ELSE":
-        return "%else"
+        return segment_prefix + "%else"
 
     m = re.match(r"IF\s+(.+)$", stripped, flags=re.I)
     if m:
-        return "%if " + convert_if_expr(m.group(1))
+        return segment_prefix + "%if " + convert_if_expr(m.group(1))
     m = re.match(r"IFE\s+(.+)$", stripped, flags=re.I)
     if m:
-        return "%if !(" + convert_if_expr(m.group(1)) + ")"
+        return segment_prefix + "%if !(" + convert_if_expr(m.group(1)) + ")"
     m = re.match(r"IFN\s+(.+)$", stripped, flags=re.I)
     if m:
-        return "%if " + convert_if_expr(m.group(1))
+        return segment_prefix + "%if " + convert_if_expr(m.group(1))
 
     m = re.match(r"INCLUDE\s+(.+)$", stripped, flags=re.I)
     if m:
         name = m.group(1).strip().strip('"').lower()
         if name == "oem.h":
-            return '%include "dwoem.inc"'
+            return segment_prefix + '%include "dwoem.inc"'
         if name == "bintrp.h":
-            return '%include "dwoem.inc"'
+            return segment_prefix + '%include "dwoem.inc"'
         if name == "gio86u":
-            return '%include "gio86u.inc"'
+            return segment_prefix + '%include "gio86u.inc"'
         if name == "msdosu":
-            return '%include "msdosu.inc"'
-        return "; TODO include " + m.group(1).strip()
+            return segment_prefix + '%include "msdosu.inc"'
+        return segment_prefix + "; TODO include " + m.group(1).strip()
 
     if re.match(r"[A-Za-z_.$?][\w.$?]*\s+MACRO\b", stripped, flags=re.I):
         return ""
@@ -711,7 +755,7 @@ def convert_instruction(code: str) -> str:
 
     m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s+LABEL\s+(BYTE|WORD|DWORD)\b", stripped, flags=re.I)
     if m:
-        return rename_symbol(m.group(1)) + ":"
+        return segment_prefix + rename_symbol(m.group(1)) + ":"
 
     m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s*=\s*(.+)$", stripped)
     if m:
@@ -719,32 +763,32 @@ def convert_instruction(code: str) -> str:
         raw_expr = m.group(2).strip()
         expr = convert_masm_boolean_operators(convert_expr(raw_expr))
         if expr_has_location_counter(raw_expr) and not (raw_expr == "$" and ASSIGNMENT_COUNTS.get(name.upper(), 0) > 1):
-            return name + " equ " + expr
+            return segment_prefix + name + " equ " + expr
         if name in {"DATAS", "FORSZC"}:
-            return name + " equ " + expr
+            return segment_prefix + name + " equ " + expr
         if re.search(rf"\b{re.escape(name)}\b", expr):
-            return "%assign " + name + " " + expr
+            return segment_prefix + "%assign " + name + " " + expr
         if re.fullmatch(r"[0-9]+", expr):
-            return "%assign " + name + " " + expr
+            return segment_prefix + "%assign " + name + " " + expr
         if expr == "_OFFST":
-            return "%xdefine " + name + " " + expr
-        return "%define " + name + " " + expr
+            return segment_prefix + "%xdefine " + name + " " + expr
+        return segment_prefix + "%define " + name + " " + expr
 
     m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s+EQU\s+(.+)$", stripped, flags=re.I)
     if m:
         expr = convert_masm_boolean_operators(convert_expr(m.group(2).strip()))
-        return rename_symbol(m.group(1)) + " equ " + expr
+        return segment_prefix + rename_symbol(m.group(1)) + " equ " + expr
 
     m = re.match(r"ORG\s+(.+)$", stripped, flags=re.I)
     if m:
-        return "; org " + convert_expr(m.group(1).strip())
+        return segment_prefix + "; org " + convert_expr(m.group(1).strip())
 
     m = re.match(r"([A-Za-z_.$?][\w.$?]*:)?\s*(DB|DW|DD)\s+(.+)$", stripped, flags=re.I)
     if m:
         label = (rename_symbol(m.group(1)[:-1]) + ":" if m.group(1) else "")
         directive = m.group(2).lower()
         operands = convert_db_dw_operands(m.group(3))
-        return (label + " " if label else "") + directive + " " + operands
+        return segment_prefix + (label + " " if label else "") + directive + " " + operands
 
     label, body = split_label(stripped)
     m = re.match(r"INS86\s+(.+)$", body, flags=re.I)
@@ -753,17 +797,17 @@ def convert_instruction(code: str) -> str:
         while args and args[-1] == "":
             args.pop()
         if len(args) == 1:
-            return label + "db " + convert_octal_byte(args[0])
+            return segment_prefix + label + "db " + convert_octal_byte(args[0])
         if len(args) == 2:
-            return label + "db " + ", ".join(convert_octal_byte(arg) for arg in args)
+            return segment_prefix + label + "db " + ", ".join(convert_octal_byte(arg) for arg in args)
         if len(args) == 3:
             lines = [label + "db " + convert_octal_byte(args[0])]
             if args[1]:
                 lines.append("db " + convert_octal_byte(args[1]))
             lines.append("dw " + convert_expr(args[2]))
-            return "\n".join(lines)
+            return segment_prefix + "\n".join(lines)
         if len(args) == 4:
-            return "\n".join(
+            return segment_prefix + "\n".join(
                 [
                     label + "db " + convert_octal_byte(args[0]),
                     "db " + convert_octal_byte(args[1]),
@@ -776,7 +820,7 @@ def convert_instruction(code: str) -> str:
     if m:
         args = [arg.strip() for arg in m.group(1).split(",")]
         if len(args) == 4:
-            return "\n".join(
+            return segment_prefix + "\n".join(
                 [
                     label + "db 0o271",
                     "db " + convert_octal_byte(args[1]),
@@ -790,7 +834,7 @@ def convert_instruction(code: str) -> str:
     m = re.match(r"DERMAK\s+([A-Za-z0-9_.$?]+)$", body, flags=re.I)
     if m:
         suffix = m.group(1).upper()
-        return "\n".join(
+        return segment_prefix + "\n".join(
             [
                 f"global DER{suffix}",
                 f"DER{suffix}:",
@@ -801,14 +845,14 @@ def convert_instruction(code: str) -> str:
 
     m = re.match(r"([A-Za-z_.$?][\w.$?]*)\s+PROC\b", body, flags=re.I)
     if m:
-        return label + rename_symbol(m.group(1)) + ":"
+        return segment_prefix + label + rename_symbol(m.group(1)) + ":"
 
     if re.match(r"[A-Za-z_.$?][\w.$?]*\s+ENDP\b", body, flags=re.I):
         return ""
 
     m = re.match(r"ADR\s+(.+)$", body, flags=re.I)
     if m:
-        return label + "dw " + convert_expr(m.group(1))
+        return segment_prefix + label + "dw " + convert_expr(m.group(1))
 
     m = re.match(r"ADRP\s+(.+)$", body, flags=re.I)
     if m:
@@ -816,7 +860,7 @@ def convert_instruction(code: str) -> str:
 
     m = re.match(r"DOSIO\s+(.+)$", body, flags=re.I)
     if m:
-        return "\n".join(
+        return segment_prefix + "\n".join(
             [
                 label + "mov ah, " + convert_expr(m.group(1)),
                 "int 33",
@@ -825,19 +869,19 @@ def convert_instruction(code: str) -> str:
     m = re.match(r"CALLOS(?:\s+(.+))?$", body, flags=re.I)
     if m:
         if m.group(1):
-            return "\n".join(
+            return segment_prefix + "\n".join(
                 [
                     label + "mov ah, " + convert_expr(m.group(1)),
                     "int 33",
                 ]
             )
-        return label + "int 33"
+        return segment_prefix + label + "int 33"
     if re.match(r"POPR$", body, flags=re.I):
-        return "\n".join([label + "pop cx", "pop dx"])
+        return segment_prefix + "\n".join([label + "pop cx", "pop dx"])
     if re.match(r"ACRLF$", body, flags=re.I):
-        return label + "db 13, 10"
+        return segment_prefix + label + "db 13, 10"
     if re.match(r"DO_EXT$", body, flags=re.I):
-        return "; DO_EXT handled by explicit extern declarations"
+        return segment_prefix + "; DO_EXT handled by explicit extern declarations"
 
     translated_macros = {
         "HLFDE": "shr dx, 1",
@@ -846,7 +890,7 @@ def convert_instruction(code: str) -> str:
         "NEGHL": "neg bx",
     }
     if body.upper() in translated_macros:
-        return label + translated_macros[body.upper()]
+        return segment_prefix + label + translated_macros[body.upper()]
 
     # Common instruction expression fixes.
     code = convert_expr(code)
@@ -890,11 +934,11 @@ def convert_instruction(code: str) -> str:
     )
     code = wrap_masm_data_memory_operands(body, code)
     code = normalize_masm_indexed_memory_syntax(code)
-    return code
+    return segment_prefix + code
 
 
-def convert_file(src: Path, dst: Path, initial_radix: int = 10) -> None:
-    global CURRENT_RADIX, DATA_SYMBOLS, ASSIGNMENT_COUNTS
+def convert_file(src: Path, dst: Path, initial_radix: int = 10, conditional_segments: bool = False) -> None:
+    global CURRENT_RADIX, CONDITIONAL_SEGMENTS, CURRENT_SEGMENT, DATA_SYMBOLS, ASSIGNMENT_COUNTS, DECLARED_SEGMENTS
     dst.parent.mkdir(parents=True, exist_ok=True)
     out: list[str] = [
         "; Auto-converted mechanically from " + str(src),
@@ -904,6 +948,9 @@ def convert_file(src: Path, dst: Path, initial_radix: int = 10) -> None:
     in_comment_block: str | None = None
     in_macro_block = False
     CURRENT_RADIX = initial_radix
+    CONDITIONAL_SEGMENTS = conditional_segments
+    CURRENT_SEGMENT = "CSEG"
+    DECLARED_SEGMENTS = set()
     DATA_SYMBOLS = collect_data_symbols(src)
     ASSIGNMENT_COUNTS = collect_assignment_counts(src)
     for line in src.read_text(errors="replace").splitlines():
@@ -950,10 +997,15 @@ def main() -> None:
         default=10,
         help="initial MASM radix before the first .RADIX directive; use 8 for sources inheriting a prior .RADIX 8",
     )
+    parser.add_argument(
+        "--conditional-segments",
+        action="store_true",
+        help="emit GW_BASIC_SPLIT_LOAD-guarded NASM CSEG/DSEG directives from MASM segment markers",
+    )
     parser.add_argument("src", type=Path)
     parser.add_argument("dst", type=Path)
     args = parser.parse_args()
-    convert_file(args.src, args.dst, initial_radix=args.initial_radix)
+    convert_file(args.src, args.dst, initial_radix=args.initial_radix, conditional_segments=args.conditional_segments)
 
 
 if __name__ == "__main__":

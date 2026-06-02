@@ -79,14 +79,21 @@ INIT:
 ; of CODESG for this to work.  No error will be generated, so be careful.
 ;
 extern BEGDSG ;Beg. of the data segment, offset from CS
-; Flat ROM CARD build: code and data labels are linked in one segment.
-; Keep DS/ES/SS in the loaded segment instead of computing an EXE-style DSEG.
-push cs
-pop dx
-mov ax, ds ;SAVE DS FOR EXIT VECTOR
-mov ds, dx
-mov es, dx
-;Initialize the jump vector for exit to MSDOS.  MSDOS 2.0 requires that
+	%if GW_BASIC_SPLIT_LOAD
+	; Split ROM CARD build: loader enters with DS already pointing to DAT.
+	mov dx, ds
+	mov ax, ds ;SAVE DS FOR EXIT VECTOR
+	mov es, dx
+	%else
+	; Flat ROM CARD build: code and data labels are linked in one segment.
+	; Keep DS/ES/SS in the loaded segment instead of computing an EXE-style DSEG.
+	push cs
+	pop dx
+	mov ax, ds ;SAVE DS FOR EXIT VECTOR
+	mov ds, dx
+	mov es, dx
+	%endif
+	;Initialize the jump vector for exit to MSDOS.  MSDOS 2.0 requires that
 ; exit is made through the segment prefix table which is located at DS:0.
 ; For .EXE files, DS is not the same as CS at program initiation time (NOW).
 extern CPMEXT
@@ -173,11 +180,11 @@ extern TEMPPT
 ;       /C:<COM INPUT QUEUE SIZE>
 ;
 extern CPMMEM
-	push ds
+	push es
 	mov bx,DW_LOADER_SEGMENT
-	mov ds,bx
-	MOV	BX,word [DW_LOADER_ABI_LIMIT] ;ROM CARD approved work-area byte limit
-	pop ds
+	mov es,bx
+	MOV	BX,word [es:DW_LOADER_ABI_LIMIT] ;ROM CARD approved work-area byte limit
+	pop es
 	MOV	[MEMSIZ],BX ;USE AS DEFAULT
 	MOV	[MAXMEM],BX ;set MAX DS size for CLEAR statement
 extern DSEGZ

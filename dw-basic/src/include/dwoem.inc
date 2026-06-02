@@ -13,7 +13,14 @@
 ; Target shape.
 %define DW_TARGET_DREAMWRITER 1
 %define I8086 1
+%ifndef GW_BASIC_SPLIT_LOAD
+%define GW_BASIC_SPLIT_LOAD 0
+%endif
+%if GW_BASIC_SPLIT_LOAD
+%define MULSEG 1
+%else
 %define MULSEG 0
+%endif
 %define TRUROM 1
 %define PURE 1
 %define REALIO 1

@@ -34,6 +34,7 @@ struct _seg {
 	int	index;		// segment local index
 	int	use32;		// use32 or use16
 	uint32	base;		// base offset
+	uint32	runtime_base;	// base offset seen by runtime fixups
 	uint32	size;		// segment size
 	int	align;		// alignment
 	int	padding;	// align padding (byte)

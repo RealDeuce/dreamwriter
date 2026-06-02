@@ -6,6 +6,10 @@
 
 %include "dwoem.inc"
 
+%if GW_BASIC_SPLIT_LOAD
+segment CSEG class=CODE use16
+%endif
+
 global CLREOL
 global CLRSCN
 global KEYINP
@@ -20,6 +24,9 @@ global dw_cursor_init
 global dw_console_get_rows
 global dw_cursor_pre_puts
 global dw_cursor_post_puts
+%if GW_BASIC_SPLIT_LOAD
+global dw_puts_ds_raw
+%endif
 %if GW_ENABLE_GRAPHICS
 global GRPSIZ
 global GTASPC
@@ -73,6 +80,35 @@ MSU_ESCAPE equ 27
 
 %define DWAPI_CURSOR_AWARE 1
 %include "dwapi.asm"
+
+%if GW_BASIC_SPLIT_LOAD
+; AX=DS-relative firmware text string pointer.
+dw_puts_ds_raw:
+    push ax
+    push bx
+    mov bx, ds
+    call dw_puts_far_raw
+    pop bx
+    pop ax
+    ret
+
+; AX:BX far firmware text string pointer.
+dw_puts_far_raw:
+    pushf
+    pusha
+    push ds
+    push es
+    push ax
+    xor ax, ax
+    mov ds, ax
+    pop ax
+    call far [DW_VEC_PUTS]
+    pop es
+    pop ds
+    popa
+    popf
+    ret
+%endif
 
 CLRSCN:
     jmp console_clear
@@ -500,6 +536,10 @@ keyinp_map:
 %define DWCONSOLE_NO_LOCAL_SETCSR 1
 %include "dwconsole.asm"
 
+%if GW_BASIC_SPLIT_LOAD
+segment CSEG
+%endif
+
 dw_console_get_rows:
     mov cl, [console_rows]
     ret
@@ -738,6 +778,10 @@ SCRSTT:
     pop ax
     stc
     ret
+%endif
+
+%if GW_BASIC_SPLIT_LOAD
+segment DSEG
 %endif
 
 dw_cursor_puts_depth:

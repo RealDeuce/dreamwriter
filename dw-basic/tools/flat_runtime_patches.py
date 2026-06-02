@@ -39,14 +39,21 @@ db 0o216, 0o332 ;MOV  DS,DX  SET UP SEG REGS
 db 0o216, 0o302 ;MOV  ES,DX
 """,
         """extern BEGDSG ;Beg. of the data segment, offset from CS
-; Flat ROM CARD build: code and data labels are linked in one segment.
-; Keep DS/ES/SS in the loaded segment instead of computing an EXE-style DSEG.
-push cs
-pop dx
-mov ax, ds ;SAVE DS FOR EXIT VECTOR
-mov ds, dx
-mov es, dx
-""",
+	%if GW_BASIC_SPLIT_LOAD
+	; Split ROM CARD build: loader enters with DS already pointing to DAT.
+	mov dx, ds
+	mov ax, ds ;SAVE DS FOR EXIT VECTOR
+	mov es, dx
+	%else
+	; Flat ROM CARD build: code and data labels are linked in one segment.
+	; Keep DS/ES/SS in the loaded segment instead of computing an EXE-style DSEG.
+	push cs
+	pop dx
+	mov ax, ds ;SAVE DS FOR EXIT VECTOR
+	mov ds, dx
+	mov es, dx
+	%endif
+	""",
     )
     text = re.sub(
         r"""extern CPMMEM
@@ -58,11 +65,11 @@ extern SEGOFF
 \s*MOV\s+\[MAXMEM\],\s*BX ;set MAX DS size for CLEAR statement
 """,
         """extern CPMMEM
-\tpush ds
+\tpush es
 \tmov bx,DW_LOADER_SEGMENT
-\tmov ds,bx
-\tMOV\tBX,word [DW_LOADER_ABI_LIMIT] ;ROM CARD approved work-area byte limit
-\tpop ds
+\tmov es,bx
+\tMOV\tBX,word [es:DW_LOADER_ABI_LIMIT] ;ROM CARD approved work-area byte limit
+\tpop es
 \tMOV\t[MEMSIZ],BX ;USE AS DEFAULT
 \tMOV\t[MAXMEM],BX ;set MAX DS size for CLEAR statement
 """,
@@ -82,35 +89,6 @@ extern SEGOFF
     text = text.replace(
         "\tMOV\tSP,BX\n\tXOR\tAL,AL ;INITIALIZE PROTECT FLAG",
         "\tMOV\tSP,BX\n\tSTI\n\tXOR\tAL,AL ;INITIALIZE PROTECT FLAG",
-        1,
-    )
-    text = text.replace(
-        """extern SCNIPL
-\tCALL\tSCNIPL ;Screen editor initialization
-\tCALL\tGWINI ;OEM specific initialization
-extern SNDRST
-\tCALL\tSNDRST ;reset sound queue, disable speaker
-extern GIOINI
-\tCALL\tGIOINI
-\tMOV\tBX,word [MEMSIZ]
-\tMOV\t[TOPMEM],BX
-\tMOV\tBX,KBUF-1 ;INITIALIZE KBUF-1 WITH A COLON
-\tMOV\tbyte [BX],":" ;DIRECT INPUTS RESTART OK.
-\tCALL\tSTKINI ;REALLY SET UP INIT'S TEMPORARY STACK
-""",
-        """extern SCNIPL
-\tCALL\tSCNIPL ;Screen editor initialization
-\tCALL\tGWINI ;OEM specific initialization
-extern SNDRST
-\tCALL\tSNDRST ;reset sound queue, disable speaker
-extern GIOINI
-\tCALL\tGIOINI
-\tMOV\tBX,word [MEMSIZ]
-\tMOV\t[TOPMEM],BX
-\tMOV\tBX,KBUF-1 ;INITIALIZE KBUF-1 WITH A COLON
-\tMOV\tbyte [BX],":" ;DIRECT INPUTS RESTART OK.
-\tCALL\tSTKINI ;REALLY SET UP INIT'S TEMPORARY STACK
-""",
         1,
     )
     text = text.replace(
@@ -389,6 +367,32 @@ def patch_scndrv(path: Path) -> None:
 \tPOP\tCX
 """,
     )
+    text = replace_once(
+        text,
+        "\tMOV\tAX,word [FUNTAB+BX]",
+        "\tMOV\tAX,word [CS:FUNTAB+BX]",
+    )
+    path.write_text(text)
+
+
+def patch_math1(path: Path) -> None:
+    text = path.read_text(errors="replace")
+    text = text.replace(
+        "\tMUL\tword [DOL_RNDA]",
+        "\tMUL\tword [CS:DOL_RNDA]",
+    )
+    text = text.replace(
+        "\tMOV\tAL,byte [DOL_RNDA+0o2]",
+        "\tMOV\tAL,byte [CS:DOL_RNDA+0o2]",
+    )
+    text = text.replace(
+        "\tMOV\tDX,word [DOL_RNDC]",
+        "\tMOV\tDX,word [CS:DOL_RNDC]",
+    )
+    text = text.replace(
+        "\tMOV\tBL,byte [DOL_RNDC+0o2]",
+        "\tMOV\tBL,byte [CS:DOL_RNDC+0o2]",
+    )
     path.write_text(text)
 
 
@@ -396,7 +400,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "module",
-        choices=["bimisc", "giokyb", "gwinit", "itsa86", "gio86", "scndrv"],
+        choices=["bimisc", "giokyb", "gwinit", "itsa86", "gio86", "math1", "scndrv"],
     )
     parser.add_argument("path", type=Path)
     args = parser.parse_args()
@@ -411,6 +415,8 @@ def main() -> None:
         patch_itsa86(args.path)
     elif args.module == "gio86":
         patch_gio86(args.path)
+    elif args.module == "math1":
+        patch_math1(args.path)
     else:
         patch_scndrv(args.path)
 

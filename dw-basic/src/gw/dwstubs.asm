@@ -7,6 +7,10 @@
 
 %include "dwoem.inc"
 
+%if GW_BASIC_SPLIT_LOAD
+segment CSEG class=CODE use16
+%endif
+
 extern FCERR
 extern DERDNA
 extern _RET
@@ -507,8 +511,7 @@ dw_power_resume:
     pop word [cs:dw_power_resume_flags]
     cli
     mov [cs:dw_power_resume_ax], ax
-    mov ax, cs
-    mov ss, ax
+    mov ss, [cs:dw_power_resume_ss]
     mov sp, [cs:dw_power_resume_sp]
     push ds
     push cs
@@ -554,6 +557,8 @@ dw_power_ff_isr:
     push cs
     pop ax
     mov [0x6d7b], ax
+    mov ax, ss
+    mov [cs:dw_power_resume_ss], ax
     lea ax, [bp + 12]
     mov [cs:dw_power_resume_sp], ax
     mov word [0x6d7d], 0x6c06
@@ -656,10 +661,6 @@ GETFBC:
     clc
     ret
 
-softkey_format:
-    dw (10 << 8) | 6
-    db 1
-
 FKYADV:
     ; Single fixed soft-key page. Return NZ so callers know there is a page to
     ; display and LABEL does not interpret the advance as "past the last page".
@@ -705,10 +706,10 @@ GWINI:
     ret
 
 GETHED:
-    mov bx, .heading
-    cmp byte [bx], 0
+    mov bx, dw_heading
+    cmp byte [cs:bx], 0
     ret
-.heading:
+dw_heading:
     db "DW-BASIC for DreamWriters", 0
 
 extern CLSALL
@@ -717,8 +718,10 @@ extern INITFG
 
 SYSTEM:
     jnz .not_eos
+%if !GW_BASIC_SPLIT_LOAD
     push cs
     pop ds
+%endif
     call dw_music_reset
     call CLSALL
     jmp SYSTME
@@ -726,8 +729,10 @@ SYSTEM:
     ret
 
 SYSTME:
+%if !GW_BASIC_SPLIT_LOAD
     push cs
     pop ds
+%endif
     call dw_music_reset
     call dw_power_restore
     cmp byte [INITFG], 0
@@ -759,6 +764,8 @@ dw_power_resume_off:
     dw 0
 dw_power_resume_seg:
     dw 0
+dw_power_resume_ss:
+    dw 0
 dw_power_resume_sp:
     dw 0
 dw_power_resume_ax:
@@ -783,6 +790,14 @@ dw_snd_slice:
     dw 0
 dw_snd_queue:
     times DW_SND_QUEUE_LEN * DW_SND_ENTRY_SIZE db 0
+
+%if GW_BASIC_SPLIT_LOAD
+segment DSEG class=DATA use16
+%endif
+
+softkey_format:
+    dw (10 << 8) | 6
+    db 1
 
 global LSTVAR
 LSTVAR:

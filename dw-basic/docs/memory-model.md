@@ -61,9 +61,9 @@ Files that currently encode flat64 policy:
 
 ## split128
 
-`split128` is the intended future target for machines with more than 64K
-available. It should use separate code and data segments, preserving the
-original GW-BASIC split-segment assumptions where possible.
+`split128` is the in-progress target for machines with more than 64K available.
+It uses separate code and data segment groups, preserving the original GW-BASIC
+split-segment assumptions where possible.
 
 The original source already has useful pieces for this model:
 
@@ -72,21 +72,39 @@ The original source already has useful pieces for this model:
 - `gwinit.asm` has startup code that computes and installs a data segment.
 - `itsa86.asm` has `MAPCLC`, `MAPINI`, `NEWDS`, `MSWSIZ`, and `SEGOFF` logic.
 
-A split128 implementation should not silently replace flat64. It should add a
-separate overlay/container format or file set, then teach the ROM card loader
-to choose the split overlay only when enough RAM is available. The flat64
-overlay must remain available as the fallback for 64K machines.
+A split128 implementation must not silently replace flat64. It uses separate
+`DW-BASIC.COD` and `DW-BASIC.DAT` images and should teach the ROM card loader to
+choose the split payload only when enough RAM is available. The flat64
+`DW-BASIC.FLT` overlay must remain available as the fallback for 64K machines.
 
-Likely split128 work:
+Implemented split128 scaffolding:
 
-- Add `GW_MEMORY_MODEL=split128` build rules instead of relaxing the current
-  makefile guard.
-- Preserve the `gwdata.asm` ORG sites in a split-aware postprocessor.
-- Add a split runtime patch path instead of reusing `flat_runtime_patches.py`.
-- Define a split overlay format with code image, initialized data image, entry
-  offset, and data limit metadata.
-- Update `src/eromcard_gw.asm` to choose `DW-BASIC128.FLT` or equivalent when
-  RAM allows, otherwise fall back to the flat64 overlay.
+- `GNUmakefile` has a `split-basic-payload` target that builds converted
+  sources into `build-split/`, passes `GW_BASIC_SPLIT_LOAD=1`, and emits
+  `DW-BASIC.COD` plus `DW-BASIC.DAT`.
+- `tools/masm2nasm.py --conditional-segments` preserves original CSEG/DSEG
+  membership behind `GW_BASIC_SPLIT_LOAD` guards. Extern-only DSEG blocks stay as
+  declarations so existing post-conversion patches still match their code
+  regions.
+- `third_party/flatlink` has `-splitseg`, `-ocode`, and `-odata` support so
+  fixups are resolved relative to the runtime CODE or DATA image, not by linking
+  a flat image and splitting bytes after the fact.
+- Hand-written DreamWriter modules put clear DS-relative scratch buffers, such
+  as file I/O scratch state and the console shadow buffer, into DSEG for split
+  builds. ISR and warm-power state that is explicitly accessed through CS remains
+  code-resident until that path gets a deliberate split-aware data-segment handoff.
+
+Remaining split128 work:
+
+- Add the ROM card loader path that loads `DW-BASIC.COD` and `DW-BASIC.DAT`,
+  then enters BASIC with CS pointing at code and DS/ES/SS pointing at data.
+- Add a split runtime patch path instead of reusing the flat startup patch that
+  forces DS=CS.
+- Preserve any still-relevant `gwdata.asm` ORG sites in a split-aware
+  postprocessor.
+- Audit CS-resident ISR/power state in `dwstubs.asm` and decide which state
+  should stay in CSEG versus moving to DSEG with an explicit saved data-segment
+  word for interrupt entry.
 
 Until split128 exists, ORG-gap conversion findings should be treated as known
 split-model work, not as flat64 regressions.

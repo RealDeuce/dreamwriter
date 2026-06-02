@@ -9,6 +9,10 @@
 %include "gio86u.inc"
 %include "msdosu.inc"
 
+%if GW_BASIC_SPLIT_LOAD
+segment CSEG class=CODE use16
+%endif
+
 extern DERBRN
 extern DERFNF
 extern DERIOE
@@ -699,6 +703,10 @@ PROCHK:
     ret
 .protected:
     jmp FCERR
+
+%if GW_BASIC_SPLIT_LOAD
+segment DSEG class=DATA use16
+%endif
 
 dw_file_byte:
     db 0

@@ -142,6 +142,51 @@ char *rewrite_ext(const char *org, const char *ext) {
 	return file;
 }
 
+int seg_is_data(Segment *seg) {
+	return seg->c_name && !strcmp(seg->c_name, "DATA");
+}
+
+void output_segment_group(char *outfile, Segment **segs, int seg_c, int want_data, uint32 output_origin) {
+	FILE *fp = fopen(outfile, "wb");
+	if (!fp) {
+		ERR_PRINT("Can not write \"%s\"\n", outfile);
+		exit(7);
+	}
+
+	uint32 pos = output_origin;
+	uint32 size = 0;
+	for(int i=0; i<seg_c; i++) {
+		Segment *seg = segs[i];
+		if (seg_is_data(seg) != want_data) continue;
+		if (seg->runtime_base < output_origin) {
+			ERR_PRINT("Segment runtime base is before output origin \"%s\"\n", outfile);
+			fclose(fp);
+			remove(outfile);
+			exit(8);
+		}
+
+		while(pos < seg->runtime_base) {
+			uint32 padding = seg->runtime_base - pos;
+			uint32 chunk = 16 < padding ? 16 : padding;
+			fwrite(zero, 1, chunk, fp);
+			pos += chunk;
+			size += chunk;
+		}
+
+		uint32 byte = fwrite(seg->code, 1, seg->size, fp);
+		if (byte != seg->size) {
+			ERR_PRINT("File write failed \"%s\"\n", outfile);
+			fclose(fp);
+			remove(outfile);
+			exit(8);
+		}
+		pos += byte;
+		size += byte;
+	}
+	fclose(fp);
+	printf("Write \"%s\" %d bytes.\n", outfile, size);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // main
 ///////////////////////////////////////////////////////////////////////////////
@@ -218,6 +263,10 @@ int main(int argc, char *argv[]) {
 	int exp_mode  = -1;	// exp file mode flag
 	char *outfile = 0;
 	char *mapfile = 0;
+	char *code_outfile = 0;
+	char *data_outfile = 0;
+	int split_seg_runtime = 0;
+	uint32 data_runtime_origin = 0;
 
 	ExpInfo exp;
 	memset(&exp, 0, sizeof(exp));
@@ -257,6 +306,10 @@ int main(int argc, char *argv[]) {
 			exp.strip_header = 1;
 			continue;
 		}
+		if (!strcmp(p, "-splitseg")) {
+			split_seg_runtime = 1;
+			continue;
+		}
 		// -o file
 		// -mindata xxxxx
 		// -maxdata xxxxx
@@ -284,6 +337,18 @@ int main(int argc, char *argv[]) {
 		}
 		if (!strcmp(p, "-m")) {
 			mapfile = val;
+			continue;
+		}
+		if (!strcmp(p, "-ocode")) {
+			code_outfile = val;
+			continue;
+		}
+		if (!strcmp(p, "-odata")) {
+			data_outfile = val;
+			continue;
+		}
+		if (!strcmp(p, "-dataorg")) {
+			data_runtime_origin = parse_num(val);
 			continue;
 		}
 		if (!strcmp(p, "-offset")) {
@@ -339,6 +404,10 @@ int main(int argc, char *argv[]) {
 			"	-q		quiet (close stdout)\n"
 			"	-h		view this help\n"
 			"	-strip		strip exp file header\n"
+			"	-splitseg	resolve fixups relative to CODE/DATA output groups\n"
+			"	-ocode file	write CODE-class output image\n"
+			"	-odata file	write DATA-class output image\n"
+			"	-dataorg num	resolve DATA-class output from this runtime offset\n"
 			"	-offset  num	exp file's load offset  (default 1000h)\n"
 			"	-stack   num	exp file's stack size   (default 1000h)\n"
 			"	-mindata num	exp file's minimum heap (default 1000h)\n"
@@ -473,6 +542,8 @@ int main(int argc, char *argv[]) {
 	//---------------------------------------------------------------------
 	FILE *fmap  = fopen(mapfile, "w");
 	uint32 base = hack_com ? 0 : exp.offset;
+	uint32 code_runtime_base = hack_com ? 0 : exp.offset;
+	uint32 data_runtime_base = data_runtime_origin;
 
 	for(i=0; i<seg_c; i++) {
 		Segment *seg = segs[i];
@@ -482,9 +553,19 @@ int main(int argc, char *argv[]) {
 		base = (base + add) & mask;
 		seg->base    = base;
 		seg->padding = base - _base;
+		if (split_seg_runtime) {
+			uint32 *runtime_base = seg_is_data(seg) ? &data_runtime_base : &code_runtime_base;
+			uint32 runtime_add = seg->align - 1;
+			uint32 runtime_mask = 0xffffffff ^ runtime_add;
+			*runtime_base = (*runtime_base + runtime_add) & runtime_mask;
+			seg->runtime_base = *runtime_base;
+			*runtime_base += seg->size;
+		} else {
+			seg->runtime_base = seg->base;
+		}
 
 		if (seg->exist_entry) {
-			uint32 entry = seg->entry + base;
+			uint32 entry = seg->entry + seg->runtime_base;
 			exp.set_entry++;
 			exp.entry = entry;
 
@@ -500,7 +581,7 @@ int main(int argc, char *argv[]) {
 		PubName *pubs = seg->pubs;
 		for(int j=0; j<pub_c; j++) {
 			PubName *p = &pubs[j];
-			p->offset += base;
+			p->offset += seg->runtime_base;
 			VV_PRINT("\t[%06X] pub name: %s\n", p->offset, p->name);
 			fprintf(fmap, "%08X %s\n", p->offset, p->name);
 		}
@@ -545,7 +626,7 @@ int main(int argc, char *argv[]) {
 			uint32 current = fixup->place ? fixup->place : (bits32 ? read_int32(p) : read_int16(p));
 
 			if (ref_seg) {
-				val = _val = current + ref_seg->base;
+				val = _val = current + ref_seg->runtime_base;
 			} else {
 				ref_name = fixup->ref_name;
 				PubName *pub = search_pub_name(ref_name, seg->f_name);
@@ -579,6 +660,9 @@ int main(int argc, char *argv[]) {
 		seg->size -= 0x100;
 		seg->code  = seg->code + 0x100;
 	}
+
+	if (code_outfile) output_segment_group(code_outfile, segs, seg_c, 0, 0);
+	if (data_outfile) output_segment_group(data_outfile, segs, seg_c, 1, data_runtime_origin);
 
 	//---------------------------------------------------------------------
 	// output

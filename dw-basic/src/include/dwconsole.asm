@@ -37,17 +37,30 @@ console_clear:
     mov ax, (CONSOLE_ATTR_DEFAULT << 8) | " "
     cld
     rep stosw
+
     xor dx, dx
-.loop:
-    mov ax, console_blank_line
+.clear_row:
+    mov ax, console_blank_half_line
     xor cx, cx
+%if GW_BASIC_SPLIT_LOAD
+    call dw_puts_ds_raw
+%else
     call dw_puts_cs_raw
+%endif
+    mov ax, console_blank_half_line
+    mov cx, CONSOLE_CLEAR_HALF_PIXELS
+%if GW_BASIC_SPLIT_LOAD
+    call dw_puts_ds_raw
+%else
+    call dw_puts_cs_raw
+%endif
     add dx, CONSOLE_CELL_H
     mov al, [console_rows]
     xor ah, ah
     shl ax, 3
     cmp dx, ax
-    jb .loop
+    jb .clear_row
+
     mov byte [console_col], 0
     mov byte [console_row], 0
     mov byte [console_cursor_visible], 0
@@ -69,43 +82,7 @@ console_goto:
 console_detect_rows:
     pushf
     push ax
-    push bx
-    push cx
-    push si
-    push ds
-    push es
     mov byte [console_rows], CONSOLE_DEFAULT_ROWS
-    xor ax, ax
-    mov ds, ax
-    mov si, [DW_VEC_DISPLAY_INFO]
-    mov ax, [DW_VEC_DISPLAY_INFO + 2]
-    or ax, ax
-    jz .done
-    mov es, ax
-    xor bx, bx
-.scan:
-    cmp byte [es:si + bx], 0xba
-    jne .next
-    cmp word [es:si + bx + 1], 0x0080
-    je .rows16
-    cmp word [es:si + bx + 1], 0x0040
-    je .rows8
-.next:
-    inc bx
-    cmp bx, 32
-    jb .scan
-    jmp .done
-.rows16:
-    mov byte [console_rows], 16
-    jmp .done
-.rows8:
-    mov byte [console_rows], 8
-.done:
-    pop es
-    pop ds
-    pop si
-    pop cx
-    pop bx
     pop ax
     popf
     ret
@@ -882,25 +859,25 @@ console_clear_bottom_row:
     rep stosw
     pop es
 
-    push es
-    xor ax, ax
-    mov es, ax
-    mov di, [lcd_framebuffer_base]
     mov al, [console_rows]
     dec al
     xor ah, ah
-    mov bx, LCD_STRIDE_BYTES * CONSOLE_CELL_H
-    mul bx
-    add di, ax
-    xor ax, ax
-    mov bx, CONSOLE_CELL_H
-.clear_scanline:
-    mov cx, LCD_VISIBLE_BYTES / 2
-    rep stosw
-    add di, LCD_STRIDE_BYTES - LCD_VISIBLE_BYTES
-    dec bx
-    jnz .clear_scanline
-    pop es
+    shl ax, 3
+    mov dx, ax
+    mov ax, console_blank_half_line
+    xor cx, cx
+%if GW_BASIC_SPLIT_LOAD
+    call dw_puts_ds_raw
+%else
+    call dw_puts_cs_raw
+%endif
+    mov ax, console_blank_half_line
+    mov cx, CONSOLE_CLEAR_HALF_PIXELS
+%if GW_BASIC_SPLIT_LOAD
+    call dw_puts_ds_raw
+%else
+    call dw_puts_cs_raw
+%endif
 
     pop di
     pop dx
@@ -1043,7 +1020,11 @@ console_draw_at_cursor:
     call console_build_cell_string
     mov ax, console_cell
     call console_cell_xy
+%if GW_BASIC_SPLIT_LOAD
+    call dw_puts_ds_raw
+%else
     call dw_puts_cs_raw
+%endif
     pop dx
     pop cx
     pop bx
@@ -1178,6 +1159,10 @@ console_cell_xy:
     pop ax
     ret
 
+%if GW_BASIC_SPLIT_LOAD
+segment DSEG class=DATA use16
+%endif
+
 console_col:
     db 0
 console_row:
@@ -1204,8 +1189,10 @@ console_cursor_saved_cell:
     dw (CONSOLE_ATTR_DEFAULT << 8) | " "
 console_cell:
     times 10 db 0
-console_blank_line:
-    times CONSOLE_COLS db " "
+CONSOLE_CLEAR_HALF_COLS equ CONSOLE_COLS / 2
+CONSOLE_CLEAR_HALF_PIXELS equ CONSOLE_CLEAR_HALF_COLS * CONSOLE_CELL_W
+console_blank_half_line:
+    times CONSOLE_CLEAR_HALF_COLS db " "
     db 0
 lcd_framebuffer_base:
     dw LCD_DEFAULT_FRAMEBUFFER_BASE

@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import os
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -20,6 +21,7 @@ DEFAULT_MAME = DEFAULT_MAME_DIR / "drwrt400"
 DEFAULT_CARD = Path("/tmp/dw-card-1m-dw-basic.bin")
 DEFAULT_SNAP_DIR = DEFAULT_MAME_DIR / "snap" / "drwrt400"
 DEFAULT_NVRAM_IMAGE = DEFAULT_MAME_DIR / "nvram" / "drwrt400_1" / "nvram"
+DEFAULT_NVRAM_TEMPLATE = (REPO_ROOT / "../nvram-romcard").resolve()
 DECODER = REPO_ROOT / "tools" / "decode_lcd_text.py"
 DEFAULT_INPUT_BRIDGE = REPO_ROOT / "tools" / "dwbasic_input_bridge.lua"
 DEFAULT_INPUT_SOCKET = Path("/tmp/dwbasic-input.sock")
@@ -27,9 +29,10 @@ ROM = REPO_ROOT / "t4_ir_2.1.ic303"
 KEYBOARD_SCAN_RATE_HZ = 19660000 / 20480
 KEYBOARD_FULL_SCAN_SECONDS = 10 / KEYBOARD_SCAN_RATE_HZ
 EXPECTED_SIGNPOSTS = {
-    "initial two-button menu": "1629822cddb229cf2499f6d7b986fc4a77a43490c7aaba368019b60e392c1f05",
-    "WP menu": "cb2de5ee6c333b2e4bef79d1261f8d8a44df9697662d5094134ce0e0f628f808",
-    "OTHERS menu": "e9632f7a15a3ca41b04f223e40da01a4912701571a332e5e751dc536310a8ebc",
+    "initial two-button menu": "077277ed26c3894e785697a424da4683144d6841adcdd3b70fe0c734ee3a7f41",
+    "WP menu": "f41b0f8db6b3139208077727f72e174ce53cb8d78601ed593ca25dc90c9d3e06",
+    "OTHERS menu": "37ca08cd70933de74e9226085241fef3f771aae3202e61d96d6a119541a13eff",
+    "prepared ROM CARD menu": "0d6c66e26029048aa8076ef51089bb9f62f6e3dd2ad6005b9281980bed4c38d4",
 }
 
 
@@ -37,9 +40,12 @@ def run(args: list[str], *, check: bool = True, **kwargs) -> subprocess.Complete
     return subprocess.run(args, check=check, text=True, **kwargs)
 
 
-def clean_run_state(nvram_image: Path, snap_dir: Path) -> None:
+def clean_run_state(nvram_image: Path, snap_dir: Path, nvram_source: Path | None) -> None:
     if nvram_image.exists():
         nvram_image.unlink()
+    if nvram_source is not None:
+        nvram_image.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(nvram_source, nvram_image)
     snap_dir.mkdir(parents=True, exist_ok=True)
     for png in snap_dir.glob("*.png"):
         png.unlink()
@@ -190,11 +196,183 @@ def print_cpu_state(stream: socket.socket) -> None:
     print(line[7:])
 
 
+def print_debug_state(stream: socket.socket) -> None:
+    line = bridge_request(stream, "DBGSTATE")
+    if not line.startswith("OK DBG "):
+        raise RuntimeError(f"input bridge rejected DBGSTATE: {line}")
+    print(line[7:])
+
+
+def send_debug_command(stream: socket.socket, command: str) -> None:
+    payload = command.encode("utf-8").hex()
+    line = bridge_request(stream, f"DBGCMD {payload}")
+    if not line.startswith("OK DBG"):
+        raise RuntimeError(f"input bridge rejected DBGCMD: {line}")
+    print(line[7:] if len(line) > 7 else "OK")
+
+
+def send_debug_batch(stream: socket.socket, commands: list[str]) -> None:
+    payload = "\n".join(commands).encode("utf-8").hex()
+    line = bridge_request(stream, f"DBGBATCH {payload}")
+    if not line.startswith("OK DBG"):
+        raise RuntimeError(f"input bridge rejected DBGBATCH: {line}")
+    print(line[7:])
+
+
+def send_debug_simple(stream: socket.socket, command: str) -> None:
+    line = bridge_request(stream, command)
+    if not line.startswith("OK DBG"):
+        raise RuntimeError(f"input bridge rejected {command}: {line}")
+    print(line[7:])
+
+
+def print_debug_log(stream: socket.socket, command: str) -> None:
+    old_timeout = stream.gettimeout()
+    stream.settimeout(15.0)
+    try:
+        line = bridge_request(stream, command)
+        if not line.startswith("OK DBGLOG "):
+            raise RuntimeError(f"input bridge rejected {command}: {line}")
+        payload = line[10:]
+        if payload:
+            print(payload.replace("\x1e", "\n"))
+    finally:
+        stream.settimeout(old_timeout)
+
+
 def print_basic_memory(stream: socket.socket, args: str) -> None:
     line = bridge_request(stream, f"MEM {args}")
     if not line.startswith("OK MEM "):
         raise RuntimeError(f"input bridge rejected MEM: {line}")
     print(line[7:])
+
+
+def print_bus_memory(stream: socket.socket, args: str) -> None:
+    line = bridge_request(stream, f"BUSMEM {args}")
+    if not line.startswith("OK BUSMEM "):
+        raise RuntimeError(f"input bridge rejected BUSMEM: {line}")
+    print(line[10:])
+
+
+def print_linear_memory(stream: socket.socket, args: str) -> None:
+    line = bridge_request(stream, f"LINEARMEM {args}")
+    if not line.startswith("OK LINEARMEM "):
+        raise RuntimeError(f"input bridge rejected LINEARMEM: {line}")
+    print(line[13:])
+
+
+def print_loader_abi(stream: socket.socket) -> None:
+    line = bridge_request(stream, "LOADERABI")
+    if not line.startswith("OK LOADERABI "):
+        raise RuntimeError(f"input bridge rejected LOADERABI: {line}")
+    print(line[13:])
+
+
+def parse_debug_address(text: str) -> int:
+    value = text.strip()
+    if not value:
+        raise ValueError("empty debug address")
+    if value.lower().startswith("0x"):
+        return int(value, 16)
+    if value.lower().endswith("h"):
+        return int(value[:-1], 16)
+    return int(value, 16)
+
+
+def debug_trace_action(label: str, *, resume: bool = True) -> str:
+    safe_label = re.sub(r"[^A-Za-z0-9_.-]", "_", label)
+    suffix = ";go" if resume else ""
+    return (
+        f'logerror "{safe_label} CS=%04X IP=%04X DS=%04X ES=%04X SS=%04X '
+        'SP=%04X AX=%04X BX=%04X CX=%04X DX=%04X SI=%04X DI=%04X FLAGS=%04X\\n",'
+        f"ps,pc,ds0,ds1,ss,sp,aw,bw,cw,dw,ix,iy,psw{suffix}"
+    )
+
+
+def debug_registerpoint_commands(entries: list[str], *, resume: bool = True) -> list[str]:
+    commands = []
+    for entry in entries:
+        parts = entry.split(":")
+        if len(parts) == 2:
+            label, address_text = parts
+            address = parse_debug_address(address_text)
+            condition = f"pc==0x{address:X}"
+        elif len(parts) == 3:
+            label, segment_text, address_text = parts
+            segment = parse_debug_address(segment_text)
+            address = parse_debug_address(address_text)
+            condition = f"ps==0x{segment:X} && pc==0x{address:X}"
+        else:
+            raise ValueError(f"debug breakpoint entry must be LABEL:ADDR or LABEL:CS:ADDR: {entry!r}")
+        commands.append(f"rpset {condition},{{{debug_trace_action(label, resume=resume)}}}")
+    commands.append("rplist")
+    return commands
+
+
+def debug_breakpoint_commands(entries: list[str]) -> list[str]:
+    commands = []
+    for entry in entries:
+        parts = entry.split(":")
+        if len(parts) == 2:
+            label, address_text = parts
+            address = parse_debug_address(address_text)
+            condition = "1"
+        elif len(parts) == 3:
+            label, segment_text, address_text = parts
+            segment = parse_debug_address(segment_text)
+            address = parse_debug_address(address_text)
+            condition = f"ps==0x{segment:X}"
+        else:
+            raise ValueError(f"debug breakpoint entry must be LABEL:ADDR or LABEL:CS:ADDR: {entry!r}")
+        commands.append(f"bpset 0x{address:X},{condition},{{{debug_trace_action(label, resume=False)}}}")
+    commands.append("bplist")
+    return commands
+
+
+def debug_segment_watch_commands() -> list[str]:
+    condition = (
+        "temp4 < 96 && ps != 0DC98 && temp0 != 0DC98 && "
+        "(ps < 0C000 || temp0 < 0C000) && "
+        "(ps != temp0 || ds0 != temp1 || ds1 != temp2 || ss != temp3)"
+    )
+    action = (
+        'logerror "SEGCHANGE CS:%04X->%04X IP=%04X DS:%04X->%04X '
+        'ES:%04X->%04X SS:%04X->%04X SP=%04X AX=%04X BX=%04X CX=%04X '
+        'DX=%04X SI=%04X DI=%04X FLAGS=%04X\\n",'
+        "temp0,ps,pc,temp1,ds0,temp2,ds1,temp3,ss,sp,aw,bw,cw,dw,ix,iy,psw;"
+        "temp4++;temp0=ps;temp1=ds0;temp2=ds1;temp3=ss;go"
+    )
+    return [
+        "temp0=ps",
+        "temp1=ds0",
+        "temp2=ds1",
+        "temp3=ss",
+        "temp4=0",
+        f"rpset {{{condition}}},{{{action}}}",
+        "rplist",
+    ]
+
+
+def install_debug_setup(
+    input_stream: socket.socket,
+    fixed_points: list[str],
+    stop_points: list[str],
+    segment_watch: bool,
+) -> None:
+    commands: list[str] = []
+    if fixed_points or stop_points or segment_watch:
+        if stop_points:
+            commands.append("bpclear")
+        commands.append("rpclear")
+    if fixed_points:
+        commands.extend(debug_registerpoint_commands(fixed_points))
+    if stop_points:
+        commands.extend(debug_breakpoint_commands(stop_points))
+    if segment_watch:
+        commands.extend(debug_segment_watch_commands())
+    if commands:
+        commands.append("rplist")
+        send_debug_batch(input_stream, commands)
 
 
 def snapshot(
@@ -283,7 +461,6 @@ def wait_for_signpost(
             return path
         last_actual = actual
         last_path = path
-        path.unlink()
         time.sleep(interval)
     raise RuntimeError(
         f"{label} signpost did not appear within {timeout:.1f}s\n"
@@ -392,7 +569,9 @@ def interactive_loop(
     print(
         "interactive commands: plain text sends a BASIC line; "
         ":snap [attrs] [all [DELAY]|DELAY [all]|START END|DELAY START END] snapshots; :csnap caches a quiet full snapshot; :key NAME sends a matrix key; "
-        ":type TEXT types without Return; :kbdstate dumps ROM keyboard state; :cpustate dumps V20 registers; :mem OFFSET LEN dumps BASIC-segment memory; :quit exits",
+        ":type TEXT types without Return; :kbdstate dumps ROM keyboard state; :cpustate dumps V20 registers; :mem OFFSET LEN dumps DS:offset through mapped CPU-bus memory; "
+        ":busmem ADDR LEN dumps mapped CPU-bus memory; :segmem SEG OFF LEN dumps SEG:OFF through mapped CPU-bus memory; :loaderabi dumps the fixed loader ABI; "
+        ":dbgstate/:dbglog [N]/:dbgerrlog [N]/:dbggo/:dbgstop/:dbgstep N/:dbgbp ADDR/:dbgbpclear [N]/:dbg CMD control MAME debugger when --debug is enabled; :quit exits",
         file=sys.stderr,
     )
     while True:
@@ -459,8 +638,54 @@ def interactive_loop(
         if command == ":cpustate":
             print_cpu_state(input_stream)
             continue
+        if command == ":dbgstate":
+            print_debug_state(input_stream)
+            continue
+        if command == ":dbggo":
+            send_debug_simple(input_stream, "DBGGO")
+            continue
+        if command == ":dbgstop":
+            send_debug_simple(input_stream, "DBGSTOP")
+            continue
+        if command.startswith(":dbgstep"):
+            count = command[8:].strip()
+            send_debug_simple(input_stream, "DBGSTEP" + (f" {count}" if count else ""))
+            continue
+        if command.startswith(":dbgerrlog"):
+            args = command[10:].strip()
+            print_debug_log(input_stream, "DBGERRLOG" + (f" {args}" if args else ""))
+            continue
+        if command.startswith(":dbglog"):
+            args = command[7:].strip()
+            print_debug_log(input_stream, "DBGLOG" + (f" {args}" if args else ""))
+            continue
+        if command.startswith(":dbgbpclear"):
+            args = command[11:].strip()
+            send_debug_simple(input_stream, "DBGBPCLEAR" + (f" {args}" if args else ""))
+            continue
+        if command.startswith(":dbgbp "):
+            send_debug_simple(input_stream, f"DBGBP {command[7:].strip()}")
+            continue
+        if command.startswith(":dbg "):
+            send_debug_command(input_stream, command[5:])
+            continue
         if command.startswith(":mem "):
             print_basic_memory(input_stream, command[5:].strip())
+            continue
+        if command.startswith(":busmem "):
+            print_bus_memory(input_stream, command[8:].strip())
+            continue
+        if command.startswith(":physmem "):
+            print_bus_memory(input_stream, command[9:].strip())
+            continue
+        if command.startswith(":linmem "):
+            print_linear_memory(input_stream, command[8:].strip())
+            continue
+        if command.startswith(":segmem "):
+            print_linear_memory(input_stream, command[8:].strip())
+            continue
+        if command == ":loaderabi":
+            print_loader_abi(input_stream)
             continue
         send_bridge_text(input_stream, line, add_return=True)
 
@@ -473,17 +698,28 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--bios", default="v2_1")
     parser.add_argument("--card", type=Path, default=DEFAULT_CARD)
     parser.add_argument("--card-option", default="-sram", help="MAME image option for the SRAM card")
+    parser.add_argument("--no-card", action="store_true", help="launch without a PCMCIA SRAM card")
     parser.add_argument("--pccard", "--pcmcia", dest="pccard", default="melcard_1m")
     parser.add_argument("--serial", "--rs232", dest="serial", default="pty")
     parser.add_argument("--snap-dir", type=Path, default=DEFAULT_SNAP_DIR)
     parser.add_argument("--nvram-image", type=Path, default=DEFAULT_NVRAM_IMAGE)
+    parser.add_argument(
+        "--nvram-source",
+        type=Path,
+        help="copy this prepared NVRAM image into --nvram-image before launch",
+    )
+    parser.add_argument(
+        "--prepared-romcard",
+        action="store_true",
+        help="use ../nvram-romcard and press Enter from its ROM CARD-selected menu state",
+    )
     parser.add_argument("--input-bridge", type=Path, default=DEFAULT_INPUT_BRIDGE)
     parser.add_argument("--input-socket", type=Path, default=DEFAULT_INPUT_SOCKET)
     parser.add_argument("--bridge-hold-frames", type=int, default=2)
     parser.add_argument("--bridge-gap-frames", type=int, default=1)
     parser.add_argument("--bridge-shift-lead-frames", type=int, default=1)
     parser.add_argument("--bridge-shift-trail-frames", type=int, default=1)
-    parser.add_argument("--boot-wait", type=float, default=2.0)
+    parser.add_argument("--boot-wait", type=float, default=0.5)
     parser.add_argument("--boot-timeout", type=float, default=1.0)
     parser.add_argument("--menu-wait", type=float, default=0.2)
     parser.add_argument("--menu-timeout", type=float, default=1.0)
@@ -497,9 +733,18 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--steadykey", action="store_true", help="enable MAME steadykey support")
     parser.add_argument("--verbose", action="store_true", help="print launch line")
     parser.add_argument("--window-position", default="top", help="move MAME after launch: 'top', 'x,y', or empty string")
+    parser.add_argument("--debug", action="store_true", help="enable MAME debugger API using the non-UI debugger module")
+    parser.add_argument("--debug-bp", action="append", default=[], metavar="LABEL:ADDR", help="install a startup debugger registerpoint before ROM CARD navigation")
+    parser.add_argument("--debug-stop-bp", action="append", default=[], metavar="LABEL:ADDR", help="install a startup debugger registerpoint that stops instead of resuming")
+    parser.add_argument("--debug-segwatch", action="store_true", help="log CS/DS/ES/SS changes with CS:IP while startup runs")
     args = parser.parse_args(argv)
 
-    if not args.card.exists():
+    if args.prepared_romcard and args.nvram_source is None:
+        args.nvram_source = DEFAULT_NVRAM_TEMPLATE
+    if args.prepared_romcard:
+        args.boot_wait = max(args.boot_wait, 2.0)
+
+    if not args.no_card and not args.card.exists():
         print(f"card image does not exist: {args.card}", file=sys.stderr)
         return 1
     if not args.mame.exists():
@@ -508,9 +753,12 @@ def main(argv: list[str]) -> int:
     if not args.input_bridge.exists():
         print(f"input bridge script does not exist: {args.input_bridge}", file=sys.stderr)
         return 1
+    if args.nvram_source is not None and not args.nvram_source.exists():
+        print(f"NVRAM source image does not exist: {args.nvram_source}", file=sys.stderr)
+        return 1
 
     if not args.no_clean:
-        clean_run_state(args.nvram_image, args.snap_dir)
+        clean_run_state(args.nvram_image, args.snap_dir, args.nvram_source)
     clean_socket(args.input_socket)
 
     command = [
@@ -530,11 +778,27 @@ def main(argv: list[str]) -> int:
         str(args.input_bridge),
         "-serial",
         args.serial,
-        "-pccard",
-        args.pccard,
-        args.card_option,
-        str(args.card),
     ]
+    if not args.no_card:
+        command.extend(
+            [
+                "-pccard",
+                args.pccard,
+                args.card_option,
+                str(args.card),
+            ]
+        )
+    if args.debug_bp or args.debug_stop_bp or args.debug_segwatch:
+        args.debug = True
+    if args.debug_bp or args.debug_stop_bp:
+        try:
+            debug_registerpoint_commands(args.debug_bp)
+            debug_breakpoint_commands(args.debug_stop_bp)
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+    if args.debug:
+        command.extend(["-debug", "-debugger", "none"])
     if args.natural:
         command.append("-natural")
     if args.steadykey:
@@ -554,7 +818,23 @@ def main(argv: list[str]) -> int:
         input_stream = connect_input_bridge(args.input_socket, proc, args.window_timeout)
 
         time.sleep(args.boot_wait)
-        if args.no_signpost_check:
+        if args.prepared_romcard:
+            if args.no_signpost_check:
+                snapshot(
+                    input_stream,
+                    args.snap_dir,
+                    args.snapshot_timeout,
+                )
+            else:
+                wait_for_signpost(
+                    input_stream,
+                    args.snap_dir,
+                    "prepared ROM CARD menu",
+                    args.boot_timeout,
+                    args.signpost_interval,
+                    args.snapshot_timeout,
+                )
+        elif args.no_signpost_check:
             snapshot(
                 input_stream,
                 args.snap_dir,
@@ -570,43 +850,47 @@ def main(argv: list[str]) -> int:
                 args.snapshot_timeout,
             )
 
-        send_bridge_key(input_stream, "Page_Down")
-        time.sleep(args.menu_wait)
-        if args.no_signpost_check:
-            snapshot(
-                input_stream,
-                args.snap_dir,
-                args.snapshot_timeout,
-            )
+        install_debug_setup(input_stream, args.debug_bp, args.debug_stop_bp, args.debug_segwatch)
+        if args.prepared_romcard:
+            send_bridge_key(input_stream, "Enter")
         else:
-            wait_for_signpost(
-                input_stream,
-                args.snap_dir,
-                "WP menu",
-                args.menu_timeout,
-                args.signpost_interval,
-                args.snapshot_timeout,
-            )
+            send_bridge_key(input_stream, "Page_Down")
+            time.sleep(args.menu_wait)
+            if args.no_signpost_check:
+                snapshot(
+                    input_stream,
+                    args.snap_dir,
+                    args.snapshot_timeout,
+                )
+            else:
+                wait_for_signpost(
+                    input_stream,
+                    args.snap_dir,
+                    "WP menu",
+                    args.menu_timeout,
+                    args.signpost_interval,
+                    args.snapshot_timeout,
+                )
 
-        send_bridge_key(input_stream, "6")
-        time.sleep(args.menu_wait)
-        if args.no_signpost_check:
-            snapshot(
-                input_stream,
-                args.snap_dir,
-                args.snapshot_timeout,
-            )
-        else:
-            wait_for_signpost(
-                input_stream,
-                args.snap_dir,
-                "OTHERS menu",
-                args.menu_timeout,
-                args.signpost_interval,
-                args.snapshot_timeout,
-            )
+            send_bridge_key(input_stream, "6")
+            time.sleep(args.menu_wait)
+            if args.no_signpost_check:
+                snapshot(
+                    input_stream,
+                    args.snap_dir,
+                    args.snapshot_timeout,
+                )
+            else:
+                wait_for_signpost(
+                    input_stream,
+                    args.snap_dir,
+                    "OTHERS menu",
+                    args.menu_timeout,
+                    args.signpost_interval,
+                    args.snapshot_timeout,
+                )
 
-        send_bridge_key(input_stream, "4")
+            send_bridge_key(input_stream, "4")
         time.sleep(args.basic_wait)
         interactive_loop(
             input_stream,

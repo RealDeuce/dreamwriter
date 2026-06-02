@@ -991,7 +991,7 @@ CTLNMK:	CMP	AL," "+0o1 ; Test for legal function code
 	MOV	BX,AX
 	MOV	AX,CTLDPX
 	PUSH	AX ; Put return on stack
-	MOV	AX,word [FUNTAB+BX]
+	MOV	AX,word [CS:FUNTAB+BX]
 	PUSH	AX ; Put routine address on stack
 CTLDSX:	CLC
 	RET ; Go do control routine
