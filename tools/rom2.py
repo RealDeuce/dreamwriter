@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import glob as _glob
 import hashlib
 import re
 import string
@@ -33,6 +34,11 @@ SPARSE_SMALL_BOLD_GLYPH_BASE = 0x5C2B6
 SHA256 = "bb6a437d4c25f90eb7a0b8bc3d41e1ca2c74196aabe60954a598c66405397757"
 
 PRINTABLE = set(bytes(string.printable, "ascii")) - {0x0B, 0x0C}
+TODO_XREF_RE = re.compile(r"TODO-xref", re.IGNORECASE)
+ADDRESS_TOKEN_RE = re.compile(
+    r"\b(?:file:[0-9A-Fa-fx$]+|phys:[0-9A-Fa-fx$]+|[0-9A-Fa-f]{3,4}:[0-9A-Fa-f]{4})\b",
+    re.IGNORECASE,
+)
 
 
 def parse_int(value: str) -> int:
@@ -89,6 +95,71 @@ def describe_phys(phys: int) -> str:
     c000 = c000_off(phys)
     aliases = f"  {c000}" if c000 else ""
     return f"file 0x{offset:05X}  phys 0x{phys:05X}  {seg:04X}:{off:04X}{aliases}"
+
+
+def expand_markdown_inputs(values: list[str], allow_dirs: bool = True) -> list[Path]:
+    collected: list[Path] = []
+    for value in values:
+        expanded = (
+            _glob.glob(value)
+            if any(ch in value for ch in "*?[")
+            else [value]
+        )
+        for item in expanded:
+            path = Path(item)
+            if path.is_dir():
+                if allow_dirs:
+                    collected.extend(path.glob("*.md"))
+                continue
+            if path.suffix.lower() == ".md" and path.exists():
+                collected.append(path)
+
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for path in sorted(collected, key=lambda path: str(path)):
+        key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path)
+    return unique
+
+
+def extract_address_tokens(text: str) -> list[str]:
+    return ADDRESS_TOKEN_RE.findall(text)
+
+
+def parse_addr_expr(value: str) -> tuple[str, int]:
+    if ":" in value and not value.lower().startswith(("file:", "phys:")):
+        seg_text, off_text = value.split(":", 1)
+        seg = parse_addr_part(seg_text)
+        off = parse_addr_part(off_text)
+        return f"{seg:04X}:{off:04X}", seg_off_to_phys(seg, off)
+    if value.lower().startswith("file:"):
+        raw = value.split(":", 1)[1]
+        return f"file:{raw}", file_to_phys(parse_int(raw))
+    if value.lower().startswith("phys:"):
+        raw = value.split(":", 1)[1]
+        return f"phys:{raw}", parse_int(raw)
+
+    raw = parse_int(value)
+    if raw < ROM_SIZE:
+        return f"file:0x{raw:X}", file_to_phys(raw)
+    return f"phys:0x{raw:X}", raw
+
+
+def format_addr_row(label: str, phys: int, fmt: str) -> str:
+    if fmt == "tsv":
+        offset = phys_to_file(phys)
+        seg, off = canonical_seg_off(phys)
+        c000 = c000_off(phys)
+        alias = c000.strip() if c000 else ""
+        return f"{label}\t0x{offset:05X}\t0x{phys:05X}\t{seg:04X}:{off:04X}\t{alias}"
+    if fmt == "compact":
+        offset = phys_to_file(phys)
+        seg, off = canonical_seg_off(phys)
+        return f"{label}: file 0x{offset:05X} phys 0x{phys:05X} {seg:04X}:{off:04X}"
+    return describe_phys(phys)
 
 
 def bank_base(value: int, size: int) -> int:
@@ -148,25 +219,21 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
 
 def cmd_addr(args: argparse.Namespace) -> int:
-    value = args.address
-    try:
-        if ":" in value and not value.lower().startswith(("file:", "phys:")):
-            seg_text, off_text = value.split(":", 1)
-            phys = seg_off_to_phys(parse_addr_part(seg_text), parse_addr_part(off_text))
-        elif value.lower().startswith("file:"):
-            phys = file_to_phys(parse_int(value.split(":", 1)[1]))
-        elif value.lower().startswith("phys:"):
-            phys = parse_int(value.split(":", 1)[1])
-            phys_to_file(phys)
-        else:
-            raw = parse_int(value)
-            phys = file_to_phys(raw) if raw < ROM_SIZE else raw
-            phys_to_file(phys)
-    except ValueError as exc:
-        print(exc, file=sys.stderr)
+    values = list(args.address)
+    if args.stdin:
+        values.extend(sys.stdin.read().split())
+
+    if not values:
+        print("no addresses supplied", file=sys.stderr)
         return 1
 
-    print(describe_phys(phys))
+    for value in values:
+        try:
+            label, phys = parse_addr_expr(value)
+            print(format_addr_row(label, phys, args.format))
+        except ValueError as exc:
+            print(f"{value}: {exc}", file=sys.stderr)
+            return 1
     return 0
 
 
@@ -508,6 +575,185 @@ def cmd_position_ops(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_disasm(args: argparse.Namespace) -> int:
+    data = read_rom(args.rom)
+    starts = list(args.start)
+    if args.stdin:
+        starts.extend(sys.stdin.read().split())
+
+    if not starts:
+        print("no start addresses supplied", file=sys.stderr)
+        return 1
+
+    if args.count <= 0:
+        print("count must be greater than zero", file=sys.stderr)
+        return 1
+
+    for start_expr in starts:
+        try:
+            label, phys = parse_addr_expr(start_expr)
+        except ValueError as exc:
+            print(f"{start_expr}: {exc}", file=sys.stderr)
+            return 1
+
+        start = phys_to_file(phys)
+        end = min(start + args.count, len(data))
+        if start >= end:
+            print(f"{label}: invalid range in ROM image", file=sys.stderr)
+            return 1
+
+        command = ["ndisasm", "-b", "16", "-o", f"0x{phys:05X}", "-"]
+        try:
+            result = subprocess.run(
+                command,
+                check=True,
+                input=data[start:end],
+                capture_output=True,
+            )
+        except FileNotFoundError:
+            print("ndisasm is required for disasm", file=sys.stderr)
+            return 1
+        except subprocess.CalledProcessError as exc:
+            print(exc.stderr.decode("utf-8", errors="replace"), file=sys.stderr)
+            return 1
+
+        print(f"; {label}  file 0x{start:05X} phys 0x{phys:05X} len=0x{end-start:X}")
+        print(result.stdout.decode("utf-8", errors="replace"), end="")
+        if args.count_output:
+            print()
+            print()
+        else:
+            print()
+    return 0
+
+
+def cmd_xref_scan(args: argparse.Namespace) -> int:
+    files = expand_markdown_inputs(args.scope)
+    if not files:
+        print("no markdown files matched", file=sys.stderr)
+        return 1
+
+    if not args.include_readme:
+        files = [path for path in files if path.name.lower() != "readme.md"]
+
+    todo_rows: list[tuple[str, int, str]] = []
+    unresolved: list[tuple[str, int, str]] = []
+
+    for path in files:
+        for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if not TODO_XREF_RE.search(line):
+                continue
+            tokens = extract_address_tokens(line)
+            if not tokens:
+                unresolved.append((str(path), line_no, line.strip()))
+                continue
+            for token in tokens:
+                try:
+                    canonical, phys = parse_addr_expr(token)
+                except ValueError:
+                    unresolved.append((str(path), line_no, f"{line.strip()} [unparseable token={token}]" ))
+                    continue
+                todo_rows.append((str(path), line_no, f"{canonical} -> 0x{phys:05X}" ))
+
+    if args.format == "markdown":
+        print("| File | Line | TODO-xref |")
+        print("| --- | ---: | --- |")
+        for path, line_no, row in todo_rows:
+            print(f"| {path} | {line_no} | `{row}` |")
+        for path, line_no, row in unresolved:
+            print(f"| {path} | {line_no} | unresolved | `{row}` |", file=sys.stderr)
+        if unresolved:
+            print(f"unresolved: {len(unresolved)}", file=sys.stderr)
+    else:
+        for path, line_no, row in todo_rows:
+            print(f"{path}:{line_no}: {row}")
+        if unresolved:
+            for path, line_no, row in unresolved:
+                print(f"{path}:{line_no}: TODO-xref unresolved: {row}", file=sys.stderr)
+            print(f"unresolved: {len(unresolved)}", file=sys.stderr)
+    if unresolved:
+        return 1
+    return 0
+
+
+def cmd_queue_audit(args: argparse.Namespace) -> int:
+    queue_path = Path(args.queue)
+    queue_lines = queue_path.read_text(encoding="utf-8").splitlines()
+
+    queue_rows: list[tuple[str, str, str]] = []
+    in_queue_section = False
+    for line in queue_lines:
+        if line.strip().startswith("## Root Expansion Queue"):
+            in_queue_section = True
+            continue
+        if not in_queue_section:
+            continue
+        if not line.startswith("|"):
+            if queue_rows:
+                break
+            continue
+        if line.startswith("| Root |") or line.startswith("| ---"):
+            continue
+
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) >= 1:
+            root_cell = cells[0].strip("`")
+            source = cells[1].strip("`") if len(cells) > 1 else ""
+            next_slice = cells[2].strip("`") if len(cells) > 2 else ""
+            if root_cell:
+                queue_rows.append((root_cell, source, next_slice))
+
+    if not queue_rows:
+        print(f"no queue rows found in {queue_path}", file=sys.stderr)
+        return 1
+
+    scope_files = expand_markdown_inputs(args.scope_docs)
+    discovered: set[int] = set()
+    for path in scope_files:
+        if path.resolve() == queue_path.resolve():
+            continue
+        for token in extract_address_tokens(path.read_text(encoding="utf-8")):
+            try:
+                _, phys = parse_addr_expr(token)
+            except ValueError:
+                continue
+            discovered.add(phys)
+
+    entries: list[tuple[str, str, str, str]] = []
+    for root_cell, source, next_slice in queue_rows:
+        tokens = extract_address_tokens(root_cell)
+        if not tokens:
+            entries.append((root_cell, source, "named", next_slice))
+            continue
+        for token in tokens:
+            try:
+                canonical, phys = parse_addr_expr(token)
+            except ValueError:
+                entries.append((token, "invalid", token, next_slice))
+                continue
+            status = "open" if phys not in discovered else "seen"
+            if args.open_only and status == "seen":
+                continue
+            entries.append((canonical, status, source, next_slice))
+
+    if args.format == "markdown":
+        print("| Root | Source | Next Slice | Status |")
+        print("| --- | --- | --- | --- |")
+        for root, source, status, next_slice in entries:
+            print(f"| `{root}` | `{source}` | `{next_slice}` | `{status}` |")
+    else:
+        for root, source, status, next_slice in entries:
+            print(f"{root:20}  status={status:5}  source={source}  next={next_slice}")
+
+    if not args.open_only:
+        open_count = len([_ for _ in entries if _[1] == "open"])
+        seen_count = len([_ for _ in entries if _[1] == "seen"])
+        named_count = len([_ for _ in entries if _[1] == "named"])
+        invalid_count = len([_ for _ in entries if _[1] == "invalid"])
+        print(f"summary: open={open_count} seen={seen_count} named={named_count} invalid={invalid_count}")
+    return 0
+
+
 XREF_RE = re.compile(
     r"^(?P<addr>[0-9A-Fa-f]+)\s+\S+\s+"
     r"(?P<op>call|jmp|jz|jnz|jc|jnc|ja|jae|jb|jbe|jg|jge|jl|jle|jo|jno|js|jns|loop|loopz|loopnz)\b"
@@ -817,7 +1063,18 @@ def build_parser() -> argparse.ArgumentParser:
     verify.set_defaults(func=cmd_verify)
 
     addr = subparsers.add_parser("addr", help="convert file/physical/segment addresses")
-    addr.add_argument("address", help="file:0x46912, phys:0xc6912, c688:0053, or a number")
+    addr.add_argument(
+        "address",
+        nargs="+",
+        help="file:0x46912, phys:0xc6912, c688:0053, or a number",
+    )
+    addr.add_argument(
+        "--format",
+        choices=("text", "compact", "tsv"),
+        default="text",
+        help="output format",
+    )
+    addr.add_argument("--stdin", action="store_true", help="read extra addresses from stdin")
     addr.set_defaults(func=cmd_addr)
 
     bank = subparsers.add_parser("bank", help="describe a MAME bank port/value mapping")
@@ -928,6 +1185,65 @@ def build_parser() -> argparse.ArgumentParser:
     position_ops.add_argument("--max-opcode", type=lambda value: parse_int(value), default=0x4F)
     position_ops.add_argument("--limit", type=int, default=0, help="maximum records to print; 0 means all")
     position_ops.set_defaults(func=cmd_position_ops)
+
+    disasm = subparsers.add_parser(
+        "disasm",
+        help="disassemble a byte window from a segment:offset, file, or physical address",
+    )
+    disasm.add_argument(
+        "start",
+        nargs="+",
+        help="start address as file:, phys:, segment:off, or a raw value",
+    )
+    disasm.add_argument("--count", type=int, default=0x400, help="number of bytes to decode")
+    disasm.add_argument("--stdin", action="store_true", help="read extra start addresses from stdin")
+    disasm.add_argument(
+        "--count-output",
+        action="store_true",
+        help="emit an extra blank line after each decode block",
+    )
+    disasm.set_defaults(func=cmd_disasm)
+
+    xref_scan = subparsers.add_parser(
+        "xref-scan",
+        help="scan markdown docs for TODO-xref address markers",
+    )
+    xref_scan.add_argument(
+        "scope",
+        nargs="*",
+        default=["docs/disassembly/*.md"],
+        help="markdown files, globs, or directories to scan",
+    )
+    xref_scan.add_argument(
+        "--include-readme",
+        action="store_true",
+        help="include README.md files in the scan",
+    )
+    xref_scan.add_argument("--format", choices=("text", "markdown"), default="text")
+    xref_scan.set_defaults(func=cmd_xref_scan)
+
+    queue_audit = subparsers.add_parser(
+        "queue-audit",
+        help="report Root Expansion Queue coverage and open vs seen roots",
+    )
+    queue_audit.add_argument(
+        "--queue",
+        default="docs/disassembly/README.md",
+        help="path to the root queue file",
+    )
+    queue_audit.add_argument(
+        "--scope-docs",
+        nargs="*",
+        default=["docs/disassembly/*.md"],
+        help="markdown files that define already-implemented roots",
+    )
+    queue_audit.add_argument(
+        "--open-only",
+        action="store_true",
+        help="show only queue entries not found in other docs",
+    )
+    queue_audit.add_argument("--format", choices=("text", "markdown"), default="text")
+    queue_audit.set_defaults(func=cmd_queue_audit)
 
     xrefs = subparsers.add_parser("xrefs", help="linear direct branch/call inventory using ndisasm")
     xrefs.add_argument("--start", default="0x40000")

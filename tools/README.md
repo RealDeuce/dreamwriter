@@ -48,14 +48,36 @@ tools/rom2.py verify
 ### `addr`
 
 Converts between ROM file offsets, physical addresses, and canonical
-segment:offset form. If the physical address is in `0xC0000..0xCFFFF`, it also
-prints the convenient `C000:xxxx` alias.
+segment:offset form.
+
+The command accepts one or more values and can also read additional values from
+stdin:
 
 ```sh
 tools/rom2.py addr file:0x46912
 tools/rom2.py addr phys:0xc6912
 tools/rom2.py addr c688:0053
+printf 'C688:0080\\n0x6bbb0\\n' | tools/rom2.py addr --stdin --format compact file:0x46912
 ```
+
+Output formats:
+
+| Format | Meaning |
+| --- | --- |
+| `text` | `file`, `phys`, and `seg:off` with optional `C000` alias (default). |
+| `compact` | one-line single record: `input: file 0x... phys 0x... seg:off`. |
+| `tsv` | machine-friendly tab-separated fields `input`, `file`, `phys`, `seg:off`, `alias`. |
+
+You can keep output minimal with compact/tsv during address-heavy disassembly
+validation:
+
+```sh
+tools/rom2.py addr --format tsv C688:0053 c688:00A0
+printf '0x46912\\nC700:1234\\nphys:0x8a000\\n' | tools/rom2.py addr --stdin --format compact
+```
+
+If the physical address is in `0xC0000..0xCFFFF`, `text` (and `tsv`) also include the
+`C000:xxxx` alias.
 
 ### `bank`
 
@@ -258,6 +280,70 @@ Options:
 | `--max-opcode` | `0x4F` | Maximum following opcode byte. |
 | `--limit` | `0` | Maximum records to print; `0` means all. |
 
+### `disasm`
+
+Disassemble an arbitrary ROM window from a mixed address without manual address
+translation. This command sets the `ndisasm` origin to the chosen physical
+address so branch/call targets come out as the expected segment-friendly
+addresses for your notes.
+
+```sh
+tools/rom2.py disasm c688:0053 --count 0x300
+tools/rom2.py disasm file:0x6bbb0 --count 0x180
+tools/rom2.py disasm phys:0x8e520
+printf 'C688:0053\\nC688:00A0\\n' | tools/rom2.py disasm --stdin --count 0x200
+```
+
+Options:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--count` | `0x400` | Bytes to feed to `ndisasm` from the start address. |
+| `--stdin` | off | Read additional start addresses from stdin. |
+| `--count-output` | off | Print an extra blank line after each decoded block. |
+
+`ndisasm` must be installed and available on `PATH`.
+
+### `xref-scan`
+
+Scans Markdown files for `TODO-xref` markers and validates that each marker has at
+least one parsable address token (`seg:off`, `file:...`, or `phys:...`).
+
+```sh
+tools/rom2.py xref-scan docs/disassembly/README.md docs/disassembly/*.md
+tools/rom2.py xref-scan --format markdown docs/disassembly/boot.md
+```
+
+Options:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `scope` | `docs/disassembly/*.md` | Markdown files, globs, or directories to scan. |
+| `--format` | `text` | Output format: `text` or `markdown`. |
+
+Exit status is non-zero when any `TODO-xref` line cannot be resolved to a known
+address form.
+
+### `queue-audit`
+
+Audits the queue in `docs/disassembly/README.md`, checks whether queue roots also
+appear in other disassembly markdown files, and shows open vs already-seen roots.
+
+```sh
+tools/rom2.py queue-audit
+tools/rom2.py queue-audit --open-only
+tools/rom2.py queue-audit --format markdown --queue docs/disassembly/README.md
+```
+
+Options:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--queue` | `docs/disassembly/README.md` | Path for the queue section to audit. |
+| `--scope-docs` | `docs/disassembly/*.md` | Markdown files used to determine if a root is already seen elsewhere. |
+| `--open-only` | off | Show only roots currently not found outside the queue file. |
+| `--format` | `text` | Output format: `text` or `markdown`. |
+
 ### `xrefs`
 
 Runs `ndisasm` over a file-offset range and extracts direct branch/call targets
@@ -373,4 +459,18 @@ Run a code-only I/O sweep from the first-pass region map:
 
 ```sh
 tools/rom2.py io-scan --summary
+```
+
+Run the full disassembly validation workflow (snippet bytes + TODO-xref + queue audit):
+
+```sh
+tools/disasm-validate.sh
+tools/disasm-validate.sh --open-only --docs docs/disassembly/*.md --queue docs/disassembly/README.md
+```
+
+You can scope validation to a single markdown file:
+
+```sh
+python3 tools/validate_snippets.py docs/disassembly/app-menu-event-loop.md
+tools/disasm-validate.sh --docs docs/disassembly/app-menu-event-loop.md
 ```
