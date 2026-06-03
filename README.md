@@ -21,8 +21,8 @@ Related projects:
 
 | Project | Notes |
 | --- | --- |
-| [Dreamulator](https://github.com/realDeuce/dreamulator) | DreamWriter emulator project and the more interesting related codebase. Local checkout: `../dreamulator`. |
-| [DreamWriter 200 notes](https://github.com/RealDeuce/dreamwriter200) | Similar ROM-map notes focused on the DreamWriter 200; useful for comparison, but generally a less complete version of this T400 content. Local checkout: `../dreamwriter-200-map`. |
+| [Dreamulator](https://github.com/realDeuce/dreamulator) | DreamWriter emulator project and the more interesting related codebase for running and experimenting with these machines. |
+| [DreamWriter 200 notes](https://github.com/RealDeuce/dreamwriter200) | Similar ROM-map notes focused on the DreamWriter 200; useful for comparison, but generally a less complete version of this T400 content. |
 
 ## MAME
 
