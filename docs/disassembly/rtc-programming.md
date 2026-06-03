@@ -197,6 +197,6 @@ gate for the minute-plus-one fallback.
 
 ## Next Splits
 
-| Root | Split | Reason |
-| --- | --- | --- |
-| `DC98:D3BB`, `DC98:DB5E` | `organizer-alarm.md` | Application-side scheduler/world-clock alarm selection and wake decision. |
+The application-side scheduler/world-clock alarm selector roots
+`DC98:D3BB` and `DC98:DB5E` are covered by
+[`organizer-alarm.md`](organizer-alarm.md).

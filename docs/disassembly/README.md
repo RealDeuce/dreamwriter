@@ -65,6 +65,7 @@ preserve the reasoning that makes the code understandable.
 | [`format-status-output.md`](format-status-output.md) | Shared format/transfer progress display resource and dynamic five-byte status field. |
 | [`diagnostics-ui.md`](diagnostics-ui.md) | Diagnostic chord/UI boundary that seeds the installed `INT 1` watch state. |
 | [`diagnostic-monitor.md`](diagnostic-monitor.md) | Built-in diagnostic command parser, memory/I/O dump and set commands, single-step state setup, keyboard/help helpers, and local output routines. |
+| [`diagnostic-spell-services.md`](diagnostic-spell-services.md) | Diagnostic `Q/R` clear/reset spell service bodies behind banked service IDs `0x58` and `0x59`. |
 | [`diagnostic-keyboard-check.md`](diagnostic-keyboard-check.md) | Diagnostic `K` command keyboard-coverage loop, local key-cell drawing helpers, key table format, and rendered keyboard bitmap assets. |
 | [`low-ram-abi.md`](low-ram-abi.md) | Far-pointer table copied from `C000:0F94` to `0000:0200`, including display, keyboard, and file wrapper entries. |
 | [`low-ram-abi-unknowns.md`](low-ram-abi-unknowns.md) | Remaining low-RAM ABI UI widgets: wrapped text, editable fields, prompt selector, and callback setter. |
@@ -81,6 +82,12 @@ preserve the reasoning that makes the code understandable.
 | [`document-picker-ui.md`](document-picker-ui.md) | Shared application-loop document/list re-entry roots, `LIST OF DOC.` template continuation, and SEARCH/REPLACE prompt variants. |
 | [`setup-screens.md`](setup-screens.md) | Word-processor setup/settings editors for RS-232, printer, SYSTEM, and PREFERENCES, including backing state and decoded option strings. |
 | [`wp-others-handlers.md`](wp-others-handlers.md) | OTHERS -> T I M E entry/Typin' Time dispatcher boundary and complete ROM CARD `EROMCARD.X` loader, including failure strings and payload header. |
+| [`organizer-calculator.md`](organizer-calculator.md) | Organizer CALCULATOR app, fixed-point decimal arithmetic core, square-root path, rendered calculator glyph PNGs, and error strings. |
+| [`organizer-calendar.md`](organizer-calendar.md) | Organizer CALENDAR app, two-month grid renderer, year/display-form prompts, explicit menu strings, and rendered small digit glyph asset. |
+| [`organizer-scheduler.md`](organizer-scheduler.md) | Organizer SCHEDULER entry, foreground WEEKLY/CONTENT UI, `SCHEDULE.ODB` record format, edit/new/delete/alarm handlers, and scheduler alarm cache builder. |
+| [`organizer-world-clock.md`](organizer-world-clock.md) | Organizer WORLD CLOCK app, city table picker, map/time bitmap renderers, time/date editor, display-form selector, and daily-alarm UI. |
+| [`organizer-address-book.md`](organizer-address-book.md) | Organizer ADDRESS BOOK app, `ADDRESS.ODB` parser/serializer, sorted index/cache maintenance, two-view UI, and search/edit/delete handlers. |
+| [`organizer-alarm.md`](organizer-alarm.md) | Shared Organizer scheduler/world-clock next-alarm selector, selected-alarm display loop, and low-RAM RTC alarm buffer handoff. |
 
 ## Root Expansion Queue
 
@@ -90,9 +97,6 @@ The boot slice has already exposed these next roots:
 | --- | --- | --- |
 | Application printer formatters | Reached from `printer-device.md`. | User-facing print formatting before `INT 21h AH=05`. |
 | `C688:EB5E` | Reached from `wp-submenus.md`. | WP PRINTER -> PRINT OUT application handler. |
-| `DC98:D3BB`, `DC98:DB5E` | Reached from `rtc-programming.md` and `rtc-alarm-power.md`. | Application-side scheduler/world-clock alarm selection and wake decision. |
 | `C688:ED1F`, `C688:E274`, `C688:D8AF` | Reached from `app-menu-event-loop.md`. | Word-processor linguistic and document flows. |
 | `C688:AD5C`, `C688:ED15` | Reached from `app-menu-event-loop.md`. | Print/merge/address app-loop handlers. |
-| `C000:18A1` service IDs `0x58`, `0x59` | Reached from `diagnostic-monitor.md`. | Banked spelling-service clear/reset hooks used by diagnostic `Q/R`. |
 | `EBBB:012E` | Reached from `wp-others-handlers.md`. | Typin' Time internal app state machine and mode handlers. |
-| `DC98:6A38`, `DC98:7284`, `DC98:990D`, `DC98:B67C`, `DC98:CF12` | Reached from `top-icon-menus.md`. | Organizer app handlers. |

@@ -120,11 +120,11 @@ DC98:53F5  C7 06 81 6D 0000  mov  word [0x6d81],0
 
 | Key | Stored index | Target |
 | ---: | ---: | --- |
-| `1` | `0` | `DC98:6A38` calculator. |
-| `2` | `1` | `DC98:7284` calendar. |
-| `3` | `2` | `DC98:990D` scheduler. |
-| `4` | `3` | `DC98:B67C` world clock. |
-| `5` | `4` | `DC98:CF12` address book. |
+| `1` | `0` | `DC98:6A38` calculator, expanded in [`organizer-calculator.md`](organizer-calculator.md). |
+| `2` | `1` | `DC98:7284` calendar, expanded in [`organizer-calendar.md`](organizer-calendar.md). |
+| `3` | `2` | `DC98:990D` scheduler, expanded in [`organizer-scheduler.md`](organizer-scheduler.md). |
+| `4` | `3` | `DC98:B67C` world clock, expanded in [`organizer-world-clock.md`](organizer-world-clock.md). |
+| `5` | `4` | `DC98:CF12` address book, expanded in [`organizer-address-book.md`](organizer-address-book.md). |
 
 ## Organizer Icon Table
 
@@ -191,6 +191,6 @@ tools/render_rom_bitmap_png.py 0x707f4 40 40 docs/disassembly/images/org-address
 
 ## Next Splits
 
-| Root | Split | Reason |
-| --- | --- | --- |
-| `DC98:6A38`, `7284`, `990D`, `B67C`, `CF12` | `organizer-apps.md` | Organizer application handlers selected by the top menu. |
+All five Organizer top-menu app roots selected by this wrapper now have named
+disassembly slices. Remaining Organizer-adjacent work is in application-side
+print/mail-merge readers rather than this top icon menu layer.

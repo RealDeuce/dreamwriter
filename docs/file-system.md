@@ -505,10 +505,26 @@ The expected database header is `ORGAN[SCHEDULE]` at file `0x71021`.
 If `SCHEDULE.ODB` is missing, the handler creates it with a 16-byte header and a
 200-entry 4-byte index table. Existing files are validated by comparing the
 header and scanning the 200 index entries; nonzero offsets below the file size
-increment the entry count at `[82AE]`. After setup, if `[82AE]` is still zero,
-the handler closes and deletes the empty database, then returns to the Organizer
-menu. That matches the brief asterisk display observed in MAME when the backing
-store is not initialized or cannot retain the database.
+increment the entry count at `[82AE]`. The same ODB validator/creator is used by
+the Organizer ADDRESS BOOK entry for `ADDRESS.ODB` with header
+`FE "ORGAN[ADDRESS ]"`, so SCHEDULER and ADDRESS BOOK are sibling databases
+over the same container format rather than one app calling into the other.
+
+The ADDRESS BOOK payload records are text lines stored behind the ODB index:
+
+```text
+NAME<TAB>SALUTATION<TAB>TEL<TAB>FAX<TAB>ADRS<TAB>MEMO<LF>
+```
+
+The Organizer parser bounds those fields to `0x28`, `0x0A`, `0x1E`, `0x1E`,
+`0x5A`, and `0x64` bytes respectively. The entry keeps the dword offset table
+at `[82B0]` and a one-byte first-character cache at `[82B2]`, then compacts the
+payload area and rewrites the index table when the foreground UI exits.
+
+After setup, if `[82AE]` is still zero, the handler closes and deletes the empty
+database, then returns to the Organizer menu. That matches the brief asterisk
+display observed in MAME when the backing store is not initialized or cannot
+retain the database.
 
 After correcting the `0x11 = 0x0E` bank mapping to RAM, FILE -> INITIALIZE
 formats the full 160 KiB built-in store, and both SCHEDULER and ADDRESS BOOK

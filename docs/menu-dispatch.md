@@ -447,6 +447,55 @@ normal text for numeric displays. The redraw helpers at `DC98:54C2` and
 `F16C:0099`, `F16C:00C0`, and nearby offsets. This is the same large digit
 resource family later used by WORLD CLOCK.
 
+The full app and arithmetic core are expanded in
+[`disassembly/organizer-calculator.md`](disassembly/organizer-calculator.md).
+
+## Organizer Calendar
+
+The organizer CALENDAR app is the second top-menu handler:
+`DC98:7284` / file `0x63C04`. It is a standalone viewer rather than an ODB
+application. The handler reads the current RTC date through `DC98:0D2A`, draws
+two month grids through `DC98:6CDD`, and handles only month navigation, a year
+prompt, and a display-form prompt.
+
+The visible menu resources decode to:
+
+| Resource | Final formatted text |
+| --- | --- |
+| `F0AB:0002` | `CALENDAR` / `[<-] PREV MONTH` / `[->] NEXT MONTH` / `[Y] YEAR` / `[F] DISPLAY FORM` |
+| `F0B3:0000` | `YEAR` / `[RET]    SET` / `[CAN]  CANCEL` |
+| `F0B6:0002` | `DISPLAY FORM` / `[RET]    SET` / `[CAN]  CANCEL` |
+
+The full calendar app is expanded in
+[`disassembly/organizer-calendar.md`](disassembly/organizer-calendar.md).
+
+## Organizer Scheduler
+
+The organizer SCHEDULER app is the third top-menu handler:
+`DC98:990D` / file `0x6628D`. Its entry wrapper uses the same Organizer ODB
+framework as ADDRESS BOOK: a 16-byte app header, a 200-entry dword record
+offset table, and records starting at file offset `0x330`.
+
+The scheduler file name is `SCHEDULE.ODB` at `F101:0000` / file `0x71010`;
+the expected header is `FE "ORGAN[SCHEDULE]"` at `F102:0000` / file
+`0x71020`. ADDRESS BOOK uses the sibling file `ADDRESS.ODB` and header
+`FE "ORGAN[ADDRESS ]"`, but the same validators/creators at `DC98:BA42` and
+`DC98:BB4F`.
+
+The scheduler-specific loader `DC98:73DB` reads the ODB records and rebuilds
+the 200-entry scheduler alarm cache at `82C8`. `DC98:990D` calls `DC98:D3BB`
+after that refresh, so scheduler entries feed the same low-RAM alarm selector
+as WORLD CLOCK daily alarms.
+
+The foreground scheduler UI at `DC98:955C` / file `0x65EDC` is a weekly view
+with a content subview. It dispatches date navigation, `DATE`, `BEGIN`, `END`,
+`CONTENT`, `EDIT`, `NEW ENTRY`, `DELETE`, and `ALARM` operations through the
+scheduler-specific helpers documented in the disassembly slice.
+
+The full scheduler app, including storage relationship with ADDRESS BOOK, is
+expanded in
+[`disassembly/organizer-scheduler.md`](disassembly/organizer-scheduler.md).
+
 ## Organizer WORLD CLOCK
 
 The organizer WORLD CLOCK app is the fourth top-menu handler:
@@ -535,6 +584,38 @@ writes hour/minute to `72DF`/`72E1`, forces `72E3` to zero, calls
 `DC98:0D72` and `DC98:0D8F`, then calls `DC98:D3BB` to refresh the broader
 time state. The C000 handlers behind those wrappers update the RTC BCD shadow
 and write ports `0xD0..0xDC`; see [`hardware.md`](hardware.md).
+
+The full annotated foreground slice is in
+[`disassembly/organizer-world-clock.md`](disassembly/organizer-world-clock.md).
+
+## Organizer ADDRESS BOOK
+
+The organizer ADDRESS BOOK app is the fifth top-menu handler:
+`DC98:CF12` / file `0x69892`. It builds `<drive>:ADDRESS.ODB`, validates or
+creates the shared Organizer ODB container with header `FE "ORGAN[ADDRESS ]"`,
+loads a 200-byte first-character cache, then enters `DC98:CB04`.
+
+`ADDRESS.ODB` uses the same 16-byte header and 200-entry dword offset table
+shape as `SCHEDULE.ODB`, but address records are tab-separated text lines:
+
+```text
+NAME<TAB>SALUTATION<TAB>TEL<TAB>FAX<TAB>ADRS<TAB>MEMO<LF>
+```
+
+The foreground loop has two local views. INDEX view draws six visible rows with
+`NAME` and `TEL` summary columns through `DC98:BD84`. CONTENT view redraws all
+six fields through `DC98:BEAF`. Edit and new-entry flows share the six-field
+editor at `DC98:C587`, then maintain sorted record order by deleting/inserting
+records through `DC98:C1B4`, `DC98:C334`, and `DC98:C0AC`.
+
+The app-local search path is whole-record search, not just name lookup:
+`DC98:C4E3` prompts into `82B4`, `DC98:C408` scans mapped serialized records,
+and `[NEXT] NEXT` repeats the scan from the next record.
+
+The full annotated foreground and database slice is in
+[`disassembly/organizer-address-book.md`](disassembly/organizer-address-book.md).
+The `C688` mail-merge/address-output readers of `ADDRESS.ODB` are separate
+application handlers and are not part of this Organizer UI slice.
 
 ## FILE Menu And ROM CARD Storage
 

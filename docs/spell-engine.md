@@ -82,7 +82,8 @@ case stubs in `3000:4AC6..4BFA`. Those stubs then call the larger parser,
 candidate-list, and dictionary helpers.
 
 `0x58` and `0x59` are the diagnostic help text's `Q/R=Clear/Reset spell`
-commands:
+commands. The full diagnostic-side slice is in
+[`disassembly/diagnostic-spell-services.md`](disassembly/diagnostic-spell-services.md):
 
 ```asm
 C000:12F8  mov dl,58
@@ -107,6 +108,13 @@ common dispatcher epilogue:
 3000:4BFF  pop bp
 3000:4C00  ret
 ```
+
+`3000:4CF4` zero-fills `3C00:6BD8..9687`. `3000:4D1A` performs the reset path:
+it initializes candidate state through `3000:5016`, initializes the `84DA`
+output record, rebuilds the active page descriptors through `3000:527C`, and
+validates the engine buffer through `3000:3AAC`. On validation failure it falls
+back through the service-`0x01` initializer at `3000:4D6A`, rings the private
+`AX=4420` tone helper five times, and returns `FFFF`.
 
 ## Local State
 
@@ -995,8 +1003,10 @@ The code around `3000:46FC..4BFA` has spelling/grammar/linguistic behavior:
 - It processes character streams through tables at offsets like `3000:09D8`,
   `3000:116A`, and `3000:12E4`.
 - It tracks word/parser state around `3C00:6D7A`, `6D7C`, `6D80`, and `6DA4`.
-- It exposes diagnostic clear/reset services through IDs `0x58` and `0x59`.
+- It exposes diagnostic clear/reset services through IDs `0x58` and `0x59`;
+  those service bodies are now bottomed in
+  [`disassembly/diagnostic-spell-services.md`](disassembly/diagnostic-spell-services.md).
 
 This is enough to call `3000:0000` the banked spelling/grammar/linguistic
 service thunk. Individual service IDs still need names beyond the confirmed
-diagnostic and startup cases.
+diagnostic, startup, and editor-facing cases.

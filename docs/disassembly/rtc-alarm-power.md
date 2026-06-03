@@ -93,4 +93,7 @@ C000:081A  C3                ret
 | Root | Split | Reason |
 | --- | --- | --- |
 | `C000:0376`, `039D`, `0B90`, `0BAF` | `rtc-programming.md` | RTC alarm register programming and compare details. |
-| `DC98:DB5E`, `DC98:D3BB` | `organizer-alarm.md` | Application-side schedule/alarm decision and display resources. |
+
+The application-side schedule/alarm decision and display roots
+`DC98:D3BB` and `DC98:DB5E` are covered by
+[`organizer-alarm.md`](organizer-alarm.md).

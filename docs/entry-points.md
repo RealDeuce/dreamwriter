@@ -83,6 +83,8 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:2C4A` | `0x42C4A` | Private `INT 21h AH=FF` direct service. With `BL=A5`, formats built-in/card storage or jumps into the DreamLink-specific path. |
 | `3000:0000` | `0x30000` | Banked spell/grammar/linguistic service thunk. Switches to segment `3C00` and dispatches through `3000:4AA6`. |
 | `3000:4AA6` | `0x34AA6` | Banked service dispatcher using service IDs `0x00..0x59`. |
+| `3000:4CF4` | `0x34CF4` | Diagnostic `Q` / service `0x58` clear-spell body. Zero-fills `3C00:6BD8..9687` and returns success. |
+| `3000:4D1A` | `0x34D1A` | Diagnostic `R` / service `0x59` reset-spell body. Reinitializes candidate state, rebuilds active slot descriptors, validates the engine buffer, and falls back through the startup initializer on failure. |
 | `C000:3064` | `0x43064` | Private `INT 21h AX=4428` endpoint probe. Returns availability bits for built-in RAM, PCMCIA SRAM card, and DreamLink. |
 | `C000:311E` | `0x4311E` | Private `INT 21h AX=4429` DreamLink finish/flush helper; returns success without action for non-DreamLink handles. |
 | `C000:3C08` | `0x43C08` | Card-storage capacity probe used during format. Write-tests the banked card window in 32 KiB steps and records the detected count. |
@@ -248,20 +250,77 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `DC98:4D67` | `0x616E7` | Directory-list builder. Uses DOS find-first/find-next on `X:*.*`, reads standard DTA fields, sorts 19-byte records, and caps at 128 entries. |
 | `DC98:52E5` | `0x61C65` | Document picker/list UI. Calls `DC98:4D67` to enumerate files and `DC98:4EAF`/`5198` to draw and navigate the list. |
 | `DC98:53C3` | `0x61D43` | Organizer top icon menu wrapper around `DC98:124C`; stores selected index in `[82A6]`. |
+| `DC98:54A9` | `0x61E29` | Calculator numeric-record clear helper. Clears sign, 16 digit bytes, and decimal/exponent byte. |
 | `DC98:54C2` | `0x61E42` | Calculator numeric display renderer. Builds inline `FF 42` bitmap records from the 8x12 digit resource at `F16C:000A`. |
 | `DC98:583E` | `0x621BE` | Calculator input display redraw helper. Uses the same `F16C` 8x12 digit/punctuation resource family. |
+| `DC98:60E0` | `0x62A60` | Calculator signed decimal add helper for 18-byte fixed-point records. |
+| `DC98:61AB` | `0x62B2B` | Calculator decimal subtract helper; negates/copies the right operand and calls the add helper. |
+| `DC98:61D1` | `0x62B51` | Calculator decimal multiply helper using a 32-byte base-10 scratch product. |
+| `DC98:62B8` | `0x62C38` | Calculator decimal divide helper using repeated subtract to generate quotient digits. |
 | `DC98:640F` | `0x62D8F` | Calculator main event loop. Reads key events, applies the private calculator translation table at `C000:5619..5644`, and dispatches digit/operator handlers. |
 | `DC98:6A38` | `0x633B8` | Organizer CALCULATOR handler. Initializes display areas, BCD buffers at `85EE`/`8600`, display glyph selectors `[8648]`/`[8649]`, then calls `DC98:640F`. |
-| `DC98:990D` | `0x6628D` | Organizer SCHEDULER handler. Displays `*** WAIT ***`, builds `<drive>:SCHEDULE.ODB`, opens or creates an `ORGAN[SCHEDULE]` database, and returns to the Organizer menu if no entries are available. |
+| `DC98:6B86` | `0x63506` | Calculator square-root handler over the same decimal digit-array record format. |
+| `DC98:6CDD` | `0x6365D` | Organizer CALENDAR month-grid renderer. Draws month/year headers, weekday labels, small bitmap day digits, and today's highlight for one month panel. |
+| `DC98:7044` | `0x639C4` | Organizer CALENDAR `YEAR` prompt. Edits and validates a four-digit year in the range 1900..2099. |
+| `DC98:713C` | `0x63ABC` | Organizer CALENDAR `DISPLAY FORM` prompt. Edits the weekday-start/display-form byte at `[8A4E]`. |
+| `DC98:71F4` | `0x63B74` | Organizer CALENDAR weekday-header renderer. Emits two-letter day labels from `F12D:0000`, rotated by `[8A4E]`. |
+| `DC98:727D` | `0x63BFD` | Organizer CALENDAR display-form initializer. Clears `[8A4E]` to the default weekday layout. |
+| `DC98:7284` | `0x63C04` | Organizer CALENDAR foreground loop. Draws two month panels, handles previous/next month, `YEAR`, and `DISPLAY FORM`, and exits back to the organizer top menu. |
+| `DC98:73DB` | `0x63D5B` | Organizer SCHEDULER record/alarm cache loader. Reads each scheduled record referenced by the ODB index and builds the 200-entry scheduler alarm table at `82C8`. |
+| `DC98:74C2` | `0x63E42` | Organizer SCHEDULER record compactor/writeback helper. Moves live payload records down and truncates the ODB file. |
+| `DC98:75CD` | `0x63F4D` | Organizer SCHEDULER right-side menu helper. Draws the shared panel/rule script and a caller-selected menu stream. |
+| `DC98:75FE` | `0x63F7E` | Organizer SCHEDULER date lower-bound helper. Finds the first cached schedule date greater than or equal to the requested date. |
+| `DC98:7634` | `0x63FB4` | Organizer SCHEDULER weekly-screen frame renderer. Clears the screen and draws the `WEEKLY` menu/header frame. |
+| `DC98:7D9B` | `0x6471B` | Organizer SCHEDULER indexed record loader. Reads one serialized record and NUL-terminates its note text in the edit buffer. |
+| `DC98:7DE7` | `0x64767` | Organizer SCHEDULER content-record renderer. Draws begin/end time, alarm state, and note text. |
+| `DC98:831A` | `0x64C9A` | Organizer SCHEDULER sorted insert-position finder by date and begin time. |
+| `DC98:838B` | `0x64D0B` | Organizer SCHEDULER record serializer/inserter. Appends a record, shifts index/cache entries, and updates alarm scan metadata. |
+| `DC98:8675` | `0x64FF5` | Organizer SCHEDULER six-field record editor for begin/end time and note text. |
+| `DC98:8B86` | `0x65506` | Organizer SCHEDULER edit-current handler. Edits the selected record, deletes the old copy, reinserts sorted, and rewrites the index. |
+| `DC98:8BDB` | `0x6555B` | Organizer SCHEDULER new-entry handler. Seeds a blank record for the selected date, edits it, inserts it sorted, and rewrites the index. |
+| `DC98:8C59` | `0x655D9` | Organizer SCHEDULER delete handler. Shows the delete confirmation prompt and removes the selected record. |
+| `DC98:8CCC` | `0x6564C` | Organizer SCHEDULER alarm toggle. Updates the record alarm byte and the `82C8` alarm scan entry. |
+| `DC98:8D65` | `0x656E5` | Organizer SCHEDULER weekly-row highlight helper. Builds a generated `FF 44` rectangle over the selected day row. |
+| `DC98:8DEB` | `0x6576B` | Organizer SCHEDULER date-label renderer. Formats the selected date label using the shared month table. |
+| `DC98:9087` | `0x65A07` | Organizer SCHEDULER `DATE` prompt. Edits month/day/year fields and validates them against the 1900..2099 date range. |
+| `DC98:9220` | `0x65BA0` | Organizer SCHEDULER `CONTENT` loop. Displays one day's records and dispatches edit, new, delete, alarm, date, and record navigation commands. |
+| `DC98:94D7` | `0x65E57` | Organizer SCHEDULER status/free-space renderer. Displays record count and available storage indicators. |
+| `DC98:955C` | `0x65EDC` | Organizer SCHEDULER foreground `WEEKLY` loop. Draws seven day rows, dispatches date navigation and the `CONTENT` subview, and exits back to the organizer top menu. |
+| `DC98:98E7` | `0x66267` | Organizer SCHEDULER alarm scan table clear helper. Clears `82C8` before records are reloaded. |
+| `DC98:990D` | `0x6628D` | Organizer SCHEDULER entry wrapper. Displays `*** WAIT ***`, builds `<drive>:SCHEDULE.ODB`, opens or creates an `FE ORGAN[SCHEDULE]` ODB, loads the shared index, refreshes scheduler alarms, calls `DC98:955C`, then compacts/writes back on exit. |
 | `DC98:9AC8` | `0x66448` | WORLD CLOCK large time renderer. Builds an inline script with `FF 42` 7x12 digit bitmaps from `F16C:000A` and 4x12 separators from `F16C:008C`. |
+| `DC98:9FD4` | `0x66954` | WORLD CLOCK signed time-delta applier. Treats `CX` as quarter-hour ticks, adjusts minutes/hours, and rolls the date through the date helpers when the clock crosses midnight. |
 | `DC98:A06C` | `0x669EC` | WORLD CLOCK current-time redraw wrapper. Updates the base time, applies the second-city offset, and calls `DC98:9AC8` for both displayed clocks. |
 | `DC98:A0CC` | `0x66A4C` | Organizer WORLD CLOCK map redraw helper. Emits the static map resource and overlays the two city markers from city-table coordinates. |
+| `DC98:A2CF` | `0x66C4F` | WORLD CLOCK set-city picker. Displays six city rows, supports order mode, letter jumps, daylight-time toggles, and recomputes the home/second-city time delta. |
 | `DC98:AAD5` | `0x67455` | WORLD CLOCK -> SET TIME/DATE handler. Draws the edit screen, reads date/time through `DC98:0D2A`/`0D4E`, edits fields, then writes accepted values through `DC98:0D72`/`0D8F`. |
 | `DC98:AD1B` | `0x6769B` | WORLD CLOCK -> DISPLAY FORM handler. Edits `[6808]` between 24-hour and 12-hour display modes. |
 | `DC98:B457` | `0x67DD7` | WORLD CLOCK -> DAILY ALARM handler. Edits four daily-alarm rows stored at `89F2`, each with a time word plus label text. |
 | `DC98:B67C` | `0x67FFC` | Organizer WORLD CLOCK main screen. Draws the city labels, map/header/menu resources, blinks the selected city marker, and dispatches the `H`/`2`/`S`/`F`/`A` subcommands. |
-| `DC98:D3BB` | `0x69D3B` | Next-alarm selector called by the retained power-transition path. Scans scheduler alarm entries and WORLD CLOCK daily alarms, then writes the selected date/time into `6D41..6D4C` for the RP5C01 alarm programmer. |
-| `DC98:CF12` | `0x69892` | Organizer ADDRESS BOOK handler. Confirmed to enter normally in MAME after the built-in store banking fix. |
+| `DC98:B9F2` | `0x68372` | Organizer ADDRESS BOOK one-byte record-cache loader. Reads one byte from each `ADDRESS.ODB` record into the secondary cache at `[82B2]`. |
+| `DC98:BA42` | `0x683C2` | Shared Organizer ODB validator. Checks a 16-byte app header, reads the 200-entry dword offset table into `[82B0]`, and counts live entries into `[82AE]`. |
+| `DC98:BB4F` | `0x684CF` | Shared Organizer ODB creator. Writes a caller-provided 16-byte header and a zeroed 200-entry offset table, then clears `[82AE]`. |
+| `DC98:BC81` | `0x68501` | Organizer ADDRESS BOOK record compactor/writeback helper. Near-copy of the scheduler compactor with a larger record buffer. |
+| `DC98:BD84` | `0x68704` | Organizer ADDRESS BOOK index-row renderer. Clears one six-row list line and draws the record `NAME` plus `TEL` summary columns. |
+| `DC98:BEAF` | `0x6882F` | Organizer ADDRESS BOOK content-view field renderer. Draws `NAME`, `SALUTATION`, `TEL`, `FAX`, `ADRS`, and `MEMO` from a six-pointer field table. |
+| `DC98:BF47` | `0x688C7` | Organizer ADDRESS BOOK first-field extractor. Reads a record and copies its `NAME` field up to tab or line feed. |
+| `DC98:BFB1` | `0x68931` | Organizer ADDRESS BOOK full record parser. Splits `NAME<TAB>SALUTATION<TAB>TEL<TAB>FAX<TAB>ADRS<TAB>MEMO<LF>` into six bounded field buffers. |
+| `DC98:C0AC` | `0x68A2C` | Organizer ADDRESS BOOK sorted insert/serializer. Shifts index/cache entries, appends a tab-separated record, and updates available-storage state. |
+| `DC98:C1B4` | `0x68B34` | Organizer ADDRESS BOOK delete helper. Frees a line-feed-terminated record, shifts later index/cache entries down, and clears the final slot. |
+| `DC98:C334` | `0x68CB4` | Organizer ADDRESS BOOK sorted-position finder. Uses the `F1B4:0008` collation map, the first-byte cache, and full `NAME` extraction for ordered insert/key jump. |
+| `DC98:C408` | `0x68D88` | Organizer ADDRESS BOOK whole-record search engine. Maps search and record bytes through `F1B4:0008` and scans serialized records until line feed. |
+| `DC98:C4E3` | `0x68E63` | Organizer ADDRESS BOOK SEARCH prompt handler. Edits the search text at `82B4`, then invokes `DC98:C408`. |
+| `DC98:C587` | `0x68F07` | Organizer ADDRESS BOOK six-field editor. Uses the descriptor table at `F1AF:0008`, supports field up/down, and rejects blank names. |
+| `DC98:C86A` | `0x691EA` | Organizer ADDRESS BOOK edit-current-entry handler. Loads the selected record, edits fields, deletes the old record, reinserts at sorted position, and rewrites the ODB index. |
+| `DC98:C8D0` | `0x69250` | Organizer ADDRESS BOOK new-entry handler. Clears six fields, edits them, inserts the new record at sorted position, and rewrites the ODB index. |
+| `DC98:C989` | `0x69309` | Organizer ADDRESS BOOK delete-selected handler. Shows the DELETE confirmation prompt and removes the selected record on `Y`/`y`. |
+| `DC98:CB04` | `0x69484` | Organizer ADDRESS BOOK foreground UI loop. Manages INDEX/CONTENT views, status counters, search-next, edit/new/delete, and up/down navigation. |
+| `DC98:CF12` | `0x69892` | Organizer ADDRESS BOOK entry wrapper. Builds `<drive>:ADDRESS.ODB`, validates or creates the `FE ORGAN[ADDRESS ]` ODB, loads the one-byte name cache, calls `DC98:CB04`, and compacts/writes back on exit. |
+| `DC98:D3BB` | `0x69D3B` | Organizer next-alarm selector called by retained power and world-clock/scheduler refresh paths. Scans scheduler alarms and WORLD CLOCK daily alarms, then writes the selected date/time into `6D41..6D4C` for the RP5C01 alarm programmer. |
+| `DC98:D678` | `0x69FF8` | Organizer selected-alarm time formatter. Emits `HH:MM` or 12-hour `am`/`pm` text according to `[6808]`. |
+| `DC98:D751` | `0x6A0D1` | Organizer SCHEDULE ALARM display helper for the selected scheduler alarm source. |
+| `DC98:DA58` | `0x6A3D8` | Organizer DAILY ALARM display helper for the selected WORLD CLOCK daily-alarm source. |
+| `DC98:DB5E` | `0x6A4DE` | Organizer selected-alarm wake-display loop. Shows scheduler/daily alarm UI, polls for cancel/timeout, stops the alarm sound path, and refreshes the next alarm. |
 | `DC98:E946` | `0x6B2C6` | File open wrapper used by the ROM-card loader before reading `EROMCARD.X`. |
 | `DC98:EE08` | `0x6B788` | File read wrapper around DOS-like `int 21h AH=3F`; ROM-card loader reads into `0xA4F0` through this path. |
 | `DC98:EE1B` | `0x6B79B` | File write wrapper around DOS-like `int 21h AH=40`. |

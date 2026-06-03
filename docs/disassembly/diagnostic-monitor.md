@@ -188,8 +188,8 @@ Recognized command letters:
 | `Zxxxx:yyyy` | command byte `Z` | Seed the watched CS:IP with `6EC0=0`, and toggle trap flag. |
 | `T` | inline path | Write `[6D94] | 0x80` to port `0x30`; diagnostic help labels this `Card ATTR`. |
 | `N` | inline path | Write `[6D94] & 0x7F` to port `0x30`; diagnostic help labels this `COM`. |
-| `Q` | service path | Calls banked linguistic service ID `0x58`, labelled `Clear spell` by help text, then falls through to the `P`-style dump base. |
-| `R` | service path | Calls banked linguistic service ID `0x59`, labelled `Reset spell` by help text, writes setup values to ports `0x13`/`0x14`, then falls through to the `P`-style dump base. |
+| `Q` | service path | Calls banked linguistic service ID `0x58`, labelled `Clear spell` by help text, then falls through to the `P`-style dump base. See [`diagnostic-spell-services.md`](diagnostic-spell-services.md). |
+| `R` | service path | Calls banked linguistic service ID `0x59`, labelled `Reset spell` by help text, writes setup values to ports `0x13`/`0x14`, then falls through to the `P`-style dump base. See [`diagnostic-spell-services.md`](diagnostic-spell-services.md). |
 | `P` | command byte `P` | Selects a built-in dump base of `0000:3000`, then falls into the dump engine. |
 
 The command scanner accepts hex digits by folding letters to uppercase and
@@ -430,6 +430,4 @@ C000:16B8  print CR/LF.
 
 ## Next Splits
 
-| Root | Split | Reason |
-| --- | --- | --- |
-| `C000:18A1` service IDs `0x58`, `0x59` | spell-engine.md | Diagnostic `Q/R` clear/reset spelling service hooks. |
+No remaining diagnostic-monitor splits are queued outside application handlers.
