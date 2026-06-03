@@ -199,8 +199,8 @@ The following table targets are app/tool boundaries:
 | `0x1B` | `C688:8D23` | `0x4F5A3` | `SEARCH` prompt variant; see [`document-picker-ui.md`](document-picker-ui.md#prompt-entry-variants). |
 | `0x1C` | `C688:8D0F` | `0x4F58F` | `REPLACE SEARCH` prompt variant; see [`document-picker-ui.md`](document-picker-ui.md#prompt-entry-variants). |
 | `0xF6` | `C688:ED1F` | `0x5559F` | Spelling/grammar front end; see [`../spell-engine.md`](../spell-engine.md). |
-| `0xEA` | `C688:ED15` | `0x55595` | Calls `C688:ACBC`, then returns to `C688:EC9F`; printer/merge-side boundary. |
-| `0xD2` | `C688:AD5C` | `0x515DC` | Address-book print/merge reader boundary. |
+| `0xEA` | `C688:ED15` | `0x55595` | Calls `C688:ACBC`, then returns to `C688:EC9F`; see [`print-merge-handlers.md`](print-merge-handlers.md#app-loop-printer-entry). |
+| `0xD2` | `C688:AD5C` | `0x515DC` | Address-book print/merge reader; see [`print-merge-handlers.md`](print-merge-handlers.md#address-database-name-list). |
 | `0xF7` | `C688:D8AF` | `0x5412F` | Large document/linguistic flow with its own nested dispatch. |
 | `0xF5` | `C688:ED1A` | `0x5559A` | Forced diagnostic-monitor entry through `C688:01B0`; see [`early-app-helper.md`](early-app-helper.md). |
 | `0xF8` | `C688:E274` | `0x54AF4` | Thesaurus front end; see [`../spell-engine.md`](../spell-engine.md#editor-thesaurus-front-end). |
@@ -273,4 +273,3 @@ C688:EE3A  E8 47 00          call C688:EE84
 | Root | Split | Reason |
 | --- | --- | --- |
 | `C688:ED1F`, `C688:E274`, `C688:D8AF` | wp-linguistic-tools.md | Spelling/grammar, thesaurus, and related document/linguistic flows. |
-| `C688:AD5C`, `C688:ED15` | print-merge-handlers.md | Printer/merge/address-book application-side handlers. |

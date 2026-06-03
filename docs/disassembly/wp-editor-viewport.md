@@ -274,11 +274,19 @@ C688:4778  E9 00 D3          jmp  C688:1A7B
 
 ## Current Bottom
 
-This pass bottoms at the lower helpers called from the viewport routine:
+This pass bottoms at the lower helpers called from the viewport routine. The
+first redraw/input helper layer is now expanded in
+[`wp-editor-redraw.md`](wp-editor-redraw.md).
 
 | Root | Current boundary |
 | --- | --- |
 | `C688:18AC` | Repeated span/delta emitter called with `CL=0`, `4`, or `0x14`; expanded in [`wp-editor-redraw.md`](wp-editor-redraw.md). |
-| `C688:1A85`, `C688:1B12`, `C688:1A7B` | Existing input/menu helper area; some paths are already partially visible in [`menu-entry.md`](menu-entry.md). |
-| `C688:1A51`, `C688:1B41`, `C688:1B6F`, `C688:1D75` | Lower redraw-buffer helpers around `7F28` and `[79E2]`. |
-| `C688:6B8C`, `C688:6BAA` | Late redraw/status helpers reached after boundary-flag updates. |
+| `C688:1A51`, `C688:1A85`, `C688:1B12`, `C688:1B41`, `C688:1B6F`, `C688:1D75`, `C688:6B8C`, `C688:6BAA` | Lower redraw-buffer helpers around `7F28`, `[79E2]`, and renderer handoff; expanded in [`wp-editor-redraw.md`](wp-editor-redraw.md). |
+| `C688:1E27`, `C688:1F45`, `C688:1F53`, `C688:1F7E` | Redraw byte dispatcher, state-save tail, and first compact marker families; expanded in [`wp-editor-redraw.md`](wp-editor-redraw.md). |
+| `C688:21F4`, `C688:2254`, `C688:22F0`, `C688:2310`, `C688:231C`, `C688:24C9`, `C688:24CE`, `C688:24F0` | Classifier-specific and final-render exits; expanded in [`wp-editor-redraw.md`](wp-editor-redraw.md). |
+| `C688:1A17`, `C688:1A24`, `C688:1BA9`, `C688:1C39`, `C688:1C5F`, `C688:1CA7`, `C688:1CD7`, `C688:1D4D` | Local redraw span, bound, and final-output utility helpers; expanded in [`wp-editor-redraw.md`](wp-editor-redraw.md). |
+| `C688:2574`, `C688:626D`, `C688:A355` | Classifier table lookup, marker-mask merge, and synthetic-stream gate; expanded in [`wp-editor-redraw.md`](wp-editor-redraw.md). |
+| `C688:A378`, `C688:A37F`, `C688:A494` | High synthetic-stream builders around scratch stream `0x8029`; expanded in [`wp-editor-redraw.md`](wp-editor-redraw.md). |
+| `C688:0EF2`, `C688:0F49` | Decimal formatter and synthetic-stream handoff wrapper; expanded in [`wp-editor-redraw.md`](wp-editor-redraw.md). |
+| `C688:1286`, `C688:4239`, `C688:66FC` | No-op marker hook, width scaler, and state-record width helper; expanded in [`wp-editor-redraw.md`](wp-editor-redraw.md). |
+| `C688:3C2B`, `C688:3C68` | Renderer descriptor setup and flush helpers; expanded in [`wp-editor-redraw.md`](wp-editor-redraw.md). |

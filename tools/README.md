@@ -334,12 +334,13 @@ Options:
 ### `disasm`
 
 Disassemble an arbitrary ROM window from a mixed address without manual address
-translation. This command sets the `ndisasm` origin to the chosen physical
-address so branch/call targets come out as the expected segment-friendly
-addresses for your notes.
+translation. By default, segment inputs set the `ndisasm` origin to the segment
+offset so local branch/call targets stay in the same notation as the docs;
+`file:` and `phys:` inputs keep a physical origin unless a segment is supplied.
 
 ```sh
 tools/rom2.py disasm c688:0053 --count 0x300
+tools/rom2.py disasm 0053 --segment c688 --count 0x300
 tools/rom2.py disasm file:0x6bbb0 --count 0x180
 tools/rom2.py disasm phys:0x8e520
 printf 'C688:0053\\nC688:00A0\\n' | tools/rom2.py disasm --stdin --count 0x200
@@ -349,7 +350,9 @@ Options:
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--count` | `0x400` | Bytes to feed to `ndisasm` from the start address. |
+| `--count` | `0x400` | Bytes to feed to `ndisasm` from the start address; decimal, `0x`, or `$` hex are accepted. |
+| `--segment` | unset | Parse bare values as offsets in this segment; also supplies the segment for offset-origin output. |
+| `--origin` | `auto` | `auto` uses segment offsets for segment inputs and physical addresses otherwise; use `phys` or `offset` to force one mode. |
 | `--stdin` | off | Read additional start addresses from stdin. |
 | `--count-output` | off | Print an extra blank line after each decoded block. |
 

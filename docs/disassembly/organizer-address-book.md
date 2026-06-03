@@ -277,5 +277,6 @@ record layer. The other Organizer top-menu roots are covered by
 [`organizer-calendar.md`](organizer-calendar.md),
 [`organizer-scheduler.md`](organizer-scheduler.md),
 [`organizer-world-clock.md`](organizer-world-clock.md), and
-[`organizer-calculator.md`](organizer-calculator.md). The mail-merge and print
-paths that also read `ADDRESS.ODB` remain separate `C688` application handlers.
+[`organizer-calculator.md`](organizer-calculator.md). The print/merge paths
+that also read `ADDRESS.ODB` are covered in
+[`print-merge-handlers.md`](print-merge-handlers.md).

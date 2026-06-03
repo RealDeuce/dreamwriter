@@ -302,6 +302,7 @@ tools/render_rom_bitmap_png.py 0x6eca2 40 40 docs/disassembly/images/wp-others-r
 
 ## Next Splits
 
-| Root | Split | Reason |
-| --- | --- | --- |
-| `C688:EB5E` | wp-print-out.md | PRINTER -> PRINT OUT application handler; wrapper enters the `C688:AAA6` print flow. |
+`C688:EB5E` is expanded in [`wp-print-out.md`](wp-print-out.md). Remaining
+printer-side roots are tracked from
+[`app-menu-event-loop.md`](app-menu-event-loop.md#next-splits) and the
+application printer formatter queue in [`README.md`](README.md#root-expansion-queue).

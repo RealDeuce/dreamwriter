@@ -231,4 +231,4 @@ C000:077A  EB E8             jmp  C000:0764
 | `C000:4BED`, `C000:4B8D` | `serial-services.md` | Serial receive queue insert/drain and software flow-control recovery. |
 | `C000:0D71`, `C000:0C58`, `C000:0CBC` | `serial-services.md` | Serial transmit and USART setup paths. |
 | `C000:08EC`, `C000:0920` | `printer-device.md` | Centronics starter and direct byte writer. |
-| `C688:C82A` and printer formatter roots | `printer-output.md` | Application-side formatted printer stream that chooses `INT 21h AH=05` or `AH=04`. |
+| `C688:C82A` and printer formatter roots | [`printer-output.md`](printer-output.md) | Application-side formatted printer stream that chooses `INT 21h AH=05` or `AH=04`. |

@@ -89,5 +89,5 @@ C000:094B  C3                ret
 
 | Root | Split | Reason |
 | --- | --- | --- |
-| Application printer formatters | `printer-output.md` | User-facing print formatting before `INT 21h AH=05`. |
+| Application printer formatters | [`printer-output.md`](printer-output.md) | Application byte sink, pause/cancel loop, and formatter bridge before `INT 21h AH=05`. |
 | `C000:49F8` | [`idle-power.md`](idle-power.md) | Shared cancel/idle path used by blocked printer output. |

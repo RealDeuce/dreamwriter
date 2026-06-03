@@ -39,6 +39,7 @@ ADDRESS_TOKEN_RE = re.compile(
     r"\b(?:file:[0-9A-Fa-fx$]+|phys:[0-9A-Fa-fx$]+|[0-9A-Fa-f]{3,4}:[0-9A-Fa-f]{4})\b",
     re.IGNORECASE,
 )
+SEG_OFF_LABEL_RE = re.compile(r"^([0-9A-Fa-f]{3,4}):([0-9A-Fa-f]{4})$")
 
 
 def parse_int(value: str) -> int:
@@ -172,6 +173,13 @@ def parse_addr_expr(value: str, default_seg: int | None = None) -> tuple[str, in
     if raw < ROM_SIZE:
         return f"file:0x{raw:X}", file_to_phys(raw)
     return f"phys:0x{raw:X}", raw
+
+
+def parse_seg_off_label(label: str) -> tuple[int, int] | None:
+    match = SEG_OFF_LABEL_RE.match(label)
+    if not match:
+        return None
+    return int(match.group(1), 16), int(match.group(2), 16)
 
 
 def format_addr_row(
@@ -636,12 +644,35 @@ def cmd_disasm(args: argparse.Namespace) -> int:
         print("count must be greater than zero", file=sys.stderr)
         return 1
 
+    default_seg = parse_addr_part(args.segment) if args.segment else None
+
     for start_expr in starts:
         try:
-            label, phys = parse_addr_expr(start_expr)
+            label, phys = parse_addr_expr(start_expr, default_seg)
         except ValueError as exc:
             print(f"{start_expr}: {exc}", file=sys.stderr)
             return 1
+
+        preferred = parse_seg_off_label(label)
+        if preferred is None and default_seg is not None:
+            try:
+                preferred = (default_seg, phys_to_seg_off(phys, default_seg))
+            except ValueError as exc:
+                print(f"{start_expr}: {exc}", file=sys.stderr)
+                return 1
+
+        if args.origin == "phys" or (args.origin == "auto" and preferred is None):
+            origin = phys
+            origin_label = "phys"
+        else:
+            if preferred is None:
+                print(
+                    f"{start_expr}: --origin offset requires segment:offset input or --segment",
+                    file=sys.stderr,
+                )
+                return 1
+            origin = preferred[1]
+            origin_label = f"{preferred[0]:04X} offset"
 
         start = phys_to_file(phys)
         end = min(start + args.count, len(data))
@@ -649,7 +680,7 @@ def cmd_disasm(args: argparse.Namespace) -> int:
             print(f"{label}: invalid range in ROM image", file=sys.stderr)
             return 1
 
-        command = ["ndisasm", "-b", "16", "-o", f"0x{phys:05X}", "-"]
+        command = ["ndisasm", "-b", "16", "-o", f"0x{origin:05X}", "-"]
         try:
             result = subprocess.run(
                 command,
@@ -664,7 +695,13 @@ def cmd_disasm(args: argparse.Namespace) -> int:
             print(exc.stderr.decode("utf-8", errors="replace"), file=sys.stderr)
             return 1
 
-        print(f"; {label}  file 0x{start:05X} phys 0x{phys:05X} len=0x{end-start:X}")
+        preferred_text = ""
+        if preferred is not None and label.lower().startswith(("file:", "phys:")):
+            preferred_text = f"  {preferred[0]:04X}:{preferred[1]:04X}"
+        print(
+            f"; {label}{preferred_text}  file 0x{start:05X} phys 0x{phys:05X} "
+            f"origin={origin_label} 0x{origin:05X} len=0x{end-start:X}"
+        )
         print(result.stdout.decode("utf-8", errors="replace"), end="")
         if args.count_output:
             print()
@@ -1246,7 +1283,23 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="+",
         help="start address as file:, phys:, segment:off, or a raw value",
     )
-    disasm.add_argument("--count", type=int, default=0x400, help="number of bytes to decode")
+    disasm.add_argument("--count", type=parse_int, default=0x400, help="number of bytes to decode")
+    disasm.add_argument(
+        "--segment",
+        help=(
+            "parse bare values as offsets in this segment; also supplies the "
+            "segment for --origin offset"
+        ),
+    )
+    disasm.add_argument(
+        "--origin",
+        choices=("auto", "phys", "offset"),
+        default="auto",
+        help=(
+            "address origin passed to ndisasm; auto uses segment offsets for "
+            "segment inputs and physical addresses otherwise"
+        ),
+    )
     disasm.add_argument("--stdin", action="store_true", help="read extra start addresses from stdin")
     disasm.add_argument(
         "--count-output",

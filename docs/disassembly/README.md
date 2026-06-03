@@ -68,6 +68,7 @@ Generated reference indexes:
 | [`device-irq.md`](device-irq.md) | Installed `FCh` RS-232 receive ISR, `FDh` serial transmit-ready acknowledge, and `FEh` Centronics ACK-driven byte feeder. |
 | [`serial-services.md`](serial-services.md) | USART setup, `INT 21h` serial output, receive queue insert/drain, and XON/XOFF state. |
 | [`printer-device.md`](printer-device.md) | Centronics stream starter and direct byte writer used by `INT 21h AH=05` and IRQ `FEh`. |
+| [`printer-output.md`](printer-output.md) | Application printer setup/vector stubs, byte sink, pause/cancel loop, counted stream emitters, and formatter bridge boundary. |
 | [`idle-power.md`](idle-power.md) | Foreground idle loops, retained resume target setup, and rendered 48x40 battery-warning icon assets. |
 | [`rtc-alarm-power.md`](rtc-alarm-power.md) | RTC alarm wake discriminator, framebuffer save/restore, fallback re-arm, and warm-start alarm wrapper. |
 | [`rtc-programming.md`](rtc-programming.md) | RTC alarm register programming, minute-plus-one fallback, current-time snapshot, and alarm compare helpers. |
@@ -92,9 +93,11 @@ Generated reference indexes:
 | [`wp-editor-viewport.md`](wp-editor-viewport.md) | WP editor viewport/window-state clamp, dirty redraw handoff, and low-RAM state fields behind `C688:44DB`. |
 | [`wp-editor-redraw.md`](wp-editor-redraw.md) | WP editor redraw span/delta state emitter at `C688:18AC`, saved-state restore path, and small scratch-record helpers. |
 | [`wp-submenus.md`](wp-submenus.md) | Word-processor FILE, PRINTER, COMMUNICATE, and OTHERS submenu wrappers, icon tables, and rendered PNG assets. |
+| [`wp-print-out.md`](wp-print-out.md) | WP PRINTER -> PRINT OUT wrapper, print-range front end, start/merge prompts, and output-loop boundary. |
 | [`wp-clear-text.md`](wp-clear-text.md) | WP top-menu CLEAR TEXT confirmation loop, editor-clear redraw path, and decoded prompt/confirmation resources. |
 | [`wp-file-handlers.md`](wp-file-handlers.md) | WP FILE submenu handlers, shared picker/name-entry UI layer, decoded prompt resources, and COPY direction/list boundary. |
 | [`wp-communicate-handlers.md`](wp-communicate-handlers.md) | COMMUNICATE send/receive/terminal handlers, decoded prompt resources, and classic 128-byte checksum XMODEM paths. |
+| [`print-merge-handlers.md`](print-merge-handlers.md) | WP print/merge app-loop roots, ADDRESS.ODB name-list reader, selected-record substitution, and merge resources. |
 | [`document-picker-ui.md`](document-picker-ui.md) | Shared application-loop document/list re-entry roots, `LIST OF DOC.` template continuation, and SEARCH/REPLACE prompt variants. |
 | [`setup-screens.md`](setup-screens.md) | Word-processor setup/settings editors for RS-232, printer, SYSTEM, and PREFERENCES, including backing state and decoded option strings. |
 | [`wp-others-handlers.md`](wp-others-handlers.md) | OTHERS -> T I M E entry/Typin' Time dispatcher boundary and complete ROM CARD `EROMCARD.X` loader, including failure strings and payload header. |
@@ -113,9 +116,4 @@ The boot slice has already exposed these next roots:
 
 | Root | Source | Next slice |
 | --- | --- | --- |
-| Application printer formatters | Reached from `printer-device.md`. | User-facing print formatting before `INT 21h AH=05`. |
-| `C688:EB5E` | Reached from `wp-submenus.md`. | WP PRINTER -> PRINT OUT application handler. |
-| `C688:1A85`, `C688:1B12`, `C688:1B41`, `C688:1B6F`, `C688:1D75`, `C688:6B8C`, `C688:6BAA` | Reached from `wp-editor-viewport.md` and `wp-editor-redraw.md`. | Lower editor redraw/input helpers behind the viewport clamp and span emitter. |
-| `C688:1DFD`, `C688:1FD3`, `C688:208D`, `C688:39B5`, `C688:39BE`, `C688:61DB` | Reached from `wp-editor-redraw.md`. | Deeper redraw/rendering exits and utility calls. |
 | `C688:ED1F`, `C688:E274`, `C688:D8AF` | Reached from `app-menu-event-loop.md`. | Word-processor linguistic and document flows. |
-| `C688:AD5C`, `C688:ED15` | Reached from `app-menu-event-loop.md`. | Print/merge/address app-loop handlers. |
