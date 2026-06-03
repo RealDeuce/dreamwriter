@@ -347,7 +347,7 @@ def emit_rows(
 
         defined_symbols = used_labels | set(local_labels.values())
 
-        if off in local_labels and off not in emitted_label_offsets:
+        if off in local_labels and local_labels[off] not in emitted_labels and off not in emitted_label_offsets:
             transformed.append(f"{local_labels[off]}:")
             emitted_label_offsets.add(off)
             used_labels.add(local_labels[off])
