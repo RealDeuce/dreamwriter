@@ -267,6 +267,9 @@ def rewrite_instruction(
         return ins
     if not is_control_flow_op(parts[0]):
         return ins
+    rewrite_memory_target = "[" in body
+    if rewrite_memory_target:
+        return ins
 
     def repl(match: re.Match[str]) -> str:
         target_off = int(match.group("value"), 16)
