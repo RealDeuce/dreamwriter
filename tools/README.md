@@ -175,6 +175,27 @@ Options:
 | `--stride` | `row-bytes * height` | Bytes between bitmap blocks. |
 | `--invert` | off | Render zero bits as set pixels. |
 
+### `render_rom_bitmap_png.py`
+
+Writes a fixed-size 1bpp ROM bitmap to PNG without external dependencies. Bits
+are decoded MSB-first, matching the text `bitmap` helper above. Set bits render
+as black pixels by default.
+
+```sh
+tools/render_rom_bitmap_png.py 0x53a2f 36 34 /tmp/startup-button.png --row-bytes 5 --scale 4
+tools/render_rom_bitmap_png.py 0x6e59a 40 40 /tmp/wp-edit-text.png --row-bytes 5 --scale 4
+```
+
+Options:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--rom` | `t4_ir_2.1.ic303` | ROM image to read. |
+| `--row-bytes` | `ceil(width / 8)` | Bytes per source bitmap row. |
+| `--stride` | effective `row-bytes` | Bytes between source rows. |
+| `--scale` | `1` | Nearest-neighbor output scale. |
+| `--invert` | off | Treat zero bits as black pixels. |
+
 ### `bitmap-records`
 
 Scans for plausible `FF 42` source-backed bitmap records. The record format

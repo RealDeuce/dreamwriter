@@ -61,16 +61,25 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:0ED6` | `0x40ED6` | Interrupt/vector setup. Fills most IVT entries with `C000:118B`, installs IRQ stubs, installs `INT 21h` as `C000:0006`, installs `INT 1` as `C000:157D`, and copies the `C000:0F94` far-call table to RAM `0x0200`. |
 | `C000:0F94` | `0x40F94` | Startup far-call table copied to RAM `0x0200`. This is the underlying vector table used by the 325 ROM's `F200:xxxx` trampoline page; the T400 keeps the low-RAM table but does not keep the `F200` trampoline page itself. |
 | `C000:106F` | `0x4106F` | Keyboard row-scan reset/start helper. Enables the `FB` row-scan source through port `0x60`, dummy-reads `0xB0`, pulses port `0x61` from `0xFE` to `0xFF`, and clears row index `[6D29]`. |
+| `C000:123C` | `0x4123C` | Forced diagnostic-monitor entry. Skips the `SPACE+F+J` chord check and enters the `C000:1247` diagnostic banner/parser loop directly. |
 | `C000:1240` | `0x41240` | Diagnostic entry routine. Calls chord compare, then diagnostic UI/loop. |
 | `C000:1252` | `0x41252` | Compares RAM `6D06..6D0F` with expected `SPACE+F+J` matrix bytes. |
 | `C000:1272` | `0x41272` | Diagnostic draw/init routine. |
 | `C000:128F` | `0x4128F` | Diagnostic command loop/parser. |
 | `C000:1534` | `0x41534` | Diagnostic dump byte reader. For `I`/`L` commands, reads the current port through `in al,dx`; otherwise reads memory through the selected segment/address. |
 | `C000:170E` | `0x4170E` | Far-call service wrapper used by `C688:9364`; service `AH=06` reaches the resource/text renderer. |
-| `C000:1712` | `0x41712` | Far-call service wrapper used by `C688:936A`; service `AH=01` reaches the `D59C` resource table reader. |
+| `C000:1712` | `0x41712` | Far-call service wrapper used by `C688:936A`; dispatches the second service table, including `AH=01` for the `D59C` resource table reader and `AH=07` for terminal mode. |
 | `C000:18EE` | `0x418EE` | Resource table reader for `D59C` / file base `0x559C0`; indexes by `DL` resource ID. |
 | `C000:18A1` | `0x418A1` | Banked spell/grammar/linguistic service helper. Temporarily maps `3000:0000` to ROM file `0x30000` and calls it. |
+| `C000:1DD9` | `0x41DD9` | Transfer-engine script command dispatcher reached by `C000:17ED`; command table includes file, stream, and XMODEM helpers. |
 | `C000:1F17` | `0x41F17` | Private format helper. Selects target drive `8/9/10`, sets `BL=A5`, and calls `INT 21h AH=FF`. |
+| `C000:1F8D` | `0x41F8D` | Transfer file-read chunk helper. Opens the selected file and returns 128-byte chunks in buffer `6C08`. |
+| `C000:2034` | `0x42034` | Transfer-engine buffered file writer. Creates the selected output file and writes 128-byte chunks through `INT 21h AH=40`. |
+| `C000:22F3` | `0x422F3` | Non-XMODEM serial stream receiver. Captures serial bytes through `C000:5117`, stops on Ctrl-Z/status, optionally decodes `0x08` control escapes, and writes 128-byte chunks. |
+| `C000:2422` | `0x42422` | Non-XMODEM serial stream sender. Reads 128-byte file chunks and emits bytes through `INT 21h AH=04`, with control/newline expansion. |
+| `C000:260D` | `0x4260D` | XMODEM sender. Waits for NAK, sends SOH packets with 128 data bytes plus one additive checksum byte, and finishes with EOT. |
+| `C000:2702` | `0x42702` | XMODEM receiver. Sends NAK, accepts 132-byte SOH packets, verifies the 8-bit checksum and block number, writes 128 data bytes, and ACKs/EOTs. |
+| `C000:2852` | `0x42852` | Far-call first-byte reader used by the COMMUNICATE ASCII-conversion prompt; opens the selected file, reads one byte into `6C08`, and returns it. |
 | `C000:2C4A` | `0x42C4A` | Private `INT 21h AH=FF` direct service. With `BL=A5`, formats built-in/card storage or jumps into the DreamLink-specific path. |
 | `3000:0000` | `0x30000` | Banked spell/grammar/linguistic service thunk. Switches to segment `3C00` and dispatches through `3000:4AA6`. |
 | `3000:4AA6` | `0x34AA6` | Banked service dispatcher using service IDs `0x00..0x59`. |
@@ -113,9 +122,11 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:675D` | `0x4675D` | `FF 44` positioned rectangle/fill handler. The simple form uses `+1 y`, `+3 x`, `+5 height`, `+7 width`, and `+D mode`; nonzero `+9/+B` dispatches to copy/shift-looking helpers. |
 | `C688:000B` | `0x4688B` | Main firmware far entry used after cold boot initialization. |
 | `C688:000F` | `0x4688F` | Warm-path application entry. Calls into `C688:7752`, bypassing full main startup and boot-update sequence. |
+| `C688:0013` | `0x46893` | COMMUNICATE serial-transfer preflight. If active target `[6806]` is DreamLink `0x0A`, resets it to built-in target `0x08`. |
 | `C688:0053` | `0x468D3` | Retained/warm RAM signature check; returns carry on mismatch. |
 | `C688:019D` | `0x46A1D` | Diagnostic display-script wrapper. Renders 15 bytes from `C688:017F` through `C000:16E7`. |
 | `C688:01AB` | `0x46A2B` | Diagnostic display-script wrapper variant. Renders 15 bytes from `C688:018E` through the same `C000:16E7` path. |
+| `C688:01B0` | `0x46A30` | App-loop forced diagnostic wrapper for event `0xF5`; far-calls `C000:123C` and returns to `C688:ED1D`. |
 | `C688:01E6` | `0x46A66` | ROM-card execution setup. Sets `ES=0x0A4F`, calls setup helpers, marks `[6D54]=1`, and returns `[7A54] * 0x80` as the loader's work-memory/file-size limit. |
 | `C688:020C` | `0x46A8C` | ROM-card execution cleanup. Sets `ES=0x0A4F`, calls cleanup/service helpers, and clears `[6D54]`. |
 | `C688:022B` | `0x46AAB` | ROM-card executable trampoline. Saves `CX/DX/SI/DI/BP`, calls the far entry pointer loaded at `[0xA4F4]`, and preserves the loaded program's returned `AX`. |
@@ -139,11 +150,33 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C688:77B4` | `0x4E034` | Copies first menu/graphic resource block from `C688:D133` / file `0x539B3`. |
 | `C688:77C1` | `0x4E041` | Copies a `C688` resource block to low RAM `0x7F28`, then calls `C688:6B8C`. |
 | `C688:7836` | `0x4E0B6` | Small WP status/template display record consumed through `C688:9D50`; code resumes at `C688:7841`. |
+| `C688:7841` | `0x4E0C1` | Shared FILE picker selection resolver. Returns the current directory-entry pointer in `BX`; callers inspect `[BX+04]` flag bits. |
+| `C688:788A` | `0x4E10A` | Shared FILE edit/list descriptor setup using filename buffer `778A`. |
+| `C688:788D` | `0x4E10D` | Shared FILE edit/list descriptor setup. Writes mode, buffer pointer, maximum length, and descriptor pointer fields at `7506..7510`. |
 | `C688:790E` | `0x4E18E` | WP FILE -> DELETE handler. Draws confirmation prompts and deletes the selected document through the DOS-like file API. |
 | `C688:7993` | `0x4E213` | WP FILE -> INITIALIZE handler. Draws the initialize confirmation flow and invokes the private format path. |
+| `C688:7A1B` | `0x4E29B` | WP FILE -> RENAME handler. Uses the shared picker/name-entry UI, validates the replacement filename, and commits through the file API. |
+| `C688:7B41` | `0x4E3C1` | WP FILE -> RECALL handler. Uses the shared picker, checks selected-file flags, and loads or inserts the selected document into editor state. |
+| `C688:7C1D` | `0x4E49D` | WP FILE -> STORE handler. Copies the current document name into the file buffer, prompts for filename/overwrite/secret state, and stores the document. |
+| `C688:7D28` | `0x4E5A8` | Shared FILE error/status prompt dispatcher. Maps result codes to message resources and waits for CAN/TAB. |
+| `C688:7DE1` | `0x4E661` | Shared FILE filename/default-label buffer seed. Initializes `778A[0]` and `778A[0x10]`. |
+| `C688:7E3E` | `0x4E6BE` | COMMUNICATE -> RECEIVE FILE handler. Prompts for output filename and enters the non-XMODEM stream receive path. |
+| `C688:7F5A` | `0x4E7DA` | COMMUNICATE -> SEND FILE handler. Uses the shared picker, optional ASCII-conversion prompt, and non-XMODEM stream send path. |
+| `C688:8005` | `0x4E885` | COMMUNICATE -> RECEIVE FILE XMODEM handler. Prompts for output filename, sets `[8294]=1`, and enters the XMODEM receiver. |
+| `C688:811D` | `0x4E99D` | COMMUNICATE -> SEND FILE XMODEM handler. Uses the shared picker, sets `[8294]=3`, and enters the XMODEM sender. |
+| `C688:81A1` | `0x4EA21` | Shared FILE directory/list setup helper. |
+| `C688:81A8` | `0x4EA28` | Shared FILE directory/list setup plus picker refresh, preserving `[75EF]`. |
+| `C688:81B7` | `0x4EA37` | Shared selected-file flag check. Calls `DC98:2887`, displays resource `0x8D`, and returns a zero/nonzero status. |
+| `C688:81C9` | `0x4EA49` | Shared selected-entry validator; resolves current selection and performs the flag-`0x04` check when needed. |
+| `C688:82A6` | `0x4EAA6` | Shared 8.3-style filename validator/blank-pad helper used by STORE and RENAME. |
+| `C688:82FF` | `0x4EAFF` | Shared filename-entry field dispatcher. Runs the one-field input loop with `CL=1` and returns `[794A]`. |
+| `C688:8263` | `0x4EAE3` | COMMUNICATE ASCII-conversion prompt helper. Reads the first selected-file byte and, when needed, asks `Convert to ASCII ?`. |
 | `C688:8312` | `0x4EB92` | First menu/input dispatcher reached after the startup menu resource is copied. |
+| `C688:8319` | `0x4EB99` | Shared app-loop first-menu/input re-entry target for event `0x0A`; see `docs/disassembly/document-picker-ui.md`. |
 | `C688:8A17` | `0x4F297` | Candidate RAM-window probe table walked by `C688:294B` while building the WP editor heap. |
-| `C688:8CFB` | `0x4F57B` | Document/list flow after the `LIST OF DOC.` template. Handles current selection state, inline key dispatch, and returns to the shared application event loop. |
+| `C688:8CFB` | `0x4F57B` | Shared document/list continuation after the `LIST OF DOC.` template. Handles current selection state, inline key dispatch, and returns to the shared application event loop. |
+| `C688:8D0F` | `0x4F58F` | Shared app-loop `REPLACE SEARCH` prompt root for event `0x1C`; draws resources `0x38` and `0x19`, edits the 16-byte search field, and dispatches local prompt actions. |
+| `C688:8D23` | `0x4F5A3` | Shared app-loop `SEARCH` prompt root for event `0x1B`; draws resources `0x38` and `0x37`, edits the 16-byte search field, and dispatches local prompt actions. |
 | `C688:9187` | `0x4FA07` | Shared document picker entry. Calls the storage-target setup path, invokes `DC98:52E5` with `[6806] | 0x40`, then copies the selected name into the caller buffer. |
 | `C688:92DF` | `0x4FB5F` | Inline key dispatch trampoline. Consumes caller-embedded key/target entries and rewrites the return address. |
 | `C688:9364` | `0x4FBE4` | Far-call wrapper for `C000:170E`. |
@@ -173,6 +206,18 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C688:C680` | `0x52F00` | Printer character table consumer and formatter front end. Uses the character-map/width tables at `C688:C0F4..C680`, then dispatches selected handlers through later printer text tables. |
 | `C688:CD82` | `0x53602` | Printer text formatting tail after the C688:CC61 handler vector table; contains small wrappers around the common printer byte/spacing helpers. |
 | `C688:CFF1` | `0x53871` | Printer/character output tail. Calls the spacing/position flush helper, emits `AL` through `C688:C82A`, then calls the backspace/spacing restore helper before returning. |
+| `C688:EB2E` | `0x553AE` | WP FILE -> RECALL far wrapper. Sets `ES=0A4F`, calls C688 internal target `7B41`, and returns `[794A]` in `AL`. |
+| `C688:EB46` | `0x553C6` | WP top menu -> CLEAR TEXT far wrapper. Sets `ES=0A4F`, calls C688 internal target `EC77`, and returns `[794A]` in `AL`. |
+| `C688:EB5E` | `0x553DE` | WP PRINTER -> PRINT OUT far wrapper. Sets `ES=0A4F`, calls `C688:AAA6`, and returns `[794A]` in `AL`. |
+| `C688:EB91` | `0x55411` | WP FILE -> INITIALIZE far wrapper. Sets `ES=0A4F`, calls C688 internal target `7993`, and returns `[794A]` in `AL`. |
+| `C688:EBA9` | `0x55429` | WP FILE -> DELETE far wrapper. Sets `ES=0A4F`, calls C688 internal target `790E`, and returns `[794A]` in `AL`. |
+| `C688:EBC1` | `0x55441` | WP FILE -> RENAME far wrapper. Sets `ES=0A4F`, calls C688 internal target `7A1B`, and returns `[794A]` in `AL`. |
+| `C688:EBD9` | `0x55459` | WP FILE -> STORE far wrapper. Sets `ES=0A4F`, calls C688 internal target `7C1D`, and returns `[794A]` in `AL`. |
+| `C688:EBF1` | `0x55471` | WP COMMUNICATE -> first RECEIVE FILE far wrapper. Sets `ES=0A4F`, calls C688 internal target `7E3E`, and returns `[794A]` in `AL`. |
+| `C688:EC09` | `0x55489` | WP COMMUNICATE -> second RECEIVE FILE far wrapper. Sets `ES=0A4F`, calls C688 internal targets `0013` and `8005`, and returns `[794A]` in `AL`. |
+| `C688:EC24` | `0x554A4` | WP COMMUNICATE -> first SEND FILE far wrapper. Sets `ES=0A4F`, calls C688 internal targets `0013` and `7F5A`, and returns `[794A]` in `AL`. |
+| `C688:EC3F` | `0x554BF` | WP COMMUNICATE -> second SEND FILE far wrapper. Sets `ES=0A4F`, calls C688 internal targets `0013` and `811D`, and returns `[794A]` in `AL`. |
+| `C688:EC5A` | `0x554DA` | WP COMMUNICATE -> TERMINAL far wrapper. Sets `ES=0A4F`, calls the C688 service path at `936A` with `AH=07`, stores `AL` in `[794A]`, and returns it. |
 | `C688:EC9F` | `0x5551F` | Shared application menu/event loop after first-screen branch setup. |
 | `C000:0BFC` | `0x40BFC` | Builds the RS-232C USART async mode byte from `6D2B..6D2D`. |
 | `C000:0C30` | `0x40C30` | Pulses port `0x30` bit `0x08` high then low using the `[6D94]` mirror, likely a USART/baud-clock setup strobe. |

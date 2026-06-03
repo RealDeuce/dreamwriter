@@ -889,6 +889,22 @@ a first-pass decode: the attribute/CIS space is not mapped, and the exact glue
 logic that decides when those bank values mean card SRAM rather than internal
 RAM needs hardware confirmation.
 
+No production storage path found so far selects or parses PCMCIA attribute
+memory. The card formatter at `C000:3C08` checks card presence via
+`C000:0AC4`, then write-tests the mapped memory window in 32 KiB steps. The
+sector/window helper at `C000:2D44` uses the same `C000:0239` bank helper for
+normal card file I/O. These paths write and read ordinary words through
+`ES:0000` or `ES:DI`; they do not scan CIS tuples, perform even-byte-only
+attribute reads, or touch a card-control port before accessing the window.
+
+The only ROM-side hint of an attribute-space control is diagnostic-only:
+the `T`/`N` commands at `C000:131C..1328` write port `0x30` bit `0x80` using
+temporary values derived from `[6D94]`, and the diagnostic command text labels
+that area as `Card Attribute` / `COM`. No file, format, mount, copy, or ROM
+CARD loader path has a confirmed caller that uses those commands or the nearby
+`C688:01D0` / `C688:01DB` fixed `0xE0..0xE1` and `0xEC..0xEF` wrappers before
+card memory access.
+
 ## Buzzer / Tone Counter
 
 The WP -> OTHERS -> SYSTEM screen has a `POWER ON BUZZER` setting with

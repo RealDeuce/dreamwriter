@@ -116,14 +116,24 @@ Confirmed entries include:
 
 | `[70F4]` | Style bits | Glyph base | Current read |
 | ---: | ---: | ---: | --- |
+| `1` | `0` | `0x5B18E` | Shifted sparse/remapped printable view, starting at sparse slot `0x1B`. |
+| `1` | `1` | `0x5B78E` | Shifted sparse bold view, starting at sparse-bold slot `0x1B`. |
+| `1` | `2` | `0x5BD8E` | Shifted sparse small view, starting at sparse-small slot `0x1B`. |
+| `1` | `3` | `0x5C38E` | Shifted sparse small-bold view, starting at sparse-small-bold slot `0x1B`. |
 | `2` | `0` | `0x580B6` | Main. |
 | `2` | `1` | `0x586B6` | Main bold. |
 | `2` | `2` | `0x58CB6` | Small. |
 | `2` | `3` | `0x592B6` | Small bold. |
+| `3` | `0` | `0x5B0B6` | Raw sparse/remapped symbol view, starting at sparse slot `0x00`. |
+| `3` | `1` | `0x586B6` | Main bold. |
+| `3` | `2` | `0x58CB6` | Small. |
+| `3` | `3` | `0x592B6` | Small bold. |
 | `4` | `0` | `0x598B6` | Narrow. |
 | `4` | `1` | `0x59EB6` | Narrow bold. |
 | `4` | `2` | `0x5A4B6` | Narrow small. |
 | `4` | `3` | `0x5AAB6` | Narrow small bold. |
+| `5` | `0..3` | same as family `4` | Duplicate narrow family. |
+| `6` | `0..3` | same as family `2` | Duplicate main family. |
 
 The typing tutor title resource confirms this visually: the stream wraps only
 the initials in `F8`/`F9`, and MAME shows those initials bold while the rest of
@@ -366,14 +376,27 @@ tools/rom2.py glyphs --narrow-bold-small --count 95 > narrow-small-bold-20-7e.tx
 
 After the narrow-small-bold extended page, file `0x5B0B6` starts a different
 kind of table. It is still 8 bytes per glyph, but it is not a complete printable
-ASCII page starting at `0x20`. It is better treated as a sparse or remapped
-glyph set until the consuming renderer/table is found.
+ASCII page starting at `0x20`. The consuming renderer/table is now identified:
+`C000:5FE3` can select it through font-family table entries in `D7EF:0006`.
 
 ```text
 sparse glyph slot N = 0x5B0B6 + N * 8
 ```
 
-The page begins with full-height vertical stroke masks, then mixes exact
+There are two useful views of the same sparse page:
+
+| Font family | Base | Meaning |
+| ---: | ---: | --- |
+| `[70F4]=3`, style `0` | `0x5B0B6` | Raw symbol/remap view: displayed byte `0x20` maps to sparse slot `0x00`. |
+| `[70F4]=1`, style `0` | `0x5B18E` | Shifted printable view: displayed byte `0x20` maps to sparse slot `0x1B`, so much of ASCII lands on normal-looking glyphs. |
+
+The shifted view explains the "second sparse" appearance. It is not a separate
+font format; it is a different base pointer into the same sparse slot ordering.
+For example, in the shifted view `A` maps to sparse slot `0x3C`, which matches
+main `A`, and `b` maps to sparse slot `0x5D`, which matches main `b`. The raw
+view leaves the early line/marker/symbol slots exposed as printable positions.
+
+The raw page begins with full-height vertical stroke masks, then mixes exact
 main-font duplicates with unique symbols. That makes it look slightly taller
 than the small/down-shifted pages: many entries use the top row, and the first
 few masks use all 8 rows.
@@ -412,8 +435,9 @@ example, sparse-bold slots `0x3C..0x43` match bold `0x41..0x48`, and
 `0x46..0x4F` match bold `0x4B..0x54` with gaps.
 
 The first few line/marker slots are not just doubled copies of the non-bold
-sparse vertical masks, so keep them as separate sparse-symbol entries until the
-code mapping is known.
+sparse vertical masks, so keep them as separate sparse-symbol entries. Family
+`1` selects this page at sparse-bold slot `0x1B`; family `3` does not use the
+sparse-bold page for style bit `1`, instead falling back to the main bold font.
 
 Use:
 
@@ -440,6 +464,8 @@ matches small `0x62`.
 
 The early line/marker slots remain full-height symbol entries, so this page is
 not uniformly "small" in the same way a printable ASCII page is.
+Family `1` selects this page at sparse-small slot `0x1B`; family `3` falls back
+to the normal small font for style bit `2`.
 
 Use:
 
@@ -465,6 +491,8 @@ small-bold `0x62`.
 
 The early line/marker slots remain separate symbol entries and are not uniformly
 down-shifted.
+Family `1` selects this page at sparse-small-bold slot `0x1B`; family `3` falls
+back to the normal small-bold font for style bit `3`.
 
 Use either spelling:
 

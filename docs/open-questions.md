@@ -11,51 +11,50 @@
    bases and the `F8/F9` and `FA..FD` style-state paths are now identified;
    the remaining uncertainty is the width/advance metadata and some display
    state names.
-4. Extend the renderer font-family table beyond the confirmed main and narrow
-   families, and tie each `[70F4]` family value to a user-visible screen or
-   resource.
-5. Identify the consumer and code mapping for the sparse/remapped glyph sets at
-   `0x5B0B6`, `0x5B6B6`, `0x5BCB6`, and `0x5C2B6`.
-6. Confirm the consumer for the high-ROM resource prelude immediately after the
+4. Tie each `[70F4]` font-family value to a user-visible screen or resource.
+   The family table now identifies main, narrow, duplicate, and sparse/remapped
+   views; the remaining question is which application resources select each
+   family.
+5. Confirm the consumer for the high-ROM resource prelude immediately after the
    reset trampoline at `0x78DD0`. The current region map classifies this area
    as probable alternate Typin' Time/alarm bitmap and display-script resources,
    followed by the alternate high-ROM typing-practice text copy at
    `0x78FC5..0x7B71C`.
-7. Classify the code or packed data beginning around `0x5C98E`, immediately
+6. Classify the code or packed data beginning around `0x5C98E`, immediately
    after the MAME-declared glyph stream.
-8. Refine the friendly names and calling conventions for the remaining
+7. Refine the friendly names and calling conventions for the remaining
    non-file/private `INT 21h` helpers. The dispatcher service set is now
    exhaustively mapped, but `AH=03`, `AX=4421`, `AX=4424`, and `AX=4425` still
    need better high-level names.
-9. Identify the encoding and consumer for the candidate status/icon resource
+8. Identify the encoding and consumer for the candidate status/icon resource
    cluster around `0x55110..0x552AC`.
-10. Confirm how the startup banner resource at `0x53888..0x539AA` is selected
+9. Confirm how the startup banner resource at `0x53888..0x539AA` is selected
    and how long each line is meant to remain visible. `INITIALIZING` is now
    traced to the cold retained-RAM/init path: reset branches to `C000:00E1`
    when `C688:0053` or `C000:47D3` rejects retained warm state, and
    `C000:4811` invokes built-in store initialization if the `1800:` volume
    header/checksum fails. No direct `mov si,D008/D012/D02A` reference has been
    found yet for the resource stream itself.
-11. Determine whether the startup copyright banner timing/visibility differs
+10. Determine whether the startup copyright banner timing/visibility differs
    between hard V20 reset and retained-RAM wake paths. The auto power-off
    timeout now confirms one retained transition route through `C000:035D` and
    `out 0x70,0x01`, while IRQ `F8` uses a separate suspend/save route ending in
    `out 0xDD,0xF8`.
-12. Confirm the physical power-button and power-management wiring. Current
+11. Confirm the physical power-button and power-management wiring. Current
     firmware evidence suggests IRQ `F8`, IRQ `FF`, the auto-off timeout path,
     and external reset/wake hardware are related, but MAME exposes only
     synthetic IRQ keys and no named power-management device.
-13. Confirm the buzzer counter clock/waveform for ports `0x50..0x52`. Firmware
+12. Confirm the buzzer counter clock/waveform for ports `0x50..0x52`. Firmware
     clearly writes a 16-bit divisor and gates it with `0x52`, but the hardware
     clock and exact output shape are still unknown.
-14. Confirm the RS-232 baud-clock source. Firmware behavior matches an
+13. Confirm the RS-232 baud-clock source. Firmware behavior matches an
     8251/8251A-compatible USART at data port `0xC0` and status/control port
     `0xC1`, likely a NEC uPD71051, with baud selected by port `0x30` bits
     `0..2`; port `0x30` bit `0x08` is also pulsed during USART setup and may
     reset or load nearby baud-clock glue. Hardware evidence says RTS/CTS and
     DTR are present, DTR duplicates RTS, and there is no CD/carrier-detect
     signal.
-15. Confirm the physical Centronics and PCMCIA status wiring on port `0xA0`.
+14. Confirm the physical Centronics and PCMCIA status wiring on port `0xA0`.
     Firmware clearly maps bit `0x02` to Centronics `BUSY`, bit `0x08` to main
     battery low, bit `0x04` to CR2032 retention battery low, bit `0x80` to a
     PCMCIA card access/presence gate, bit `0x10` to the PCMCIA SRAM-card battery
@@ -64,7 +63,7 @@
     strobe, and uses IRQ `FE` as ACK-driven output. Board pins are still needed
     to confirm whether any Centronics `PE`/`SEL`/`ERROR` lines are present on
     the same register or simply unused by the firmware.
-16. Confirm the external PCMCIA memory decode and ROM-card drive mapping. MAME
+15. Confirm the external PCMCIA memory decode and ROM-card drive mapping. MAME
     now has the slot/status lines wired, and `DC98:2B75` is decoded as a normal
     file-loader for `EROMCARD.X`: it searches `([0x6805]+1):EROMCARD.X` then
     `[0x6805]:EROMCARD.X`, loads the file at `0xA4F0`, validates header words
@@ -75,7 +74,7 @@
     A separate feasibility thread for wrapping the DreamWriter 325 BASIC
     interpreter as `EROMCARD.X` is parked in
     [`basic-eromcard.md`](basic-eromcard.md).
-17. Decode the custom volume header and geometry used under the FAT12-style file
+16. Decode the custom volume header and geometry used under the FAT12-style file
     implementation. The lower handlers use standard 8.3 directory entries and
     FAT12 allocation, but mount/format code checks header words `0x1997` and
     `0x0126` rather than a stock DOS boot sector/BPB.

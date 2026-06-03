@@ -15,6 +15,7 @@ Start here:
 | [`banking.md`](banking.md) | MAME bank formula and confirmed ROM bank-switching routines. |
 | [`spell-engine.md`](spell-engine.md) | Banked spell/grammar/linguistic service thunk and dispatcher notes. |
 | [`entry-points.md`](entry-points.md) | Confirmed code entry points and direct branch/call inventory. |
+| [`disassembly/`](disassembly/) | Hand-annotated reachable-code disassembly, starting with reset and boot. |
 | [`startup-ui.md`](startup-ui.md) | Cold-start UI path, inline display scripts, boot update sequence, and first menu graphic. |
 | [`menu-dispatch.md`](menu-dispatch.md) | Inline key dispatch tables and the shared application menu event loop. |
 | [`file-system.md`](file-system.md) | FILE menu storage flow, DOS-like file API wrappers, and directory/DTA evidence. |

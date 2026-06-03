@@ -143,7 +143,9 @@ FF -> C688:EDE8
 
 `C688:8D0F` and `C688:8D23` set `[757D]` to their own address, call
 `C688:7689` with resource IDs `0x38` plus `0x19` or `0x37`, populate a 16-byte
-buffer at `0x7A30`, and then enter a small inline dispatch:
+buffer at `0x7A30`, and then enter a small inline dispatch. The resources name
+these as the `REPLACE SEARCH` and `SEARCH` prompt variants; the full expansion
+is in [`disassembly/document-picker-ui.md`](disassembly/document-picker-ui.md).
 
 ```text
 DA -> C688:8D86
@@ -160,10 +162,9 @@ DA -> C688:8DC4
 FF -> C688:8D8E
 ```
 
-The exact menu meaning is still unnamed, but this is clearly part of the
-horizontal menu/list selection machinery: it sets state flags in `[7520]`, calls
-`C688:8F40`, updates UI state through `C688:44C4`, and returns to the shared
-`C688:EC9F` loop.
+This is part of the shared document/list selection machinery: it sets state
+flags in `[7520]`, calls `C688:8F40`, updates UI state through `C688:44C4`, and
+returns to the shared `C688:EC9F` loop.
 
 ## Screen Resource Selector
 
