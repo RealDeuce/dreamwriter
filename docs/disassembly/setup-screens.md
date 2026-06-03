@@ -15,9 +15,10 @@ helpers documented in [`display-wrappers.md`](display-wrappers.md) and the
 shared field selector at `DC98:214E`.
 
 `EBBB:0000`, the OTHERS -> `T I M E` target, is expanded separately in
-[`wp-others-handlers.md`](wp-others-handlers.md). Its correct file base is
-`0x6BBB0`, and the entry fans out through a much larger application-style
-dispatcher rather than one of these compact settings editors.
+[`wp-others-handlers.md`](wp-others-handlers.md), with app internals in
+[`typin-time.md`](typin-time.md). Its correct file base is `0x6BBB0`, and the
+entry fans out through a much larger application-style dispatcher rather than
+one of these compact settings editors.
 
 ## Shared Field Selector
 

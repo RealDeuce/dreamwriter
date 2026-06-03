@@ -218,6 +218,13 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C688:C680` | `0x52F00` | Printer character table consumer and formatter front end. Uses the character-map/width tables at `C688:C0F4..C680`, then dispatches selected handlers through later printer text tables. |
 | `C688:CD82` | `0x53602` | Printer text formatting tail after the C688:CC61 handler vector table; contains small wrappers around the common printer byte/spacing helpers. |
 | `C688:CFF1` | `0x53871` | Printer/character output tail. Calls the spacing/position flush helper, emits `AL` through `C688:C82A`, then calls the backspace/spacing restore helper before returning. |
+| `EBBB:0000` | `0x6BBB0` | OTHERS -> `T I M E` Typin' Time app entry. Saves caller segment state, calls `EBBB:00CC`, restores, clears `[7119]`, and returns to the OTHERS wrapper. |
+| `EBBB:012E` | `0x6BCDE` | Typin' Time dispatcher. Walks the `F87B:0004` state sequence, polls key events through `DC98:F200`/`F198`, and dispatches state codes `1..0x15`. |
+| `EBBB:0A82` | `0x6C632` | Typin' Time menu-of-tests grid renderer. Walks the `F50E:275C` pointer-grid banks and highlights the current cell. |
+| `EBBB:1250` | `0x6CE00` | Typin' Time live supplied-text test loop. Compares typed keys to selected `F50E` lesson lines, records input, updates counters, and finalizes elapsed time. |
+| `EBBB:157A` | `0x6D12A` | Typin' Time live `YOURS` free-entry loop. Records typed lines into the `8E92` buffer without supplied-text comparison. |
+| `EBBB:2360` | `0x6DF10` | Typin' Time unsigned 32-bit multiply helper used by scoreboard integer math. |
+| `EBBB:2392` | `0x6DF42` | Typin' Time unsigned 32-bit division helper used by scoreboard integer math. |
 | `C688:EB2E` | `0x553AE` | WP FILE -> RECALL far wrapper. Sets `ES=0A4F`, calls C688 internal target `7B41`, and returns `[794A]` in `AL`. |
 | `C688:EB46` | `0x553C6` | WP top menu -> CLEAR TEXT far wrapper. Sets `ES=0A4F`, calls C688 internal target `EC77`, and returns `[794A]` in `AL`. |
 | `C688:EB5E` | `0x553DE` | WP PRINTER -> PRINT OUT far wrapper. Sets `ES=0A4F`, calls `C688:AAA6`, and returns `[794A]` in `AL`. |

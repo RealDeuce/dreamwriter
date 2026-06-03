@@ -39,7 +39,8 @@ at `[7119]` before returning. The temporary `ds=0` at `EBBB:0012` lets the
 restore load `[8E44]` from low memory.
 
 `EBBB:00CC` is the app initializer. It seeds the Typin' Time state words and
-then calls the shared dispatcher at `EBBB:012E`.
+then calls the shared dispatcher at `EBBB:012E`, expanded in
+[`typin-time.md`](typin-time.md).
 
 ```asm
 typin_time_init_EBBB_00CC:
@@ -89,34 +90,33 @@ The jump table at `EBBB:0234` has handlers for state codes `1..0x15`:
 
 | State | Target | Notes |
 | ---: | --- | --- |
-| `1` | `EBBB:0196` -> `EBBB:0BF4` | App-internal mode handler. |
-| `2` | `EBBB:019C` -> `EBBB:1250` | App-internal mode handler. |
-| `3` | `EBBB:01A2` -> `EBBB:0550` | App-internal mode handler. |
-| `4` | `EBBB:01A8` -> `EBBB:0568` | App-internal mode handler. |
-| `5` | `EBBB:01AE` -> `EBBB:182C` | App-internal mode handler. |
+| `1` | `EBBB:0196` -> `EBBB:0BF4` | Test-menu navigation. |
+| `2` | `EBBB:019C` -> `EBBB:1250` | Live supplied-text test. |
+| `3` | `EBBB:01A2` -> `EBBB:0550` | Scoreboard wrapper. |
+| `4` | `EBBB:01A8` -> `EBBB:0568` | Scoreboard renderer. |
+| `5` | `EBBB:01AE` -> `EBBB:182C` | Error-review header/status setup. |
 | `6` | `EBBB:01B4` | Resets `[8E52]` and `[8E54]` to zero. |
-| `7` | `EBBB:01C3` -> `EBBB:0274` | App-internal mode handler. |
-| `8` | `EBBB:01C9` -> `EBBB:047C` | App-internal mode handler. |
-| `9` | `EBBB:01CF` -> `EBBB:1190` | App-internal mode handler. |
-| `10` | `EBBB:01D5` -> `EBBB:0A56` | App-internal mode handler. |
+| `7` | `EBBB:01C3` -> `EBBB:0274` | Intro/about screen and title animation. |
+| `8` | `EBBB:01C9` -> `EBBB:047C` | Corpus choice screen. |
+| `9` | `EBBB:01CF` -> `EBBB:1190` | Start-test handler. |
+| `10` | `EBBB:01D5` -> `EBBB:0A56` | Menu-of-tests shell/reset handoff. |
 | `11` | `EBBB:01DB` | No-op return to dispatcher loop. |
-| `12` | `EBBB:01DE` -> `EBBB:0EC6` | App-internal mode handler. |
-| `13` | `EBBB:01E4` -> `EBBB:08B8` | App-internal mode handler. |
-| `14` | `EBBB:01EA` -> `EBBB:1862` | App-internal mode handler. |
-| `15` | `EBBB:01F0` -> `EBBB:188C` | App-internal mode handler. |
-| `16` | `EBBB:01F6` -> `EBBB:19C0` | App-internal mode handler. |
-| `17` | `EBBB:01FC` -> `EBBB:0A82` | App-internal mode handler. |
-| `18` | `EBBB:0202` -> `EBBB:0EF6` | App-internal mode handler. |
-| `19` | `EBBB:0208` -> `EBBB:1B80` | App-internal mode handler. |
-| `20` | `EBBB:020E` -> `EBBB:1DB8` | App-internal mode handler. |
-| `21` | `EBBB:0214` -> `EBBB:157A` | App-internal mode handler. |
+| `12` | `EBBB:01DE` -> `EBBB:0EC6` | Live-test footer/status prompt. |
+| `13` | `EBBB:01E4` -> `EBBB:08B8` | Scoreboard command handler. |
+| `14` | `EBBB:01EA` -> `EBBB:1862` | Options screen shell. |
+| `15` | `EBBB:01F0` -> `EBBB:188C` | Options value renderer. |
+| `16` | `EBBB:01F6` -> `EBBB:19C0` | Options navigation/value handler. |
+| `17` | `EBBB:01FC` -> `EBBB:0A82` | Menu-of-tests grid renderer. |
+| `18` | `EBBB:0202` -> `EBBB:0EF6` | Selected-test text pager. |
+| `19` | `EBBB:0208` -> `EBBB:1B80` | Error-review renderer. |
+| `20` | `EBBB:020E` -> `EBBB:1DB8` | Error-review pager. |
+| `21` | `EBBB:0214` -> `EBBB:157A` | Live free-entry `YOURS` test. |
 
 `EBBB:012E` returns `[8E90]` when `[8E54]` reaches zero. The OTHERS wrapper
 only treats a low-byte `0x0B` return as a menu exit; other returns redraw the
 OTHERS menu with `T I M E` selected.
 
-This is the natural stop for the menu-layer pass: the next live roots are the
-Typin' Time application internals, not a small settings screen.
+The app internals are bottomed in [`typin-time.md`](typin-time.md).
 
 ## ROM CARD Loader
 
@@ -307,6 +307,4 @@ format are summarized in [`../running-rom-card-binaries.md`](../running-rom-card
 
 ## Next Splits
 
-| Root | Split | Reason |
-| --- | --- | --- |
-| `EBBB:012E` | Typin' Time internals | Full app state machine reached by OTHERS -> `T I M E`; outside this menu-layer pass. |
+No remaining OTHERS-handler-only roots are queued.

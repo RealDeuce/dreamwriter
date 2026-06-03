@@ -218,8 +218,9 @@ SEND FILE     SEND FILE     RECEIVE FILE RECEIVE FILE TERMINAL      SET UP
 
 `DC98:2D2B` renders the four-item `OTHERS` submenu from effective table base
 `0x6F7AC`. The system/preferences screens are expanded in
-[`setup-screens.md`](setup-screens.md), while the `T I M E` entry boundary and
-ROM-card loader are expanded in [`wp-others-handlers.md`](wp-others-handlers.md).
+[`setup-screens.md`](setup-screens.md), the `T I M E` entry boundary and
+ROM-card loader are expanded in [`wp-others-handlers.md`](wp-others-handlers.md),
+and the Typin' Time app states are expanded in [`typin-time.md`](typin-time.md).
 
 ```asm
 wp_others_submenu_DC98_2D2B:
@@ -304,4 +305,3 @@ tools/render_rom_bitmap_png.py 0x6eca2 40 40 docs/disassembly/images/wp-others-r
 | Root | Split | Reason |
 | --- | --- | --- |
 | `C688:EB5E` | wp-print-out.md | PRINTER -> PRINT OUT application handler; wrapper enters the `C688:AAA6` print flow. |
-| `EBBB:012E` | Typin' Time internals | OTHERS -> T I M E enters a full application state machine. |

@@ -82,6 +82,8 @@ preserve the reasoning that makes the code understandable.
 | [`document-picker-ui.md`](document-picker-ui.md) | Shared application-loop document/list re-entry roots, `LIST OF DOC.` template continuation, and SEARCH/REPLACE prompt variants. |
 | [`setup-screens.md`](setup-screens.md) | Word-processor setup/settings editors for RS-232, printer, SYSTEM, and PREFERENCES, including backing state and decoded option strings. |
 | [`wp-others-handlers.md`](wp-others-handlers.md) | OTHERS -> T I M E entry/Typin' Time dispatcher boundary and complete ROM CARD `EROMCARD.X` loader, including failure strings and payload header. |
+| [`typin-time.md`](typin-time.md) | Typin' Time app state machine, test-selection grid, live supplied/free-entry typing flows, scoreboard/options/error review, and text/lesson resource formats. |
+| [`typin-time-lessons.md`](typin-time-lessons.md) | Extracted Typin' Time lesson banks in menu order, with each label, cell pointer, line pointer, and final practice text line. |
 | [`organizer-calculator.md`](organizer-calculator.md) | Organizer CALCULATOR app, fixed-point decimal arithmetic core, square-root path, rendered calculator glyph PNGs, and error strings. |
 | [`organizer-calendar.md`](organizer-calendar.md) | Organizer CALENDAR app, two-month grid renderer, year/display-form prompts, explicit menu strings, and rendered small digit glyph asset. |
 | [`organizer-scheduler.md`](organizer-scheduler.md) | Organizer SCHEDULER entry, foreground WEEKLY/CONTENT UI, `SCHEDULE.ODB` record format, edit/new/delete/alarm handlers, and scheduler alarm cache builder. |
@@ -99,4 +101,3 @@ The boot slice has already exposed these next roots:
 | `C688:EB5E` | Reached from `wp-submenus.md`. | WP PRINTER -> PRINT OUT application handler. |
 | `C688:ED1F`, `C688:E274`, `C688:D8AF` | Reached from `app-menu-event-loop.md`. | Word-processor linguistic and document flows. |
 | `C688:AD5C`, `C688:ED15` | Reached from `app-menu-event-loop.md`. | Print/merge/address app-loop handlers. |
-| `EBBB:012E` | Reached from `wp-others-handlers.md`. | Typin' Time internal app state machine and mode handlers. |
