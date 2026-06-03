@@ -4,22 +4,22 @@ Generated from direct call/jump operands in annotated snippets. Address-only tar
 
 | Target | Symbol(s) | Transfers | Sample sources |
 | ---: | --- | ---: | --- |
-| `3000:0037` | (address-only) | 5 | call from `3000:4D4E` [diagnostic-spell-services.md:137](diagnostic-spell-services.md#L137)<br>call from `3000:4D51` [diagnostic-spell-services.md:138](diagnostic-spell-services.md#L138)<br>call from `3000:4D54` [diagnostic-spell-services.md:139](diagnostic-spell-services.md#L139)<br>call from `3000:4D57` [diagnostic-spell-services.md:140](diagnostic-spell-services.md#L140)<br>call from `3000:4D5A` [diagnostic-spell-services.md:141](diagnostic-spell-services.md#L141) |
-| `3000:3646` | (address-only) | 1 | call from `3000:4D2E` [diagnostic-spell-services.md:120](diagnostic-spell-services.md#L120) |
-| `3000:39E0` | (address-only) | 1 | call from `3000:4D75` [diagnostic-spell-services.md:158](diagnostic-spell-services.md#L158) |
-| `3000:3A1E` | (address-only) | 1 | call from `3000:4D7B` [diagnostic-spell-services.md:160](diagnostic-spell-services.md#L160) |
-| `3000:3AAC` | (address-only) | 1 | call from `3000:4D44` [diagnostic-spell-services.md:126](diagnostic-spell-services.md#L126) |
-| `3000:4CF4` | (address-only) | 1 | call from `3000:4BF2` [diagnostic-spell-services.md:60](diagnostic-spell-services.md#L60) |
-| `3000:4D02` | (address-only) | 1 | jc from `3000:4D14` [diagnostic-spell-services.md:91](diagnostic-spell-services.md#L91) |
-| `3000:4D0D` | (address-only) | 1 | jmp from `3000:4D00` [diagnostic-spell-services.md:84](diagnostic-spell-services.md#L84) |
-| `3000:4D1A` | (address-only) | 1 | call from `3000:4BFA` [diagnostic-spell-services.md:66](diagnostic-spell-services.md#L66) |
-| `3000:4D21` | (address-only) | 1 | jmp from `3000:4D63` [diagnostic-spell-services.md:143](diagnostic-spell-services.md#L143) |
-| `3000:4D26` | (address-only) | 1 | jz from `3000:4D1F` [diagnostic-spell-services.md:112](diagnostic-spell-services.md#L112) |
-| `3000:4D66` | (address-only) | 1 | jz from `3000:4D49` [diagnostic-spell-services.md:128](diagnostic-spell-services.md#L128) |
-| `3000:4D6A` | (address-only) | 1 | call from `3000:4D4B` [diagnostic-spell-services.md:136](diagnostic-spell-services.md#L136) |
-| `3000:4F76` | (address-only) | 1 | call from `3000:4D6A` [diagnostic-spell-services.md:153](diagnostic-spell-services.md#L153) |
-| `3000:5016` | (address-only) | 1 | call from `3000:4D1A` [diagnostic-spell-services.md:110](diagnostic-spell-services.md#L110) |
-| `3000:527C` | (address-only) | 1 | call from `3000:4D3E` [diagnostic-spell-services.md:124](diagnostic-spell-services.md#L124) |
+| `3000:0037` | (address-only) | 5 | call from `3000:4D4E` [diagnostic-spell-services.md:138](diagnostic-spell-services.md#L138)<br>call from `3000:4D51` [diagnostic-spell-services.md:139](diagnostic-spell-services.md#L139)<br>call from `3000:4D54` [diagnostic-spell-services.md:140](diagnostic-spell-services.md#L140)<br>call from `3000:4D57` [diagnostic-spell-services.md:141](diagnostic-spell-services.md#L141)<br>call from `3000:4D5A` [diagnostic-spell-services.md:142](diagnostic-spell-services.md#L142) |
+| `3000:3646` | (address-only) | 1 | call from `3000:4D2E` [diagnostic-spell-services.md:121](diagnostic-spell-services.md#L121) |
+| `3000:39E0` | (address-only) | 1 | call from `3000:4D75` [diagnostic-spell-services.md:159](diagnostic-spell-services.md#L159) |
+| `3000:3A1E` | (address-only) | 1 | call from `3000:4D7B` [diagnostic-spell-services.md:161](diagnostic-spell-services.md#L161) |
+| `3000:3AAC` | (address-only) | 1 | call from `3000:4D44` [diagnostic-spell-services.md:127](diagnostic-spell-services.md#L127) |
+| `3000:4CF4` | (address-only) | 1 | call from `3000:4BF2` [diagnostic-spell-services.md:61](diagnostic-spell-services.md#L61) |
+| `3000:4D02` | (address-only) | 1 | jc from `3000:4D14` [diagnostic-spell-services.md:92](diagnostic-spell-services.md#L92) |
+| `3000:4D0D` | (address-only) | 1 | jmp from `3000:4D00` [diagnostic-spell-services.md:85](diagnostic-spell-services.md#L85) |
+| `3000:4D1A` | (address-only) | 1 | call from `3000:4BFA` [diagnostic-spell-services.md:67](diagnostic-spell-services.md#L67) |
+| `3000:4D21` | (address-only) | 1 | jmp from `3000:4D63` [diagnostic-spell-services.md:144](diagnostic-spell-services.md#L144) |
+| `3000:4D26` | (address-only) | 1 | jz from `3000:4D1F` [diagnostic-spell-services.md:113](diagnostic-spell-services.md#L113) |
+| `3000:4D66` | (address-only) | 1 | jz from `3000:4D49` [diagnostic-spell-services.md:129](diagnostic-spell-services.md#L129) |
+| `3000:4D6A` | (address-only) | 1 | call from `3000:4D4B` [diagnostic-spell-services.md:137](diagnostic-spell-services.md#L137) |
+| `3000:4F76` | (address-only) | 1 | call from `3000:4D6A` [diagnostic-spell-services.md:154](diagnostic-spell-services.md#L154) |
+| `3000:5016` | `candidate_manager_init_C3000_5016` | 1 | call from `3000:4D1A` [diagnostic-spell-services.md:111](diagnostic-spell-services.md#L111) |
+| `3000:527C` | (address-only) | 1 | call from `3000:4D3E` [diagnostic-spell-services.md:125](diagnostic-spell-services.md#L125) |
 | `C000:0000` | `root_c000_entry` | 1 | jmp from `F8DC:0008` [boot.md:30](boot.md#L30) |
 | `C000:0029` | `startup_C000_0029` | 1 | jmp from `C000:12E5` [diagnostic-monitor.md:171](diagnostic-monitor.md#L171) |
 | `C000:011A` | (address-only) | 1 | jz from `C000:0157` [boot.md:225](boot.md#L225) |
@@ -98,7 +98,7 @@ Generated from direct call/jump operands in annotated snippets. Address-only tar
 | `C000:16EB` | `diagnostic_help_page_C000_16EB` | 1 | call from `C000:12D0` [diagnostic-monitor.md:160](diagnostic-monitor.md#L160) |
 | `C000:1716` | (address-only) | 1 | call from `C000:0021` [boot.md:68](boot.md#L68) |
 | `C000:1873` | (address-only) | 1 | call from `C000:0025` [boot.md:70](boot.md#L70) |
-| `C000:18A1` | (address-only) | 2 | call from `C000:12FB` [diagnostic-spell-services.md:16](diagnostic-spell-services.md#L16)<br>call from `C000:15F1` [diagnostic-spell-services.md:43](diagnostic-spell-services.md#L43) |
+| `C000:18A1` | `banked_linguistic_mapper_C000_18A1` | 2 | call from `C000:12FB` [diagnostic-spell-services.md:16](diagnostic-spell-services.md#L16)<br>call from `C000:15F1` [diagnostic-spell-services.md:43](diagnostic-spell-services.md#L43) |
 | `C000:23D9` | `status_lower_default_x_C000_23D9` | 1 | call from `C000:3C83` [storage-geometry.md:74](storage-geometry.md#L74) |
 | `C000:23DE` | `status_lower_C000_23DE` | 1 | call from `C000:3CA2` [storage-geometry.md:97](storage-geometry.md#L97) |
 | `C000:28A7` | `service_0E_select_drive_C000_28A7` | 1 | call from `C000:5163` [int21-dispatch.md:182](int21-dispatch.md#L182) |
@@ -420,7 +420,7 @@ Generated from direct call/jump operands in annotated snippets. Address-only tar
 | `C688:4239` | `quarter_width_helper_C688_4239` | 2 | call from `C688:1AB3` [wp-editor-redraw.md:198](wp-editor-redraw.md#L198)<br>call from `C688:1BB4` [wp-editor-redraw.md:437](wp-editor-redraw.md#L437) |
 | `C688:441A` | (address-only) | 1 | call from `C688:2A5D` [menu-entry.md:118](menu-entry.md#L118) |
 | `C688:4473` | (address-only) | 1 | call from `C688:77A3` [wp-edit-text.md:121](wp-edit-text.md#L121) |
-| `C688:44C4` | `snapshot_active_editor_state_C688_44C4` | 17 | call from `C688:ECB6` [app-menu-event-loop.md:79](app-menu-event-loop.md#L79)<br>call from `C688:ED0A` [app-menu-event-loop.md:187](app-menu-event-loop.md#L187)<br>call from `C688:EE20` [app-menu-event-loop.md:259](app-menu-event-loop.md#L259)<br>call from `C688:8D80` [document-picker-ui.md:114](document-picker-ui.md#L114)<br>call from `C688:8DE9` [document-picker-ui.md:244](document-picker-ui.md#L244)<br>call from `C688:8DFE` [document-picker-ui.md:262](document-picker-ui.md#L262) |
+| `C688:44C4` | `snapshot_active_editor_state_C688_44C4` | 17 | call from `C688:ECB6` [app-menu-event-loop.md:79](app-menu-event-loop.md#L79)<br>call from `C688:ED0A` [app-menu-event-loop.md:187](app-menu-event-loop.md#L187)<br>call from `C688:EE20` [app-menu-event-loop.md:260](app-menu-event-loop.md#L260)<br>call from `C688:8D80` [document-picker-ui.md:114](document-picker-ui.md#L114)<br>call from `C688:8DE9` [document-picker-ui.md:244](document-picker-ui.md#L244)<br>call from `C688:8DFE` [document-picker-ui.md:262](document-picker-ui.md#L262) |
 | `C688:44F4` | `shared_editor_viewport_body_C688_44F4` | 1 | jmp from `C688:44E0` [wp-editor-viewport.md:25](wp-editor-viewport.md#L25) |
 | `C688:4503` | (address-only) | 1 | jz from `C688:44FE` [wp-editor-viewport.md:47](wp-editor-viewport.md#L47) |
 | `C688:452F` | (address-only) | 1 | jnz from `C688:4527` [wp-editor-viewport.md:77](wp-editor-viewport.md#L77) |
@@ -446,7 +446,7 @@ Generated from direct call/jump operands in annotated snippets. Address-only tar
 | `C688:599C` | (address-only) | 2 | call from `C688:7771` [menu-entry.md:163](menu-entry.md#L163)<br>call from `C688:7771` [wp-edit-text.md:93](wp-edit-text.md#L93) |
 | `C688:5B7D` | (address-only) | 2 | call from `C688:83FA` [menu-entry.md:341](menu-entry.md#L341)<br>call from `C688:AE0B` [print-merge-handlers.md:122](print-merge-handlers.md#L122) |
 | `C688:5B83` | `formatter_emit_byte_C688_5B83` | 6 | call from `C688:ADEB` [print-merge-handlers.md:102](print-merge-handlers.md#L102)<br>call from `C688:ADF8` [print-merge-handlers.md:108](print-merge-handlers.md#L108)<br>call from `C688:AEC8` [print-merge-handlers.md:214](print-merge-handlers.md#L214)<br>call from `C688:AF00` [print-merge-handlers.md:237](print-merge-handlers.md#L237)<br>call from `C688:AF07` [print-merge-handlers.md:240](print-merge-handlers.md#L240)<br>call from `C688:AF0C` [print-merge-handlers.md:242](print-merge-handlers.md#L242) |
-| `C688:5B90` | `formatter_mode_19_C688_5B90` | 1 | call from `C688:EDEB` [app-menu-event-loop.md:257](app-menu-event-loop.md#L257) |
+| `C688:5B90` | `formatter_mode_19_C688_5B90` | 1 | call from `C688:EDEB` [app-menu-event-loop.md:258](app-menu-event-loop.md#L258) |
 | `C688:5C90` | (address-only) | 1 | call from `C688:AE08` [print-merge-handlers.md:121](print-merge-handlers.md#L121) |
 | `C688:61DB` | `write_redraw_mode_table_byte_C688_61DB` | 4 | call from `C688:2A0F` [menu-entry.md:91](menu-entry.md#L91)<br>call from `C688:1B4A` [wp-editor-redraw.md:243](wp-editor-redraw.md#L243)<br>call from `C688:1A55` [wp-editor-redraw.md:298](wp-editor-redraw.md#L298)<br>call from `C688:21C3` [wp-editor-redraw.md:1215](wp-editor-redraw.md#L1215) |
 | `C688:622B` | (address-only) | 1 | call from `C688:ED04` [app-menu-event-loop.md:185](app-menu-event-loop.md#L185) |
@@ -472,7 +472,7 @@ Generated from direct call/jump operands in annotated snippets. Address-only tar
 | `C688:77AA` | (address-only) | 3 | call from `C688:EB15` [app-menu-event-loop.md:121](app-menu-event-loop.md#L121)<br>call from `C688:774F` [menu-entry.md:143](menu-entry.md#L143)<br>call from `C688:EB15` [wp-edit-text.md:35](wp-edit-text.md#L35) |
 | `C688:77B4` | (address-only) | 1 | call from `C688:7752` [menu-entry.md:146](menu-entry.md#L146) |
 | `C688:77C1` | (address-only) | 1 | call from `C688:77BA` [menu-entry.md:220](menu-entry.md#L220) |
-| `C688:77DD` | (address-only) | 4 | call from `C688:EC9F` [app-menu-event-loop.md:69](app-menu-event-loop.md#L69)<br>call from `C688:EE29` [app-menu-event-loop.md:262](app-menu-event-loop.md#L262)<br>call from `C688:EC9F` [menu-entry.md:364](menu-entry.md#L364)<br>call from `C688:EC9F` [wp-edit-text.md:57](wp-edit-text.md#L57) |
+| `C688:77DD` | (address-only) | 4 | call from `C688:EC9F` [app-menu-event-loop.md:69](app-menu-event-loop.md#L69)<br>call from `C688:EE29` [app-menu-event-loop.md:263](app-menu-event-loop.md#L263)<br>call from `C688:EC9F` [menu-entry.md:364](menu-entry.md#L364)<br>call from `C688:EC9F` [wp-edit-text.md:57](wp-edit-text.md#L57) |
 | `C688:8312` | (address-only) | 1 | call from `C688:77BD` [menu-entry.md:221](menu-entry.md#L221) |
 | `C688:834F` | (address-only) | 2 | jmp from `C688:8335` [document-picker-ui.md:54](document-picker-ui.md#L54)<br>jmp from `C688:8335` [menu-entry.md:293](menu-entry.md#L293) |
 | `C688:8399` | (address-only) | 2 | jz from `C688:8390` [menu-entry.md:314](menu-entry.md#L314)<br>jz from `C688:8394` [menu-entry.md:316](menu-entry.md#L316) |
@@ -484,7 +484,7 @@ Generated from direct call/jump operands in annotated snippets. Address-only tar
 | `C688:8413` | (address-only) | 1 | jmp from `C688:8400` [menu-entry.md:343](menu-entry.md#L343) |
 | `C688:8419` | (address-only) | 1 | jmp from `C688:83DB` [menu-entry.md:328](menu-entry.md#L328) |
 | `C688:85B4` | (address-only) | 2 | call from `C688:832C` [document-picker-ui.md:51](document-picker-ui.md#L51)<br>call from `C688:832C` [menu-entry.md:290](menu-entry.md#L290) |
-| `C688:8610` | (address-only) | 4 | call from `C688:EDE8` [app-menu-event-loop.md:256](app-menu-event-loop.md#L256)<br>call from `C688:83F2` [menu-entry.md:338](menu-entry.md#L338)<br>call from `C688:AAC2` [wp-print-out.md:51](wp-print-out.md#L51)<br>call from `C688:ACBC` [wp-print-out.md:135](wp-print-out.md#L135) |
+| `C688:8610` | (address-only) | 4 | call from `C688:EDE8` [app-menu-event-loop.md:257](app-menu-event-loop.md#L257)<br>call from `C688:83F2` [menu-entry.md:338](menu-entry.md#L338)<br>call from `C688:AAC2` [wp-print-out.md:51](wp-print-out.md#L51)<br>call from `C688:ACBC` [wp-print-out.md:135](wp-print-out.md#L135) |
 | `C688:8617` | (address-only) | 2 | call from `C688:832F` [document-picker-ui.md:52](document-picker-ui.md#L52)<br>call from `C688:832F` [menu-entry.md:291](menu-entry.md#L291) |
 | `C688:86C9` | (address-only) | 1 | call from `C688:83FD` [menu-entry.md:342](menu-entry.md#L342) |
 | `C688:88FC` | (address-only) | 1 | call from `C688:8416` [menu-entry.md:352](menu-entry.md#L352) |
@@ -522,7 +522,7 @@ Generated from direct call/jump operands in annotated snippets. Address-only tar
 | `C688:928D` | (address-only) | 2 | jmp from `C688:8399` [menu-entry.md:318](menu-entry.md#L318)<br>jmp from `C688:AB1A` [wp-print-out.md:85](wp-print-out.md#L85) |
 | `C688:92A0` | (address-only) | 1 | jmp from `C688:8396` [menu-entry.md:317](menu-entry.md#L317) |
 | `C688:92DF` | `inline_key_dispatch_C688_92DF` | 5 | call from `C688:ECC3` [app-menu-event-loop.md:84](app-menu-event-loop.md#L84)<br>call from `C688:8D60` [document-picker-ui.md:164](document-picker-ui.md#L164)<br>call from `C688:8DB0` [document-picker-ui.md:206](document-picker-ui.md#L206)<br>call from `C688:ECC3` [menu-entry.md:377](menu-entry.md#L377)<br>call from `C688:ECC3` [wp-edit-text.md:70](wp-edit-text.md#L70) |
-| `C688:92E2` | `inline_key_dispatch_body_C688_92E2` | 1 | call from `C688:ED87` [app-menu-event-loop.md:220](app-menu-event-loop.md#L220) |
+| `C688:92E2` | `inline_key_dispatch_body_C688_92E2` | 1 | call from `C688:ED87` [app-menu-event-loop.md:221](app-menu-event-loop.md#L221) |
 | `C688:92EA` | (address-only) | 1 | jmp from `C688:92FC` [app-menu-event-loop.md:51](app-menu-event-loop.md#L51) |
 | `C688:92FE` | (address-only) | 2 | jz from `C688:92F4` [app-menu-event-loop.md:46](app-menu-event-loop.md#L46)<br>jz from `C688:92F8` [app-menu-event-loop.md:48](app-menu-event-loop.md#L48) |
 | `C688:9301` | (address-only) | 1 | jz from `C688:92F0` [app-menu-event-loop.md:44](app-menu-event-loop.md#L44) |
@@ -537,7 +537,7 @@ Generated from direct call/jump operands in annotated snippets. Address-only tar
 | `C688:9461` | (address-only) | 1 | call from `C688:AD3B` [wp-print-out.md:170](wp-print-out.md#L170) |
 | `C688:9541` | (address-only) | 4 | call from `C688:2A57` [menu-entry.md:116](menu-entry.md#L116)<br>call from `C688:776E` [menu-entry.md:162](menu-entry.md#L162)<br>call from `C688:AD89` [print-merge-handlers.md:60](print-merge-handlers.md#L60)<br>call from `C688:776E` [wp-edit-text.md:92](wp-edit-text.md#L92) |
 | `C688:96E1` | (address-only) | 2 | call from `C688:779F` [menu-entry.md:181](menu-entry.md#L181)<br>call from `C688:779F` [wp-edit-text.md:111](wp-edit-text.md#L111) |
-| `C688:96EA` | (address-only) | 3 | call from `C688:EDC1` [app-menu-event-loop.md:253](app-menu-event-loop.md#L253)<br>call from `C688:8EE3` [document-picker-ui.md:355](document-picker-ui.md#L355)<br>call from `C688:EC94` [wp-clear-text.md:57](wp-clear-text.md#L57) |
+| `C688:96EA` | (address-only) | 3 | call from `C688:EDC1` [app-menu-event-loop.md:254](app-menu-event-loop.md#L254)<br>call from `C688:8EE3` [document-picker-ui.md:355](document-picker-ui.md#L355)<br>call from `C688:EC94` [wp-clear-text.md:57](wp-clear-text.md#L57) |
 | `C688:97E7` | (address-only) | 1 | call from `C688:8F26` [document-picker-ui.md:409](document-picker-ui.md#L409) |
 | `C688:9DFB` | (address-only) | 1 | call from `C688:2A5A` [menu-entry.md:117](menu-entry.md#L117) |
 | `C688:A355` | `synthetic_stream_allowed_predicate_C688_A355` | 4 | call from `C688:1DE4` [wp-editor-redraw.md:733](wp-editor-redraw.md#L733)<br>call from `C688:2224` [wp-editor-redraw.md:1267](wp-editor-redraw.md#L1267)<br>call from `C688:A378` [wp-editor-redraw.md:1791](wp-editor-redraw.md#L1791)<br>call from `C688:A494` [wp-editor-redraw.md:1945](wp-editor-redraw.md#L1945) |
@@ -616,18 +616,18 @@ Generated from direct call/jump operands in annotated snippets. Address-only tar
 | `C688:EC5A` | (address-only) | 1 | call from `DC98:2723` [wp-submenus.md:167](wp-submenus.md#L167) |
 | `C688:EC77` | `wp_clear_text_worker_C688_EC77` | 2 | call from `C688:EB50` [wp-clear-text.md:25](wp-clear-text.md#L25)<br>jnz from `C688:EC8A` [wp-clear-text.md:53](wp-clear-text.md#L53) |
 | `C688:EC9F` | `root_app_menu_event_loop_C688_EC9F`, `root_edit_text_shared_loop_C688_EC9F` | 12 | jmp from `C688:EB2B` [app-menu-event-loop.md:130](app-menu-event-loop.md#L130)<br>jmp from `C688:EF56` [app-menu-event-loop.md:154](app-menu-event-loop.md#L154)<br>jmp from `C688:EF68` [app-menu-event-loop.md:169](app-menu-event-loop.md#L169)<br>jmp from `C688:8D0C` [document-picker-ui.md:99](document-picker-ui.md#L99)<br>jmp from `C688:8D83` [document-picker-ui.md:115](document-picker-ui.md#L115)<br>jmp from `C688:8E19` [document-picker-ui.md:273](document-picker-ui.md#L273) |
-| `C688:ECA7` | `loop_refresh_and_poll_C688_ECA7` | 2 | jmp from `C688:ED02` [app-menu-event-loop.md:184](app-menu-event-loop.md#L184)<br>jmp from `C688:EE2C` [app-menu-event-loop.md:263](app-menu-event-loop.md#L263) |
+| `C688:ECA7` | `loop_refresh_and_poll_C688_ECA7` | 2 | jmp from `C688:ED02` [app-menu-event-loop.md:184](app-menu-event-loop.md#L184)<br>jmp from `C688:EE2C` [app-menu-event-loop.md:264](app-menu-event-loop.md#L264) |
 | `C688:ECC3` | (address-only) | 3 | jnz from `C688:ECBE` [app-menu-event-loop.md:82](app-menu-event-loop.md#L82)<br>jnz from `C688:ECBE` [menu-entry.md:375](menu-entry.md#L375)<br>jnz from `C688:ECBE` [wp-edit-text.md:68](wp-edit-text.md#L68) |
 | `C688:ED04` | (address-only) | 1 | jz from `C688:ECFB` [app-menu-event-loop.md:182](app-menu-event-loop.md#L182) |
 | `C688:ED84` | `no_event_dispatch_C688_ED84` | 3 | jmp from `C688:ECC0` [app-menu-event-loop.md:83](app-menu-event-loop.md#L83)<br>jmp from `C688:ECC0` [menu-entry.md:376](menu-entry.md#L376)<br>jmp from `C688:ECC0` [wp-edit-text.md:69](wp-edit-text.md#L69) |
-| `C688:EDB9` | (address-only) | 1 | jmp from `C688:EDC4` [app-menu-event-loop.md:254](app-menu-event-loop.md#L254) |
-| `C688:EDC1` | (address-only) | 1 | jmp from `C688:EE32` [app-menu-event-loop.md:265](app-menu-event-loop.md#L265) |
-| `C688:EDCB` | (address-only) | 1 | jc from `C688:EDA1` [app-menu-event-loop.md:250](app-menu-event-loop.md#L250) |
-| `C688:EE84` | (address-only) | 4 | call from `C688:EE3A` [app-menu-event-loop.md:268](app-menu-event-loop.md#L268)<br>call from `C688:EC7A` [wp-clear-text.md:46](wp-clear-text.md#L46)<br>call from `C688:AAD4` [wp-print-out.md:60](wp-print-out.md#L60)<br>call from `C688:ACCE` [wp-print-out.md:144](wp-print-out.md#L144) |
+| `C688:EDB9` | (address-only) | 1 | jmp from `C688:EDC4` [app-menu-event-loop.md:255](app-menu-event-loop.md#L255) |
+| `C688:EDC1` | (address-only) | 1 | jmp from `C688:EE32` [app-menu-event-loop.md:266](app-menu-event-loop.md#L266) |
+| `C688:EDCB` | (address-only) | 1 | jc from `C688:EDA1` [app-menu-event-loop.md:251](app-menu-event-loop.md#L251) |
+| `C688:EE84` | (address-only) | 4 | call from `C688:EE3A` [app-menu-event-loop.md:269](app-menu-event-loop.md#L269)<br>call from `C688:EC7A` [wp-clear-text.md:46](wp-clear-text.md#L46)<br>call from `C688:AAD4` [wp-print-out.md:60](wp-print-out.md#L60)<br>call from `C688:ACCE` [wp-print-out.md:144](wp-print-out.md#L144) |
 | `C688:EE8C` | (address-only) | 1 | call from `C688:92DF` [app-menu-event-loop.md:34](app-menu-event-loop.md#L34) |
-| `C688:EE98` | (address-only) | 2 | call from `C688:EE34` [app-menu-event-loop.md:266](app-menu-event-loop.md#L266)<br>call from `C688:8EDD` [document-picker-ui.md:353](document-picker-ui.md#L353) |
+| `C688:EE98` | (address-only) | 2 | call from `C688:EE34` [app-menu-event-loop.md:267](app-menu-event-loop.md#L267)<br>call from `C688:8EDD` [document-picker-ui.md:353](document-picker-ui.md#L353) |
 | `C688:EE9E` | (address-only) | 5 | call from `C688:8329` [document-picker-ui.md:50](document-picker-ui.md#L50)<br>call from `C688:8329` [menu-entry.md:289](menu-entry.md#L289)<br>call from `C688:AD84` [print-merge-handlers.md:58](print-merge-handlers.md#L58)<br>call from `C688:AAE8` [wp-print-out.md:79](wp-print-out.md#L79)<br>call from `C688:ACAA` [wp-print-out.md:118](wp-print-out.md#L118) |
-| `C688:EEFE` | (address-only) | 1 | call from `C688:ED9E` [app-menu-event-loop.md:249](app-menu-event-loop.md#L249) |
+| `C688:EEFE` | (address-only) | 1 | call from `C688:ED9E` [app-menu-event-loop.md:250](app-menu-event-loop.md#L250) |
 | `C688:EF45` | `organizer_then_wp_menu_C688_EF45` | 2 | jmp from `C688:EB28` [app-menu-event-loop.md:129](app-menu-event-loop.md#L129)<br>jmp from `C688:EB28` [wp-edit-text.md:43](wp-edit-text.md#L43) |
 | `C688:EF67` | (address-only) | 1 | jz from `C688:EF62` [app-menu-event-loop.md:166](app-menu-event-loop.md#L166) |
 | `C688:EF81` | (address-only) | 1 | call from `C688:EC87` [wp-clear-text.md:52](wp-clear-text.md#L52) |

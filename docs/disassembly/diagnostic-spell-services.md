@@ -52,8 +52,9 @@ C000:15FD  C3                ret
 ## Dispatcher Stubs
 
 `C000:18A1` maps the banked code at `3000:0000`, which dispatches through
-`3000:4AA6`. Service IDs `0x58` and `0x59` are the final valid entries in the
-`0x00..0x59` jump table:
+`3000:4AA6`. The full wrapper and service table are mapped in
+[`banked-linguistic-services.md`](banked-linguistic-services.md). Service IDs
+`0x58` and `0x59` are the final valid entries in the `0x00..0x59` jump table:
 
 ```asm
 ; file 0x34BF2

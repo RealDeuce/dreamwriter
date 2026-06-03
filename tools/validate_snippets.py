@@ -12,6 +12,9 @@ from pathlib import Path
 from rom2 import (
     expand_markdown_inputs,
     parse_addr_expr,
+    parse_addr_part,
+    parse_file_base,
+    parse_seg_off_label,
     phys_to_file,
     read_rom,
 )
@@ -60,6 +63,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="include README.md files",
     )
+    parser.add_argument(
+        "--bank-base",
+        action="append",
+        default=["3000=file:0x30000"],
+        metavar="SEG=file:OFFSET",
+        help=(
+            "map bank-local segment snippets to a ROM file base; repeatable. "
+            "Defaults to 3000=file:0x30000 for the linguistic bank"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -71,7 +84,23 @@ def normalize_path(path: Path, include_readme: bool) -> bool:
     return True
 
 
-def parse_snippet_lines(lines: list[str]) -> list[tuple[str, int, int, bytes, str]]:
+def parse_bank_bases(values: list[str]) -> dict[int, int]:
+    bases: dict[int, int] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError(f"invalid --bank-base {value!r}; expected SEG=file:OFFSET")
+        seg_text, base_text = value.split("=", 1)
+        seg = parse_addr_part(seg_text)
+        if not 0 <= seg <= 0xFFFF:
+            raise ValueError(f"bank segment out of range: {seg_text}")
+        bases[seg] = parse_file_base(base_text)
+    return bases
+
+
+def parse_snippet_lines(
+    lines: list[str],
+    bank_bases: dict[int, int],
+) -> list[tuple[str, int, int, int, bytes, str]]:
     in_asm = False
     found = []
 
@@ -109,12 +138,20 @@ def parse_snippet_lines(lines: list[str]) -> list[tuple[str, int, int, bytes, st
             continue
         bytes_vals = bytes(byte_values)
 
-        try:
-            _, phys = parse_addr_expr(addr_expr)
-        except ValueError:
-            continue
+        bank_label = parse_seg_off_label(addr_expr)
+        if bank_label is not None and bank_label[0] in bank_bases:
+            seg, off = bank_label
+            file_off = bank_bases[seg] + off
+            origin = off
+        else:
+            try:
+                _, phys = parse_addr_expr(addr_expr)
+            except ValueError:
+                continue
+            file_off = phys_to_file(phys)
+            origin = phys
 
-        found.append((addr_expr, line_no, phys, bytes_vals, rest))
+        found.append((addr_expr, line_no, file_off, origin, bytes_vals, rest))
 
     return found
 
@@ -183,29 +220,31 @@ def extract_ndisasm_records(output: str) -> list[tuple[int | None, bytes, str]]:
     return records
 
 
-def contiguous_groups(records: list[tuple[str, int, int, bytes, str]]):
+def contiguous_groups(records: list[tuple[str, int, int, int, bytes, str]]):
     group = []
-    next_phys = None
+    next_file_off = None
+    next_origin = None
     for record in records:
-        _, _, phys, expected, _ = record
-        if group and phys != next_phys:
+        _, _, file_off, origin, expected, _ = record
+        if group and (file_off != next_file_off or origin != next_origin):
             yield group
             group = []
         group.append(record)
-        next_phys = phys + len(expected)
+        next_file_off = file_off + len(expected)
+        next_origin = origin + len(expected)
     if group:
         yield group
 
 
-def validate_disasm_records(records: list[tuple[str, int, int, bytes, str]], path: Path) -> int:
+def validate_disasm_records(records: list[tuple[str, int, int, int, bytes, str]], path: Path) -> int:
     if not records:
         return 0
 
-    start_phys = records[0][2]
-    blob = b"".join(record[3] for record in records)
-    disasm_out, disasm_err = run_ndisasm(blob, start_phys)
+    start_origin = records[0][3]
+    blob = b"".join(record[4] for record in records)
+    disasm_out, disasm_err = run_ndisasm(blob, start_origin)
     if disasm_err is not None:
-        for addr_expr, line_no, _, _, _ in records:
+        for addr_expr, line_no, _, _, _, _ in records:
             print(
                 f"{path}:{line_no}: {addr_expr} cannot disassemble as 8086 bytes",
                 file=sys.stderr,
@@ -230,24 +269,24 @@ def validate_disasm_records(records: list[tuple[str, int, int, bytes, str]], pat
         return len(records)
 
     boundary_mismatch = any(
-        actual_phys != phys or actual_bytes != expected
-        for (_, _, phys, expected, _), (actual_phys, actual_bytes, _) in zip(records, actual_records)
+        actual_origin != origin or actual_bytes != expected
+        for (_, _, _, origin, expected, _), (actual_origin, actual_bytes, _) in zip(records, actual_records)
     )
     if boundary_mismatch and len(records) > 1:
         mid = len(records) // 2
         return validate_disasm_records(records[:mid], path) + validate_disasm_records(records[mid:], path)
 
     failures = 0
-    for (addr_expr, line_no, phys, expected, rest), (actual_phys, actual_bytes, actual_text) in zip(records, actual_records):
-        if actual_phys != phys or actual_bytes != expected:
+    for (addr_expr, line_no, _, origin, expected, rest), (actual_origin, actual_bytes, actual_text) in zip(records, actual_records):
+        if actual_origin != origin or actual_bytes != expected:
             failures += 1
-            actual_addr = "?" if actual_phys is None else f"0x{actual_phys:05X}"
+            actual_addr = "?" if actual_origin is None else f"0x{actual_origin:05X}"
             print(
                 f"{path}:{line_no}: {addr_expr} instruction boundary mismatch",
                 file=sys.stderr,
             )
             print(
-                f"  expected addr/bytes: 0x{phys:05X} {expected.hex(' ')}",
+                f"  expected addr/bytes: 0x{origin:05X} {expected.hex(' ')}",
                 f"actual addr/bytes:   {actual_addr} {actual_bytes.hex(' ')}",
                 file=sys.stderr,
             )
@@ -283,15 +322,23 @@ def main() -> int:
         return 1
 
     rom = read_rom(args.rom)
+    try:
+        bank_bases = parse_bank_bases(args.bank_base)
+    except ValueError as exc:
+        print(f"validate snippets: {exc}", file=sys.stderr)
+        return 1
+
     total = 0
     bytes_fail = 0
     asm_fail = 0
 
     for path in files:
         disasm_candidates = []
-        for addr_expr, line_no, phys, expected, rest in parse_snippet_lines(path.read_text(encoding="utf-8").splitlines()):
+        for addr_expr, line_no, file_off, origin, expected, rest in parse_snippet_lines(
+            path.read_text(encoding="utf-8").splitlines(),
+            bank_bases,
+        ):
             total += 1
-            file_off = phys_to_file(phys)
             if file_off + len(expected) > len(rom) or file_off < 0:
                 bytes_fail += 1
                 print(
@@ -314,7 +361,7 @@ def main() -> int:
                 )
                 continue
 
-            disasm_candidates.append((addr_expr, line_no, phys, expected, rest))
+            disasm_candidates.append((addr_expr, line_no, file_off, origin, expected, rest))
 
         for group in contiguous_groups(disasm_candidates):
             asm_fail += validate_disasm_records(group, path)

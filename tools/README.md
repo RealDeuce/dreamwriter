@@ -336,11 +336,14 @@ Options:
 Disassemble an arbitrary ROM window from a mixed address without manual address
 translation. By default, segment inputs set the `ndisasm` origin to the segment
 offset so local branch/call targets stay in the same notation as the docs;
+the printed address column is also relabeled as `SEG:OFF` for those decodes,
+and byte columns are split into the annotated snippet style used by the docs.
 `file:` and `phys:` inputs keep a physical origin unless a segment is supplied.
 
 ```sh
 tools/rom2.py disasm c688:0053 --count 0x300
 tools/rom2.py disasm 0053 --segment c688 --count 0x300
+tools/rom2.py disasm 3000:4aa6 --bank-base file:0x30000 --count 0x80
 tools/rom2.py disasm file:0x6bbb0 --count 0x180
 tools/rom2.py disasm phys:0x8e520
 printf 'C688:0053\\nC688:00A0\\n' | tools/rom2.py disasm --stdin --count 0x200
@@ -352,6 +355,7 @@ Options:
 | --- | --- | --- |
 | `--count` | `0x400` | Bytes to feed to `ndisasm` from the start address; decimal, `0x`, or `$` hex are accepted. |
 | `--segment` | unset | Parse bare values as offsets in this segment; also supplies the segment for offset-origin output. |
+| `--bank-base` | unset | File offset mapped to segment offset `0000` for banked code; for example `file:0x30000` maps `3000:4AA6` to file `0x34AA6`. |
 | `--origin` | `auto` | `auto` uses segment offsets for segment inputs and physical addresses otherwise; use `phys` or `offset` to force one mode. |
 | `--stdin` | off | Read additional start addresses from stdin. |
 | `--count-output` | off | Print an extra blank line after each decoded block. |
@@ -528,3 +532,8 @@ You can scope validation to a single markdown file:
 python3 tools/validate_snippets.py docs/disassembly/app-menu-event-loop.md
 tools/disasm-validate.sh --docs docs/disassembly/app-menu-event-loop.md
 ```
+
+`validate_snippets.py` maps bank-local `3000:` snippets to file `0x30000` by
+default so linguistic-bank disassembly can be byte-checked. Additional bank
+windows can be supplied with repeated mappings such as
+`--bank-base 4000=file:0x50000`.

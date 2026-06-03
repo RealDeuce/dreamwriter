@@ -33,7 +33,7 @@ digraph disassembly_transfers {
   n_3000_4D75 [label="3000:4D75\n3000:4D75"];
   n_3000_4D7B [label="3000:4D7B\n3000:4D7B"];
   n_3000_4F76 [label="3000:4F76\n3000:4F76"];
-  n_3000_5016 [label="3000:5016\n3000:5016"];
+  n_3000_5016 [label="candidate_manager_init_C3000_5016\n3000:5016"];
   n_3000_527C [label="3000:527C\n3000:527C"];
   n_C000_0000 [label="root_c000_entry\nC000:0000"];
   n_C000_0021 [label="C000:0021\nC000:0021"];
@@ -220,7 +220,7 @@ digraph disassembly_transfers {
   n_C000_1708 [label="C000:1708\nC000:1708"];
   n_C000_1716 [label="C000:1716\nC000:1716"];
   n_C000_1873 [label="C000:1873\nC000:1873"];
-  n_C000_18A1 [label="C000:18A1\nC000:18A1"];
+  n_C000_18A1 [label="banked_linguistic_mapper_C000_18A1\nC000:18A1"];
   n_C000_23D9 [label="status_lower_default_x_C000_23D9\nC000:23D9"];
   n_C000_23DE [label="status_lower_C000_23DE\nC000:23DE"];
   n_C000_28A7 [label="service_0E_select_drive_C000_28A7\nC000:28A7"];

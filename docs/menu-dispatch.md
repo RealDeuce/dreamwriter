@@ -124,7 +124,7 @@ Some targets are already useful anchors:
 | `C688:EF4F` | `0x557CF` | Far-calls `DC98:53C3`, then returns to `C688:EC9F`. |
 | `C688:EF59` | `0x557D9` | Far-calls `DC98:4D08`; if the result is not `FFFF`, stores `AL` to `[7884]`. |
 | `C688:AD5C` | `0x515DC` | Opens `H:ADDRESS.ODB`, reads records, and prints/steps through address-book data. Strong organizer/address-book anchor. |
-| `C688:D8AF` | `0x5412F` | Large file/document-style flow with nested `C688:92DF` table. |
+| `C688:D8AF` | `0x5412F` | Editor Dictionary front end. Draws resource `0x39`, then enters local dictionary/suggestion dispatch; see [`disassembly/wp-linguistic-tools.md`](disassembly/wp-linguistic-tools.md#dictionary-front-end). |
 | `C688:E274` | `0x54AF4` | Editor Thesaurus entry. Calls `C688:E282`, draws resource `0x76`, then enters the Thesaurus list/meaning loop at `C688:E2EA`. See [`spell-engine.md`](spell-engine.md#editor-thesaurus-front-end). |
 
 `C688:ED84` embeds another table after `C688:ED87 call C688:92E2`, keyed by

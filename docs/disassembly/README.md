@@ -80,6 +80,22 @@ Generated reference indexes:
 | [`diagnostics-ui.md`](diagnostics-ui.md) | Diagnostic chord/UI boundary that seeds the installed `INT 1` watch state. |
 | [`diagnostic-monitor.md`](diagnostic-monitor.md) | Built-in diagnostic command parser, memory/I/O dump and set commands, single-step state setup, keyboard/help helpers, and local output routines. |
 | [`diagnostic-spell-services.md`](diagnostic-spell-services.md) | Diagnostic `Q/R` clear/reset spell service bodies behind banked service IDs `0x58` and `0x59`. |
+| [`banked-linguistic-services.md`](banked-linguistic-services.md) | C000/C688 linguistic service wrapper, banked `3000:4AA6` dispatcher table, and editor-facing service front ends. |
+| [`banked-candidate-manager.md`](banked-candidate-manager.md) | Banked linguistic candidate-list manager, row/cursor accessors, and related-word iterator boundary. |
+| [`banked-candidate-formatter.md`](banked-candidate-formatter.md) | Banked candidate-row formatter, selector table, subtype row bodies, and label resolver. |
+| [`banked-candidate-record-formatter.md`](banked-candidate-record-formatter.md) | Banked candidate record formatter, dictionary field expansion routing, and suffix-handler dispatch boundary. |
+| [`banked-suffix-dispatch.md`](banked-suffix-dispatch.md) | Banked suffix final-letter dispatcher, local word-form mutations, and dictionary-check handoffs. |
+| [`banked-suffix-secondary.md`](banked-suffix-secondary.md) | Secondary banked suffix helpers for `3000:7164` and `3000:721C`, including the `a..y` dispatch table. |
+| [`banked-suffix-tertiary.md`](banked-suffix-tertiary.md) | Tertiary banked suffix helpers for `3000:7432`, `3000:748E`, and the shared compound builder at `3000:7686`. |
+| [`banked-suffix-extended.md`](banked-suffix-extended.md) | Extended banked suffix helper for `3000:7724`, including the `est`/`more ` and `er`/`most ` record-type paths. |
+| [`banked-compound-normalizer.md`](banked-compound-normalizer.md) | Banked compound/alternate candidate normalizer for `3000:78CE`, including `0x0E` and slash separator handling. |
+| [`banked-compressed-subheader-loader.md`](banked-compressed-subheader-loader.md) | Banked compressed-word subheader loader for `3000:7972`, including runtime table setup at `3C00:9650`. |
+| [`banked-candidate-expansion-dispatcher.md`](banked-candidate-expansion-dispatcher.md) | Banked candidate expansion dispatcher for `3000:79E8`, including single-word, multiword, and suffix-pattern fallback routing. |
+| [`banked-suffix-pattern-records.md`](banked-suffix-pattern-records.md) | Banked suffix-pattern record table lookup, record-kind jump table, and first final-`e` helper body. |
+| [`banked-suffix-final-letter-extended.md`](banked-suffix-final-letter-extended.md) | Banked extended final-letter suffix helpers for `3000:7F66`, `3000:7F96`, `3000:7F9C`, `3000:7FD4`, and `3000:8056`. |
+| [`banked-inflection-helper-tail.md`](banked-inflection-helper-tail.md) | Banked inflection helper tail for `3000:8232` and `3000:8264`, including helper entries `3000:8290`, `3000:82C6`, `3000:83E4`, and `3000:8438`. |
+| [`banked-multiword-expansion.md`](banked-multiword-expansion.md) | Banked compound/multiword expansion helpers for `3000:84A8`, `3000:8528`, `3000:87D6`, and `3000:8808`. |
+| [`banked-dictionary-stream-init.md`](banked-dictionary-stream-init.md) | Banked dictionary stream initializer and page loader for `3000:8854`, `3000:88A0`, `3000:89B6`, and `3000:89E2`. |
 | [`diagnostic-keyboard-check.md`](diagnostic-keyboard-check.md) | Diagnostic `K` command keyboard-coverage loop, local key-cell drawing helpers, key table format, and rendered keyboard bitmap assets. |
 | [`low-ram-abi.md`](low-ram-abi.md) | Far-pointer table copied from `C000:0F94` to `0000:0200`, including display, keyboard, and file wrapper entries. |
 | [`low-ram-abi-unknowns.md`](low-ram-abi-unknowns.md) | Remaining low-RAM ABI UI widgets: wrapped text, editable fields, prompt selector, and callback setter. |
@@ -98,6 +114,7 @@ Generated reference indexes:
 | [`wp-file-handlers.md`](wp-file-handlers.md) | WP FILE submenu handlers, shared picker/name-entry UI layer, decoded prompt resources, and COPY direction/list boundary. |
 | [`wp-communicate-handlers.md`](wp-communicate-handlers.md) | COMMUNICATE send/receive/terminal handlers, decoded prompt resources, and classic 128-byte checksum XMODEM paths. |
 | [`print-merge-handlers.md`](print-merge-handlers.md) | WP print/merge app-loop roots, ADDRESS.ODB name-list reader, selected-record substitution, and merge resources. |
+| [`wp-linguistic-tools.md`](wp-linguistic-tools.md) | WP Spell/Grammar Check, Dictionary, and Thesaurus app-loop roots and editor UI handoffs. |
 | [`document-picker-ui.md`](document-picker-ui.md) | Shared application-loop document/list re-entry roots, `LIST OF DOC.` template continuation, and SEARCH/REPLACE prompt variants. |
 | [`setup-screens.md`](setup-screens.md) | Word-processor setup/settings editors for RS-232, printer, SYSTEM, and PREFERENCES, including backing state and decoded option strings. |
 | [`wp-others-handlers.md`](wp-others-handlers.md) | OTHERS -> T I M E entry/Typin' Time dispatcher boundary and complete ROM CARD `EROMCARD.X` loader, including failure strings and payload header. |
@@ -112,8 +129,8 @@ Generated reference indexes:
 
 ## Root Expansion Queue
 
-The boot slice has already exposed these next roots:
+No open roots are currently queued. Keep the table in place so
+`tools/rom2.py queue-audit` can report an empty queue explicitly.
 
 | Root | Source | Next slice |
 | --- | --- | --- |
-| `C688:ED1F`, `C688:E274`, `C688:D8AF` | Reached from `app-menu-event-loop.md`. | Word-processor linguistic and document flows. |

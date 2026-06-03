@@ -159,7 +159,7 @@ used when the ROM event paths are followed later:
 | `WORDL`, `WORDR`, `PREVP`, `NEXTP`, `BEGIN`, end-of-document | Quick cursor movement from the EDIT TEXT screen. |
 | `WORD WRAP`, `INDENT`, `INDCLR`, `CENTER`, `R-FLUSH`, `PITCH`, `FORMAT` | Typing/layout functions. |
 | `REFORMAT`, `JUSTIFY`, `SELECT`, `COPY/PASTE`, `CUT/PASTE`, `DELETE`, `SEARCH`, `REPLACE`, `NEXT`, `UNDELETE` | Editing functions. |
-| `SPELL CHECK`, `AUTO SPELL`, `DICTIONARY`, `THESAURUS` | Linguistic tools, already separated as app-loop boundaries. |
+| `SPELL CHECK`, `AUTO SPELL`, `DICTIONARY`, `THESAURUS` | Linguistic tools; Spell/Grammar, Dictionary, and Thesaurus app-loop roots are mapped in [`wp-linguistic-tools.md`](wp-linguistic-tools.md). |
 
 These names come from the manual's EDIT TEXT and quick-reference sections. The
 ROM event bytes still need to be tied back through
@@ -176,4 +176,5 @@ This first EDIT TEXT pass bottoms at:
 | `C688:7766` | Editor redraw/update sequence used by boot and CLEAR TEXT. |
 | `C688:44C4` | Active editor state snapshot into the fixed UI buffer. |
 | `C688:44DB` | Viewport/window-state helper, expanded in [`wp-editor-viewport.md`](wp-editor-viewport.md). |
-| App-loop targets `C688:ED1F`, `C688:E274`, `C688:D8AF`, `C688:AD5C`, `C688:ED15` | Deferred non-editor app/tool branches listed in [`app-menu-event-loop.md`](app-menu-event-loop.md#next-splits). |
+| App-loop printer/merge targets `C688:AD5C`, `C688:ED15` | Mapped in [`print-merge-handlers.md`](print-merge-handlers.md). |
+| App-loop linguistic targets `C688:ED1F`, `C688:D8AF`, `C688:E274` | Mapped in [`wp-linguistic-tools.md`](wp-linguistic-tools.md). |

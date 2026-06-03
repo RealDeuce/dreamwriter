@@ -40,6 +40,7 @@ ADDRESS_TOKEN_RE = re.compile(
     re.IGNORECASE,
 )
 SEG_OFF_LABEL_RE = re.compile(r"^([0-9A-Fa-f]{3,4}):([0-9A-Fa-f]{4})$")
+NDISASM_LINE_RE = re.compile(r"^([0-9A-Fa-f]+)(\s+)([0-9A-Fa-f]+)(\s+)(.*)$")
 
 
 def parse_int(value: str) -> int:
@@ -180,6 +181,41 @@ def parse_seg_off_label(label: str) -> tuple[int, int] | None:
     if not match:
         return None
     return int(match.group(1), 16), int(match.group(2), 16)
+
+
+def parse_file_base(value: str) -> int:
+    if value.lower().startswith("file:"):
+        value = value.split(":", 1)[1]
+    offset = parse_int(value)
+    if not 0 <= offset < ROM_SIZE:
+        raise ValueError(f"file offset out of ROM range: 0x{offset:x}")
+    return offset
+
+
+def format_ndisasm_output(output: str, segment: int | None = None) -> str:
+    """Convert ndisasm output into the annotated style used in docs."""
+    lines = []
+    for line in output.splitlines(keepends=True):
+        body = line[:-1] if line.endswith("\n") else line
+        newline = "\n" if line.endswith("\n") else ""
+        match = NDISASM_LINE_RE.match(body)
+        if not match:
+            lines.append(line)
+            continue
+        addr_text = match.group(1)
+        try:
+            offset = int(addr_text, 16)
+        except ValueError:
+            lines.append(line)
+            continue
+        if segment is not None and offset <= 0xFFFF:
+            addr_text = f"{segment:04X}:{offset:04X}"
+
+        byte_text = match.group(3)
+        if len(byte_text) % 2 == 0:
+            byte_text = " ".join(byte_text[i : i + 2] for i in range(0, len(byte_text), 2))
+        lines.append(f"{addr_text}  {byte_text:<17} {match.group(5)}{newline}")
+    return "".join(lines)
 
 
 def format_addr_row(
@@ -645,21 +681,72 @@ def cmd_disasm(args: argparse.Namespace) -> int:
         return 1
 
     default_seg = parse_addr_part(args.segment) if args.segment else None
+    try:
+        bank_base = parse_file_base(args.bank_base) if args.bank_base else None
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
 
     for start_expr in starts:
-        try:
-            label, phys = parse_addr_expr(start_expr, default_seg)
-        except ValueError as exc:
-            print(f"{start_expr}: {exc}", file=sys.stderr)
-            return 1
-
-        preferred = parse_seg_off_label(label)
-        if preferred is None and default_seg is not None:
+        preferred: tuple[int, int] | None
+        if bank_base is None:
             try:
-                preferred = (default_seg, phys_to_seg_off(phys, default_seg))
+                label, phys = parse_addr_expr(start_expr, default_seg)
             except ValueError as exc:
                 print(f"{start_expr}: {exc}", file=sys.stderr)
                 return 1
+
+            preferred = parse_seg_off_label(label)
+            if preferred is None and default_seg is not None:
+                try:
+                    preferred = (default_seg, phys_to_seg_off(phys, default_seg))
+                except ValueError as exc:
+                    print(f"{start_expr}: {exc}", file=sys.stderr)
+                    return 1
+            start = phys_to_file(phys)
+        else:
+            preferred = None
+            if ":" in start_expr and not start_expr.lower().startswith(("file:", "phys:")):
+                seg_text, off_text = start_expr.split(":", 1)
+                seg = parse_addr_part(seg_text)
+                off = parse_addr_part(off_text)
+                preferred = (seg, off)
+                label = f"{seg:04X}:{off:04X}"
+                start = bank_base + off
+            elif start_expr.lower().startswith("phys:"):
+                print(f"{start_expr}: --bank-base does not support phys: starts", file=sys.stderr)
+                return 1
+            elif start_expr.lower().startswith("file:"):
+                try:
+                    start = parse_file_base(start_expr)
+                except ValueError as exc:
+                    print(f"{start_expr}: {exc}", file=sys.stderr)
+                    return 1
+                off = start - bank_base
+                label = f"file:0x{start:X}"
+                if default_seg is not None and 0 <= off <= 0xFFFF:
+                    preferred = (default_seg, off)
+            else:
+                if default_seg is None:
+                    print(
+                        f"{start_expr}: --bank-base requires segment:offset input or --segment",
+                        file=sys.stderr,
+                    )
+                    return 1
+                off = parse_int(start_expr)
+                if not 0 <= off <= 0xFFFF:
+                    print(
+                        f"{start_expr}: segment offset out of range for {default_seg:04X}: 0x{off:x}",
+                        file=sys.stderr,
+                    )
+                    return 1
+                preferred = (default_seg, off)
+                label = f"{default_seg:04X}:{off:04X}"
+                start = bank_base + off
+            if not 0 <= start < len(data):
+                print(f"{label}: banked range starts outside ROM image", file=sys.stderr)
+                return 1
+            phys = file_to_phys(start)
 
         if args.origin == "phys" or (args.origin == "auto" and preferred is None):
             origin = phys
@@ -698,11 +785,15 @@ def cmd_disasm(args: argparse.Namespace) -> int:
         preferred_text = ""
         if preferred is not None and label.lower().startswith(("file:", "phys:")):
             preferred_text = f"  {preferred[0]:04X}:{preferred[1]:04X}"
+        disassembly = result.stdout.decode("utf-8", errors="replace")
+        display_segment = preferred[0] if preferred is not None and origin == preferred[1] else None
+        disassembly = format_ndisasm_output(disassembly, display_segment)
+
         print(
             f"; {label}{preferred_text}  file 0x{start:05X} phys 0x{phys:05X} "
             f"origin={origin_label} 0x{origin:05X} len=0x{end-start:X}"
         )
-        print(result.stdout.decode("utf-8", errors="replace"), end="")
+        print(disassembly, end="")
         if args.count_output:
             print()
             print()
@@ -788,8 +879,12 @@ def cmd_queue_audit(args: argparse.Namespace) -> int:
                 queue_rows.append((root_cell, source, next_slice))
 
     if not queue_rows:
-        print(f"no queue rows found in {queue_path}", file=sys.stderr)
-        return 1
+        if args.format == "markdown":
+            print("| Root | Source | Next Slice | Status |")
+            print("| --- | --- | --- | --- |")
+        if not args.open_only:
+            print("summary: open=0 seen=0 named=0 invalid=0")
+        return 0
 
     scope_files = expand_markdown_inputs(args.scope_docs)
     discovered: set[int] = set()
@@ -1289,6 +1384,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "parse bare values as offsets in this segment; also supplies the "
             "segment for --origin offset"
+        ),
+    )
+    disasm.add_argument(
+        "--bank-base",
+        help=(
+            "file offset mapped to segment offset 0000 for banked code, such as "
+            "file:0x30000 for the linguistic 3000: window"
         ),
     )
     disasm.add_argument(

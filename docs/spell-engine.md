@@ -554,7 +554,9 @@ confirmed pointer.
 
 `3000:88A0` initializes the dictionary structure at `3C00:7502`. It resets the
 logical stream, seeks to offset `0x100`, reads 16 bytes, and converts them into
-eight little-endian words:
+eight little-endian words. Detailed disassembly for `3000:8854`, `3000:88A0`,
+`3000:89B6`, and `3000:89E2` is maintained in
+[`disassembly/banked-dictionary-stream-init.md`](disassembly/banked-dictionary-stream-init.md):
 
 ```asm
 3000:88CB  mov ax,0100
@@ -619,9 +621,13 @@ the page, seeks through `3000:66AE`, reads `0x400` bytes to `0x864E`, and sets:
 
 `3000:ADBE` reads an arbitrary number of bits from this page buffer and calls
 `3000:B076` again when the pointer passes `0x814E`. `3000:8854` uses that bit
-reader to read little-endian 16-bit words as two 8-bit reads.
+reader to read little-endian 16-bit words as two 8-bit reads; detailed
+disassembly is maintained in
+[`disassembly/banked-dictionary-stream-init.md`](disassembly/banked-dictionary-stream-init.md).
 
-`3000:7972` reads the compressed-word subheader:
+`3000:7972` reads the compressed-word subheader. Detailed disassembly is
+maintained in
+[`disassembly/banked-compressed-subheader-loader.md`](disassembly/banked-compressed-subheader-loader.md):
 
 | Address | Source |
 | ---: | --- |
@@ -712,6 +718,9 @@ ROM map:
 
 The rough block after the stream reader begins with real code. `3000:66D4`
 initializes the high-level candidate/suggestion state:
+
+Detailed service-facing disassembly for the candidate manager is maintained in
+[`disassembly/banked-candidate-manager.md`](disassembly/banked-candidate-manager.md).
 
 ```asm
 3000:66DA  mov word [712E],FFFF
@@ -878,16 +887,19 @@ Thesaurus expansion path does not yet prove a direct slot-0 page-data read.
 
 `3000:6964` formats numbered suggestion lines. It writes a digit, `") "`,
 then formats a candidate based on packed record fields and appends text through
-the local string helpers at `3000:960A`, `3000:9626`, `3000:963A`, `3000:9666`,
-and `3000:969E`. The apparent constants such as `0x24F4`, `0x2508`, and
-`0x2589` in this formatter are `DS=3C00` RAM/data-segment pointers, not ROM
-file offsets.
+the local string helpers at `3000:960A`, `3000:9626`, and `3000:969E`. Detailed
+disassembly for this row formatter is maintained in
+[`disassembly/banked-candidate-formatter.md`](disassembly/banked-candidate-formatter.md).
+The apparent constants such as `0x24F4`, `0x2508`, and `0x2589` in this
+formatter are `DS=3C00` RAM/data-segment pointers, not ROM file offsets.
 
-`3000:6B6C..6ECE` is a parser/search-record formatter. It stores the active
+`3000:6B6C..6ECD` is a parser/search-record formatter. It stores the active
 record at `0x7134`, inspects fields like `[record+3]` and `[record+6]`, and
 uses `3000:B116` to expand dictionary entries into output buffers. Special
 cases combine entries with separators such as `/`, which looks like formatting
-compound or alternate forms.
+compound or alternate forms. Detailed disassembly for this layer is maintained
+in
+[`disassembly/banked-candidate-record-formatter.md`](disassembly/banked-candidate-record-formatter.md).
 
 ## Inflection and Suffix Handlers
 
@@ -898,7 +910,8 @@ scratch buffers, append suffix strings from the `3C00` data segment, and call
 
 `3000:6ECE` dispatches on the final character of the current output word. It
 subtracts `'e'` and jumps through an inline table at file `0x37124`, covering
-letters `e..z`:
+letters `e..z`. Detailed disassembly for this first suffix island is maintained
+in [`disassembly/banked-suffix-dispatch.md`](disassembly/banked-suffix-dispatch.md):
 
 | Final letter | Handler |
 | --- | --- |
@@ -925,14 +938,18 @@ Other handlers in the same island use similar final-letter dispatch:
 
 | File range | Role |
 | ---: | --- |
-| `0x37150..0x373F2` | Suffix handlers including a `3000:7164` path for final `c/e/l/y` cases and a `3000:721C` path that dispatches through `a..y`. |
+| `0x37150..0x373F2` | Suffix handlers including a `3000:7164` path for final `c/e/l/y` cases and a `3000:721C` path that dispatches through `a..y`; detailed in [`disassembly/banked-suffix-secondary.md`](disassembly/banked-suffix-secondary.md). |
 | `0x373F2..0x37424` | Inline `a..y` jump table for `3000:721C`. |
-| `0x37424..0x37636` | Continuation of suffix handling, including another large final-letter dispatcher at `3000:748E`. |
-| `0x37636..0x37666` | Inline `b..y` jump table for `3000:748E`. |
-| `0x37666..0x37724` | Candidate-combination helper used by the suffix handlers. |
-| `0x37724..0x378CE` | Additional suffix handler using record type `0x0B` and strings in the `3C00` data segment. |
-| `0x37F66..0x37F96` | Inline `c..z` jump table used by `3000:7E12`. |
-| `0x38232..0x38264` | Inline `a..y` jump table used by `3000:8056`. |
+| `0x37424..0x37636` | Continuation of suffix handling, including another large final-letter dispatcher at `3000:748E`; detailed in [`disassembly/banked-suffix-tertiary.md`](disassembly/banked-suffix-tertiary.md). |
+| `0x37636..0x37666` | Inline `b..y` jump table for `3000:748E`; documented in [`disassembly/banked-suffix-tertiary.md`](disassembly/banked-suffix-tertiary.md). |
+| `0x37666..0x37724` | Candidate-combination helper used by the suffix handlers; documented in [`disassembly/banked-suffix-tertiary.md`](disassembly/banked-suffix-tertiary.md). |
+| `0x37724..0x378CE` | Additional suffix handler using record type `0x0B` and strings in the `3C00` data segment; detailed in [`disassembly/banked-suffix-extended.md`](disassembly/banked-suffix-extended.md). |
+| `0x37F66..0x37F96` | Inline `c..z` jump table used by `3000:7E12`; documented in [`disassembly/banked-suffix-final-letter-extended.md`](disassembly/banked-suffix-final-letter-extended.md). |
+| `0x37F96..0x38232` | Extended suffix/word-form helpers including `3000:7F9C`, `3000:7FD4`, and `3000:8056`; detailed in [`disassembly/banked-suffix-final-letter-extended.md`](disassembly/banked-suffix-final-letter-extended.md). |
+| `0x38232..0x38264` | Inline `a..y` jump table used by `3000:8056`; documented in [`disassembly/banked-inflection-helper-tail.md`](disassembly/banked-inflection-helper-tail.md). |
+| `0x38264..0x384A8` | Tail helpers for doubled-letter, final-vowel, and pattern-constrained candidate forms; detailed in [`disassembly/banked-inflection-helper-tail.md`](disassembly/banked-inflection-helper-tail.md). |
+| `0x384A8..0x38854` | Compound rewrite, visible-space multiword expansion, array compaction, and `0x0E` marker rewriting; detailed in [`disassembly/banked-multiword-expansion.md`](disassembly/banked-multiword-expansion.md). |
+| `0x38854..0x38A0E` | Dictionary stream initializer, header/table loader, string pointer-table builder, and 1 KiB page loader; detailed in [`disassembly/banked-dictionary-stream-init.md`](disassembly/banked-dictionary-stream-init.md). |
 
 The combination helper at `3000:7686` copies two candidate fragments into
 scratch buffers, inserts byte `0x0E` as a separator when both fragments are
@@ -955,15 +972,20 @@ candidate inflection, suffix transformation, and dictionary validation.
 
 ## Candidate Expansion and Record Dispatch
 
-`3000:7A1E` is a larger candidate expansion dispatcher. It starts by expanding
-the caller's candidate with `3000:B116`, translates the returned record class
-through `3000:83E4`, and stores the active record pointer at `3C00:7180`.
+`3000:79E8` chooses the single-word or multiword candidate expansion path.
+`3000:7A1E` is the single-word dispatcher: it starts by expanding the caller's
+candidate with `3000:B116`, translates the returned record class through
+`3000:83E4`, and stores the active record pointer at `3C00:7180`. Detailed
+disassembly is maintained in
+[`disassembly/banked-candidate-expansion-dispatcher.md`](disassembly/banked-candidate-expansion-dispatcher.md).
 
 For ordinary single-word forms it calls `3000:8438` to append output pointers
 and record pointers to parallel arrays supplied by the caller. When direct
 expansion fails, it uses `3000:7DCA` to look up a suffix pattern in the
 `3C00:2A1E` data table. The matched pattern's record-kind byte selects one of
-11 handlers through the inline jump table at file `0x37D0E`:
+11 handlers through the inline jump table at file `0x37D0E`. Detailed
+disassembly for the table and pattern scanner is maintained in
+[`disassembly/banked-suffix-pattern-records.md`](disassembly/banked-suffix-pattern-records.md):
 
 | Record kind | Handler |
 | ---: | --- |
@@ -985,16 +1007,22 @@ array helper at `3000:87D6` removes entries by shifting both arrays together.
 
 The separator byte `0x0E` is treated as an internal compound/alternate marker.
 `3000:78CE` scans candidate text for `0x0E` or `/`, expands each fragment with
-`3000:B116`, and rebuilds the candidate. `3000:8808` performs the inverse-style
-string rewrite: it copies a candidate into a scratch buffer and replaces every
-`0x0E` marker with a caller-provided string.
+`3000:B116`, and rebuilds the candidate; detailed disassembly is maintained in
+[`disassembly/banked-compound-normalizer.md`](disassembly/banked-compound-normalizer.md).
+`3000:8808` performs the inverse-style string rewrite: it copies a candidate
+into a scratch buffer and replaces every `0x0E` marker with a caller-provided
+string. Detailed disassembly for `3000:8808` is maintained in
+[`disassembly/banked-multiword-expansion.md`](disassembly/banked-multiword-expansion.md).
 
 `3000:79E8` chooses between the normal expansion path at `3000:7A1E` and the
 multiword path at `3000:8528` by checking whether the candidate contains a
 space. `3000:8528` splits a space-separated candidate, recursively expands each
 part through `3000:7A1E`, and then stitches the resulting pointer/type arrays
 back together. This makes the candidate machinery explicitly handle both
-compound markers and visible space-separated multiword forms.
+compound markers and visible space-separated multiword forms. Detailed
+disassembly for `3000:84A8`, `3000:8528`, and the local array helpers is
+maintained in
+[`disassembly/banked-multiword-expansion.md`](disassembly/banked-multiword-expansion.md).
 
 ## Working Interpretation
 
