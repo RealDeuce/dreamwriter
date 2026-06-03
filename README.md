@@ -17,6 +17,13 @@ the disassembly helpers in `tools/` as the source of truth. The first-pass
 machine-readable split is [`docs/rom-regions.tsv`](docs/rom-regions.tsv);
 topic pages should agree with that map or explain why they are provisional.
 
+Related projects:
+
+| Project | Notes |
+| --- | --- |
+| [Dreamulator](https://github.com/realDeuce/dreamulator) | DreamWriter emulator project and the more interesting related codebase. Local checkout: `../dreamulator`. |
+| [DreamWriter 200 notes](https://github.com/RealDeuce/dreamwriter200) | Similar ROM-map notes focused on the DreamWriter 200; useful for comparison, but generally a less complete version of this T400 content. Local checkout: `../dreamwriter-200-map`. |
+
 ## MAME
 
 Machine:
