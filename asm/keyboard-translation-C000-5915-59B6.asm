@@ -4,70 +4,78 @@
 BITS 16
 org 0x5915
 
-
 translate_key_event_C000_5915:
-; file 0x45915
-    xor  bh,bh
-    test byte [0x6d51],0x01
-    jnz  direct_table_C000_598B
-    test byte [0x6d51],0x08
-    jnz  ram_table_mode_C000_5995
-    test dh,0x80
-    jnz  high_modifier_C000_595A
+    db 0x32, 0xff    ; xor bh,bh
+    db 0xf6, 0x06, 0x51, 0x6d, 0x01    ; test byte [0x6d51],0x01
+    jnz direct_table_C000_598B
+    db 0xf6, 0x06, 0x51, 0x6d, 0x08    ; test byte [0x6d51],0x08
+    jnz ram_table_mode_C000_5995
+    db 0xf6, 0xc6, 0x80    ; test dh,0x80
+    jnz high_modifier_C000_595A
+    db 0xf6, 0xc6, 0x40, 0x74, 0x07, 0x80, 0x3e, 0xb4
+    db 0x6e, 0x00, 0x75, 0x18
 normal_table_mode_C000_5936:
-    mov  cl,4
-    shr  dh,cl
-    mov  bl,dh
-    mov  al,[cs:bx+0x5a57]
+    db 0xb1, 0x04    ; mov cl,4
+    db 0xd2, 0xee    ; shr dh,cl
+    db 0x8a, 0xde    ; mov bl,dh
+    db 0x2e, 0x8a, 0x87, 0x57, 0x5a    ; mov al,[cs:bx+0x5a57]
     call table_lookup_C000_5A07
-    cmp  al,0x0c
-    jnz  translated_C000_594D
-    xor  byte [0x7673],0x40
-    ret
+    db 0x3c, 0x0c    ; cmp al,0x0c
+    jnz translated_C000_594D
+    db 0x80, 0x36, 0x73, 0x76, 0x40    ; xor byte [0x7673],0x40
+    db 0xc3    ; ret
 latched_special_C000_594E:
-    mov  al,0x0e
+    db 0xb0, 0x0e    ; mov al,0x0e
+    db 0x90
     call table_lookup_C000_5A07
-    mov  [0x6daa],al
-    mov  al,0xec
-    ret
+    db 0xa2, 0xaa, 0x6d    ; mov [0x6daa],al
+    db 0xb0, 0xec    ; mov al,0xec
+    db 0xc3    ; ret
 high_modifier_C000_595A:
-    mov  bl,dl
-    test dh,0x40
-    jnz  rom_special_C000_5966
-    mov  al,[bx+0x7055]
-    ret
+    db 0x8a, 0xda    ; mov bl,dl
+    db 0xf6, 0xc6, 0x40    ; test dh,0x40
+    jnz rom_special_C000_5966
+    db 0x8a, 0x87, 0x55, 0x70    ; mov al,[bx+0x7055]
+    db 0xc3    ; ret
 rom_special_C000_5966:
-    mov  bx,0x53d7
-    mov  ax,[cs:bx]
-    mov  bl,dl
-    xor  bh,bh
-    add  bx,ax
-    mov  al,[cs:bx]
-    cmp  al,0x64
-    jz   return_f5_C000_5985
-    cmp  al,0x76
-    jz   return_ctrl_z_C000_5988
-    mov  byte [0x70e9],0
-    mov  al,0xff
-    ret
+    db 0xbb, 0xd7, 0x53    ; mov bx,0x53d7
+    db 0x2e, 0x8b, 0x07    ; mov ax,[cs:bx]
+    db 0x8a, 0xda    ; mov bl,dl
+    db 0x32, 0xff    ; xor bh,bh
+    db 0x03, 0xd8    ; add bx,ax
+    db 0x2e, 0x8a, 0x07    ; mov al,[cs:bx]
+    db 0x3c, 0x64    ; cmp al,0x64
+    jz return_f5_C000_5985
+    db 0x3c, 0x76    ; cmp al,0x76
+    jz return_ctrl_z_C000_5988
+    db 0xc6, 0x06, 0xe9, 0x70, 0x00    ; mov byte [0x70e9],0
+    db 0xb0, 0xff    ; mov al,0xff
+    db 0xc3    ; ret
+    db 0xb0, 0xf5, 0xc3, 0xb0, 0x1a, 0xc3
 direct_table_C000_598B:
-    mov  bl,dl
-    add  bx,0x59b7
-    mov  al,[cs:bx]
-    ret
-
+    db 0x8a, 0xda    ; mov bl,dl
+    db 0x81, 0xc3, 0xb7, 0x59    ; add bx,0x59b7
+    db 0x2e, 0x8a, 0x07    ; mov al,[cs:bx]
+    db 0xc3    ; ret
 ram_table_mode_C000_5995:
-    test dh,0x40
-    jz   ram_select_C000_599F
-    test dh,0x80
-    jnz  rom_special_C000_5966
-    mov  cl,4
-    shr  dh,cl
-    mov  bl,dh
-    mov  al,[cs:bx+0x5a57]
-    mov  bl,al
-    mov  ax,[bx+0x6814]
-    mov  bl,dl
-    add  bx,ax
-    mov  al,[bx]
-    ret
+    db 0xf6, 0xc6, 0x40    ; test dh,0x40
+    jz ram_select_C000_599F
+    db 0xf6, 0xc6, 0x80    ; test dh,0x80
+    jnz rom_special_C000_5966
+    db 0xb1, 0x04    ; mov cl,4
+    db 0xd2, 0xee    ; shr dh,cl
+    db 0x8a, 0xde    ; mov bl,dh
+    db 0x2e, 0x8a, 0x87, 0x57, 0x5a    ; mov al,[cs:bx+0x5a57]
+    db 0x8a, 0xd8    ; mov bl,al
+    db 0x8b, 0x87, 0x14, 0x68    ; mov ax,[bx+0x6814]
+    db 0x8a, 0xda    ; mov bl,dl
+    db 0x03, 0xd8    ; add bx,ax
+    db 0x8a, 0x07    ; mov al,[bx]
+    db 0xc3    ; ret
+
+; helper call targets covered by other slices
+ram_select_C000_599F equ 0x599F
+return_ctrl_z_C000_5988 equ 0x5988
+return_f5_C000_5985 equ 0x5985
+table_lookup_C000_5A07 equ 0x5A07
+translated_C000_594D equ 0x594D

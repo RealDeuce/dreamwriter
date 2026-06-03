@@ -4,10 +4,6 @@
 BITS 16
 org 0x936A
 
-
 linguistic_far_wrapper_C688_936A:
-; file 0x4FBEA
     call 0xc000:0x1712
-    ret
-linguistic_ah05_adjust_C000_189E:
-; file 0x4189E
+    db 0xc3    ; ret

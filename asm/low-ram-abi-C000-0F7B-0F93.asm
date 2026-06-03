@@ -4,18 +4,16 @@
 BITS 16
 org 0x0F7B
 
-
-; file 0x40F7B
-    push ds
-    mov  di,0x0200
-    mov  ax,ds
-    mov  es,ax
-    mov  si,0x0f94
-    mov  ax,0xc000
-    mov  ds,ax
-    mov  cx,0x0052       ; 164 bytes
-    nop
-    rep  movsw
-    pop  ds
-    pop  es
-    ret
+    db 0x1e    ; push ds
+    db 0xbf, 0x00, 0x02    ; mov di,0x0200
+    db 0x8c, 0xd8    ; mov ax,ds
+    db 0x8e, 0xc0    ; mov es,ax
+    db 0xbe, 0x94, 0x0f    ; mov si,0x0f94
+    db 0xb8, 0x00, 0xc0    ; mov ax,0xc000
+    db 0x8e, 0xd8    ; mov ds,ax
+    db 0xb9, 0x52, 0x00    ; mov cx,0x0052 ; 164 bytes
+    db 0x90    ; nop
+    db 0xf3, 0xa5    ; rep movsw
+    db 0x1f    ; pop ds
+    db 0x07    ; pop es
+    db 0xc3    ; ret
