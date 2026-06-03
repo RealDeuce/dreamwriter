@@ -31,7 +31,7 @@ The wrapper dispatches the returned key:
 
 | Key | Target |
 | ---: | --- |
-| `1` | Return `AX=0`. |
+| `1` | EDIT TEXT: return `AX=0` to the shared app/editor loop. |
 | `2` | Call FILE submenu `DC98:275A`; select/enter returns `AX=0`. |
 | `3` | Far-call `C688:EB46`. |
 | `4` | Call PRINTER submenu `DC98:265D`. |

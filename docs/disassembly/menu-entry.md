@@ -103,8 +103,10 @@ inline resource yet.
 Execution resumes after the script at `C688:2A35`:
 
 ```asm
-C688:2A35  C6 06 A2 78 FF    mov  byte [0x78a2],0xff
-C688:2A3A  C6 06 10 78 FF    mov  byte [0x7810],0xff
+C688:2A35  B0 FF             mov  al,0xff
+C688:2A37  A2 1B 78          mov  [0x781b],al
+C688:2A3A  A2 10 78          mov  [0x7810],al
+C688:2A3D  A2 94 79          mov  [0x7994],al
 C688:2A46  BE 30 30          mov  si,0x3030
 C688:2A49  89 36 7E 78       mov  [0x787e],si
 C688:2A4D  B0 08             mov  al,0x08

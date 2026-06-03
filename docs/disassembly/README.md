@@ -9,6 +9,19 @@ depth-first, and records indirect roots when the running code installs them.
 Generated disassembly is treated as scaffolding; labels and comments here should
 preserve the reasoning that makes the code understandable.
 
+Generated reference indexes:
+
+- [`symbol-index.html`](symbol-index.html) is a sortable address/name index for
+  named labels in this directory.
+- [`asset-index.md`](asset-index.md) lists documented PNG assets and descriptor
+  dimensions.
+- [`string-resource-index.md`](string-resource-index.md) lists documented
+  string resources and final formatted text references.
+- [`ram-ledger.md`](ram-ledger.md) and [`io-port-ledger.md`](io-port-ledger.md)
+  summarize RAM and I/O-port references found in the notes.
+- [`transfer-targets.md`](transfer-targets.md) audits direct call/jump targets;
+  [`call-graph.dot`](call-graph.dot) exports the same transfer set as Graphviz.
+
 ## Conventions
 
 - Addresses are written as the CPU address seen by the V20, with file offsets
@@ -75,6 +88,9 @@ preserve the reasoning that makes the code understandable.
 | [`early-app-helper.md`](early-app-helper.md) | App-loop event `0xF5` forced diagnostic-monitor entry through `C688:01B0` and `C000:123C`. |
 | [`top-icon-menus.md`](top-icon-menus.md) | Word-processor and organizer top icon menu wrappers, ROM icon tables, rendered PNGs beside each icon entry, and shared renderer boundary. |
 | [`horizontal-icon-renderer.md`](horizontal-icon-renderer.md) | Shared `DC98:124C` horizontal icon table renderer, `DC98:1198` key loop, and selection marker helper. |
+| [`wp-edit-text.md`](wp-edit-text.md) | WP EDIT TEXT entry semantics, shared editor loop boundary, redraw/update sequence, active-state snapshot, and manual-named key families. |
+| [`wp-editor-viewport.md`](wp-editor-viewport.md) | WP editor viewport/window-state clamp, dirty redraw handoff, and low-RAM state fields behind `C688:44DB`. |
+| [`wp-editor-redraw.md`](wp-editor-redraw.md) | WP editor redraw span/delta state emitter at `C688:18AC`, saved-state restore path, and small scratch-record helpers. |
 | [`wp-submenus.md`](wp-submenus.md) | Word-processor FILE, PRINTER, COMMUNICATE, and OTHERS submenu wrappers, icon tables, and rendered PNG assets. |
 | [`wp-clear-text.md`](wp-clear-text.md) | WP top-menu CLEAR TEXT confirmation loop, editor-clear redraw path, and decoded prompt/confirmation resources. |
 | [`wp-file-handlers.md`](wp-file-handlers.md) | WP FILE submenu handlers, shared picker/name-entry UI layer, decoded prompt resources, and COPY direction/list boundary. |
@@ -99,5 +115,7 @@ The boot slice has already exposed these next roots:
 | --- | --- | --- |
 | Application printer formatters | Reached from `printer-device.md`. | User-facing print formatting before `INT 21h AH=05`. |
 | `C688:EB5E` | Reached from `wp-submenus.md`. | WP PRINTER -> PRINT OUT application handler. |
+| `C688:1A85`, `C688:1B12`, `C688:1B41`, `C688:1B6F`, `C688:1D75`, `C688:6B8C`, `C688:6BAA` | Reached from `wp-editor-viewport.md` and `wp-editor-redraw.md`. | Lower editor redraw/input helpers behind the viewport clamp and span emitter. |
+| `C688:1DFD`, `C688:1FD3`, `C688:208D`, `C688:39B5`, `C688:39BE`, `C688:61DB` | Reached from `wp-editor-redraw.md`. | Deeper redraw/rendering exits and utility calls. |
 | `C688:ED1F`, `C688:E274`, `C688:D8AF` | Reached from `app-menu-event-loop.md`. | Word-processor linguistic and document flows. |
 | `C688:AD5C`, `C688:ED15` | Reached from `app-menu-event-loop.md`. | Print/merge/address app-loop handlers. |

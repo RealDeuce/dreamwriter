@@ -12,7 +12,10 @@ Usage: tools/disasm-validate.sh [--docs <glob> ...] [--queue <file>] [--open-onl
 
 Run disassembly validation checks:
   1) xref-scan for unresolved TODO-xref markers
-  2) queue-audit for Root Expansion Queue status
+  2) validate_snippets.py for snippet byte/disassembly drift
+  3) queue-audit for Root Expansion Queue status
+  4) generated symbol index freshness
+  5) disassembly_audit.py semantic checks and generated artifact freshness
 
 Options:
   --docs <glob>    Markdown docs/glob to include (repeatable). Default: docs/disassembly/*.md
@@ -90,6 +93,18 @@ fi
 echo
 echo "==> queue-audit"
 if ! tools/rom2.py queue-audit --queue "$QUEUE" --scope-docs "${expand_docs[@]}" $([[ "${OPEN_ONLY}" -eq 1 ]] && echo "--open-only"); then
+  FAIL=1
+fi
+
+echo
+echo "==> symbol-index"
+if ! python3 tools/generate_symbol_index.py --check; then
+  FAIL=1
+fi
+
+echo
+echo "==> disassembly-audit"
+if ! tools/disassembly_audit.py check --generated; then
   FAIL=1
 fi
 

@@ -18,16 +18,19 @@ calling a higher-level serial cleanup/setup helper at `C000:48D5`.
 serial_init_C000_0C58:
 ; file 0x40C58
 C000:0C58  ...               ; program USART/baud and port 0x30 mirror
-C000:0C72  C6 06 A5 6D 00    mov  byte [0x6da5],0
-C000:0C77  A3 AC 6E          mov  [0x6eac],ax
+C000:0C5D  89 0E A5 6D       mov  [0x6da5],cx
+C000:0C61  A3 AC 6E          mov  [0x6eac],ax
 ...
-C000:0CA6  C6 06 A3 6D 01    mov  byte [0x6da3],1
-C000:0CAB  A0 4F 6D          mov  al,[0x6d4f]
-C000:0CAE  E6 60             out  0x60,al
+C000:0C9E  C6 06 A3 6D 01    mov  byte [0x6da3],1
+C000:0CA3  A0 4F 6D          mov  al,[0x6d4f]
+C000:0CA6  E6 60             out  0x60,al
 ...
-C000:0CB8  B0 37             mov  al,0x37
-C000:0CBA  E6 C1             out  0xc1,al
-C000:0CBC  C3                ret
+C000:0CB3  B0 37             mov  al,0x37
+C000:0CB5  52                push dx
+C000:0CB6  BA C1 00          mov  dx,0x00c1
+C000:0CB9  EE                out  dx,al
+C000:0CBA  5A                pop  dx
+C000:0CBB  C3                ret
 
 serial_reinit_C000_0CBC:
 C000:0CBC  FA                cli
@@ -46,24 +49,34 @@ cancelled by foreground input.
 ```asm
 serial_can_send_C000_0D4F:
 ; file 0x40D4F
-C000:0D4F  EC                in   al,dx          ; dx = 00C1h
-C000:0D50  A8 01             test al,0x01
+C000:0D4F  52                push dx
+C000:0D50  BA C1 00          mov  dx,0x00c1
+C000:0D53  EC                in   al,dx
+C000:0D54  5A                pop  dx
+C000:0D55  A8 01             test al,0x01
 ...
-C000:0D5C  A0 A5 70          mov  al,[0x70a5]
-C000:0D5F  24 0C             and  al,0x0c
-C000:0D61  C3                ret
+C000:0D59  A1 31 6D          mov  ax,[0x6d31]
+C000:0D5C  A3 0B 68          mov  [0x680b],ax
+C000:0D5F  52                push dx
+...
+C000:0D63  5A                pop  dx
+C000:0D66  F6 06 A5 70 0C    test byte [0x70a5],0x0c
 
 service_04_serial_output_C000_0D71:
 ; file 0x40D71
 C000:0D71  E8 DB FF          call serial_can_send_C000_0D4F
-C000:0D74  73 1D             jnc  serial_send_dl_C000_0D93
-C000:0D76  E8 7F 3C          call idle_until_event_C000_49F8
+C000:0D74  73 0D             jnc  serial_send_dl_C000_0D83
+C000:0D76  52                push dx
+C000:0D77  E8 7E 3C          call idle_until_event_C000_49F8
+C000:0D7A  5A                pop  dx
 ...
 serial_send_byte_C000_0D96:
 C000:0D96  80 0E A5 70 08    or   byte [0x70a5],0x08
-C000:0D9B  BA C0 00          mov  dx,0x00c0
-C000:0D9E  EE                out  dx,al
-C000:0D9F  C3                ret
+C000:0D9B  52                push dx
+C000:0D9C  BA C0 00          mov  dx,0x00c0
+C000:0D9F  EE                out  dx,al
+C000:0DA0  5A                pop  dx
+C000:0DA1  C3                ret
 ```
 
 `C000:0DA2` and `C000:0DC4` are higher-level byte senders used by the DreamLink
@@ -82,7 +95,7 @@ serial_rx_enqueue_C000_4BED:
 C000:4BED  ...               ; store AL at ring[70E5]
 C000:4C02  ...               ; advance write pointer and count 70E6
 C000:4C0D  ...               ; if free space <= 0x20 / <= 0x0A, throttle peer
-C000:4C1B  C3                ret
+C000:4C1A  C3                ret
 ```
 
 When `[6D2E] != 0`, the queue uses XOFF `0x13` and XON `0x11`; otherwise it
@@ -99,15 +112,21 @@ XON `0x11` through `C000:0D96`.
 ```asm
 serial_rx_dequeue_C000_4B8D:
 ; file 0x44B8D
-C000:4B8D  A1 0B 68          mov  ax,[0x680b]    ; refresh auto-off path
+C000:4B8D  A1 31 6D          mov  ax,[0x6d31]    ; refresh auto-off path
 ...
-C000:4BA0  80 0E A5 70 04    or   byte [0x70a5],0x04
-C000:4BA5  B0 37             mov  al,0x37
-C000:4BA7  E6 C1             out  0xc1,al
+C000:4B9C  80 0E A5 70 02    or   byte [0x70a5],0x02
+C000:4BA2  B0 37             mov  al,0x37
+C000:4BA4  52                push dx
+C000:4BA5  BA C1 00          mov  dx,0x00c1
+C000:4BA8  EE                out  dx,al
+C000:4BA9  5A                pop  dx
+C000:4BAA  C3                ret              ; empty queue
 ...
-C000:4BDD  B0 11             mov  al,0x11        ; XON
-C000:4BDF  E8 B4 C1          call serial_send_byte_C000_0D96
-C000:4BE2  C3                ret
+C000:4BDD  5A                pop  dx
+C000:4BDE  80 3E 2E 6D 00    cmp  byte [0x6d2e],0
+C000:4BE5  B0 11             mov  al,0x11        ; XON
+C000:4BE7  E8 AC C1          call serial_send_byte_C000_0D96
+C000:4BEC  C3                ret
 ```
 
 ## State Boundary

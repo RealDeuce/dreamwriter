@@ -66,16 +66,17 @@ function.
 | `0x0D` | Clear entry: clears `85EE` and redraws the input display. |
 | `0xDA` | Equals/select: finalizes pending operation through `DC98:6340` and sets `[85EA]=0x32`. |
 
-Operation keys first normalize the current input with `DC98:5ED4`, store the
-operation in `[85EA]` and `[85EC]`, then return to the loop:
+Operation keys first normalize the current input with `DC98:5ED4`, run the
+pending-operation dispatcher at `DC98:629E`, store the new operation in
+`[85EA]` and `[85EC]`, then return to the loop:
 
-| Operation | `[85EA]` / `[85EC]` | Final helper |
+| Operation | `[85EA]` / `[85EC]` | Core helper used by the dispatcher |
 | --- | ---: | --- |
-| `+` | `1` | `DC98:60E0` |
-| `-` | `2` | `DC98:61AB` |
-| multiply | `3` | `DC98:61D1` |
-| divide | `4` | `DC98:62B8` |
-| equals / percent finalization | `0x32` | `DC98:6340` dispatcher |
+| `+` | `1` | `DC98:5FE0` |
+| `-` | `2` | `DC98:60AB` |
+| multiply | `3` | `DC98:60D1` |
+| divide | `4` | `DC98:61B8` |
+| equals / percent finalization | `0x32` | `DC98:6340` final dispatcher |
 
 The memory keys use the same decimal core:
 
@@ -91,8 +92,10 @@ byte is nonzero:
 
 ```asm
 ; file 0x62656
-DC98:5CD6  8B D8             mov  bx,ax
-DC98:5CDA  cmp  word [0x85e8],0
+DC98:5CD6  51                push cx
+DC98:5CD7  56                push si
+DC98:5CD8  8B D8             mov  bx,ax
+DC98:5CDA  83 3E E8 85 00    cmp  word [0x85e8],0
 ...
 DC98:5CE8  cmp  byte [si],0
 DC98:5CEB  jz   DC98:5CFC
@@ -118,42 +121,62 @@ The calculator core is a compact fixed-point decimal library:
 | `DC98:5E2D` | Subtracts digit arrays with borrow. |
 | `DC98:5ED4` | Normalizes left/right by shifting and adjusting byte `+11h`. |
 | `DC98:5F42` | Rounding/overflow normalization. |
-| `DC98:60E0` | Signed decimal add. Aligns decimal positions, then adds or subtracts by sign. |
-| `DC98:61AB` | Decimal subtract. Negates/copies the right operand, then calls add. |
-| `DC98:61D1` | Decimal multiply. Builds a 32-byte scratch product with `mul byte [bx]` and decimal carry. |
-| `DC98:62B8` | Decimal divide. Repeatedly subtracts the divisor to generate quotient digits. |
+| `DC98:5FE0` | Signed decimal add. Aligns decimal positions, then adds or subtracts by sign. |
+| `DC98:60AB` | Decimal subtract. Negates/copies the right operand, then calls add. |
+| `DC98:60D1` | Decimal multiply. Builds a 32-byte scratch product with `mul byte [bx]` and decimal carry. |
+| `DC98:61B8` | Decimal divide. Repeatedly subtracts the divisor to generate quotient digits. |
 
 The multiply routine is the clearest evidence of the representation. It walks
 digit bytes and uses byte `mul`, base-10 division, and a 32-byte temporary
 product:
 
 ```asm
-; file 0x62B51
-DC98:61D1  55                push bp
-DC98:61D2  8B EC             mov  bp,sp
-DC98:61D4  83 EC 20          sub  sp,0x20        ; scratch product
+; file 0x62A51
+DC98:60D1  55                push bp
+DC98:60D2  8B EC             mov  bp,sp
+DC98:60D4  83 EC 20          sub  sp,0x20        ; scratch product
 ...
-DC98:6214  8A C1             mov  al,cl          ; left digit
-DC98:6216  F6 27             mul  byte [bx]      ; right digit
-DC98:622A  B1 0A             mov  cl,0x0a
-DC98:622E  F6 F1             div  cl             ; base-10 carry/remainder
+DC98:6116  F6 27             mul  byte [bx]      ; digit * digit
+DC98:611E  02 5A E1          add  bl,[bp+si-0x1f]
+DC98:612A  B1 0A             mov  cl,0x0a
+DC98:612E  F6 F1             div  cl             ; base-10 carry/remainder
 ```
 
-The divide routine likewise performs long division by repeated subtract:
+The divide routine checks for a zero divisor, then performs long division by
+repeated subtract/compare steps:
 
 ```asm
-; file 0x62C38
-DC98:62B8  55                push bp
+; file 0x62B38
+DC98:61B8  55                push bp
+DC98:61B9  8B EC             mov  bp,sp
+DC98:61BB  83 EC 02          sub  sp,0x02
+DC98:61E3  C7 06 E8 85 0200  mov  word [0x85e8],2 ; division by zero
 ...
-DC98:6339  8B C7             mov  ax,di
-DC98:633B  8B DE             mov  bx,si
-DC98:633D  E8 ED FB          call DC98:5F2D      ; subtract divisor
-DC98:6343  41                inc  cx             ; quotient digit
-DC98:634A  8B C7             mov  ax,di
-DC98:634C  8B DE             mov  bx,si
-DC98:634E  E8 4E FB          call DC98:5E9F      ; compare
-DC98:6351  3D 00 00          cmp  ax,0
-DC98:6354  7D E3             jnl  DC98:6339
+DC98:6239  8B C7             mov  ax,di
+DC98:623B  8B DE             mov  bx,si
+DC98:623D  E8 ED FB          call DC98:5E2D      ; subtract divisor
+DC98:6243  41                inc  cx             ; quotient digit
+DC98:624A  8B C7             mov  ax,di
+DC98:624C  8B DE             mov  bx,si
+DC98:624E  E8 4E FB          call DC98:5D9F      ; compare
+DC98:6251  3D 00 00          cmp  ax,0
+DC98:6254  7D E3             jnl  DC98:6239
+```
+
+The pending-operation dispatcher at `DC98:629E` selects those same helpers from
+`[85EA]` before returning to the calculator UI:
+
+```asm
+; file 0x62C1E
+DC98:629E  51                push cx
+DC98:629F  52                push dx
+DC98:62A0  8B D0             mov  dx,ax
+DC98:62BE  83 3E EA 85 01    cmp  word [0x85ea],1
+DC98:62CB  E8 12 FD          call DC98:5FE0
+...
+DC98:62E6  E8 C2 FD          call DC98:60AB
+DC98:6301  E8 CD FD          call DC98:60D1
+DC98:631C  E8 99 FE          call DC98:61B8
 ```
 
 This is decimal integer/fixed-point arithmetic over local digit arrays. There
@@ -170,9 +193,10 @@ build a result.
 
 ```asm
 ; file 0x63506
-DC98:6B86  8B F0             mov  si,ax
+DC98:6B86  51                push cx
+DC98:6B8A  8B F0             mov  si,ax
 DC98:6B96  80 3C 01          cmp  byte [si],1
-DC98:6B9B  C7 06 E8 85 0003  mov  word [0x85e8],3
+DC98:6B9B  C7 06 E8 85 0300  mov  word [0x85e8],3
 ...
 DC98:6C32  B8 AA 86          mov  ax,0x86aa
 DC98:6C35  BB CA 86          mov  bx,0x86ca
@@ -224,7 +248,7 @@ The `CALCULATOR` root bottoms inside this slice:
 | --- | --- |
 | App entry | `DC98:6A38` initializes records and calls `DC98:640F`. |
 | Event loop | `DC98:640F` dispatches calculator overlay keys and exits on menu-return events. |
-| Arithmetic | `DC98:60E0`, `61AB`, `61D1`, `62B8`, and helpers `5C73..5F42`. |
+| Arithmetic | `DC98:5FE0`, `60AB`, `60D1`, `61B8`, dispatchers `629E`/`6340`, and helpers `5C73..5F42`. |
 | Square root | `DC98:6B86` decimal-array square-root path. |
 | Display | `DC98:54C2`, `583E`, `5BCC`, `5C5C` emit display-resource scripts and bitmap glyph records. |
 

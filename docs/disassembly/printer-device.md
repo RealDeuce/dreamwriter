@@ -20,14 +20,15 @@ C000:08F0  8A 17             mov  dl,[bx]
 C000:08F2  43                inc  bx
 C000:08F3  89 1E 92 6D       mov  [0x6d92],bx
 C000:08F7  80 FA 00          cmp  dl,0
-C000:08FA  74 23             jz   printer_return_C000_091F
+C000:08FA  74 19             jz   printer_return_C000_0915
 C000:08FC  C6 06 A4 6D 00    mov  byte [0x6da4],0
 C000:0901  80 26 4F 6D BF    and  byte [0x6d4f],0xbf
 C000:0906  A0 4F 6D          mov  al,[0x6d4f]
 C000:0909  E6 60             out  0x60,al
-C000:090B  C6 06 A4 6D 01    mov  byte [0x6da4],1
-C000:0910  E8 0D 00          call centronics_write_dl_C000_0920
-C000:0913  C3                ret
+C000:090B  90                nop
+C000:090C  C6 06 A4 6D 01    mov  byte [0x6da4],1
+C000:0911  E8 0C 00          call centronics_write_dl_C000_0920
+C000:0914  C3                ret
 ```
 
 Subsequent bytes are fed by IRQ `FEh`, documented in
@@ -35,10 +36,11 @@ Subsequent bytes are fed by IRQ `FEh`, documented in
 
 ## Direct Byte Writer
 
-`C000:0920` writes `DL` to the parallel data port `0x40`, waits for status port
-`0xA0 bit 0x02` to clear, then pulses port `0x30 bit 0x20` using mirror
-`[6D94]`. While waiting it calls `C000:49F8`, so foreground input can cancel a
-blocked printer write; cancellation returns `AL=FF`.
+`C000:0920` writes `DL` to the parallel data port `0x40`, refreshes the
+foreground wait counter from `[6D31]`, waits for status port `0xA0 bit 0x02` to
+clear, then pulses port `0x30 bit 0x20` using mirror `[6D94]`. While waiting it
+calls `C000:49F8`, so foreground input can cancel a blocked printer write;
+cancellation returns `AL=FF`.
 
 ```asm
 centronics_write_dl_C000_0920:
@@ -46,26 +48,31 @@ centronics_write_dl_C000_0920:
 C000:0920  8A C2             mov  al,dl
 C000:0922  E6 40             out  0x40,al
 printer_wait_ready_C000_0924:
-C000:0924  E4 A0             in   al,0xa0
-C000:0926  A8 02             test al,0x02        ; BUSY
-C000:0928  74 0A             jz   printer_strobe_C000_0934
-C000:092A  E8 CB 40          call idle_until_event_C000_49F8
-C000:092D  73 F5             jnc  printer_wait_ready_C000_0924
-C000:092F  B0 FF             mov  al,0xff
-C000:0931  C3                ret
+C000:0924  A1 31 6D          mov  ax,[0x6d31]
+C000:0927  A3 0B 68          mov  [0x680b],ax
+C000:092A  E4 A0             in   al,0xa0
+C000:092C  A8 02             test al,0x02        ; BUSY
+C000:092E  75 12             jnz  printer_wait_idle_C000_0942
 
-printer_strobe_C000_0934:
-C000:0934  A0 94 6D          mov  al,[0x6d94]
-C000:0937  0C 20             or   al,0x20
-C000:0939  E6 30             out  0x30,al
-C000:093B  90                nop
-C000:093C  90                nop
-C000:093D  90                nop
-C000:093E  90                nop
-C000:093F  24 DF             and  al,0xdf
-C000:0941  E6 30             out  0x30,al
-C000:0943  32 C0             xor  al,al
-C000:0945  C3                ret
+printer_strobe_C000_0930:
+C000:0930  A0 94 6D          mov  al,[0x6d94]
+C000:0933  0C 20             or   al,0x20
+C000:0935  E6 30             out  0x30,al
+C000:0937  90                nop
+C000:0938  90                nop
+C000:0939  90                nop
+C000:093A  90                nop
+C000:093B  24 DF             and  al,0xdf
+C000:093D  E6 30             out  0x30,al
+C000:093F  B0 00             mov  al,0
+C000:0941  C3                ret
+
+printer_wait_idle_C000_0942:
+C000:0942  E8 B3 40          call idle_until_event_C000_49F8
+C000:0945  3C 00             cmp  al,0
+C000:0947  74 DB             jz   printer_wait_ready_C000_0924
+C000:0949  B0 FF             mov  al,0xff
+C000:094B  C3                ret
 ```
 
 ## State Boundary

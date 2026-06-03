@@ -76,6 +76,22 @@ def seg_off_to_phys(seg: int, off: int) -> int:
     return phys
 
 
+def phys_to_seg_off(phys: int, seg: int) -> int:
+    phys_to_file(phys)
+    base = (seg << 4) & 0xFFFFF
+    off = (phys - base) & 0xFFFFF
+    if off > 0xFFFF:
+        end = (base + 0xFFFF) & 0xFFFFF
+        if base <= end:
+            window = f"0x{base:05X}..0x{end:05X}"
+        else:
+            window = f"0x{base:05X}..0xFFFFF, 0x00000..0x{end:05X}"
+        raise ValueError(
+            f"physical address 0x{phys:X} is outside segment {seg:04X} window {window}"
+        )
+    return off
+
+
 def canonical_seg_off(phys: int) -> tuple[int, int]:
     phys_to_file(phys)
     seg = phys >> 4
@@ -89,9 +105,13 @@ def c000_off(phys: int) -> str:
     return ""
 
 
-def describe_phys(phys: int) -> str:
+def describe_phys(phys: int, preferred_seg: int | None = None) -> str:
     offset = phys_to_file(phys)
-    seg, off = canonical_seg_off(phys)
+    if preferred_seg is None:
+        seg, off = canonical_seg_off(phys)
+    else:
+        seg = preferred_seg
+        off = phys_to_seg_off(phys, seg)
     c000 = c000_off(phys)
     aliases = f"  {c000}" if c000 else ""
     return f"file 0x{offset:05X}  phys 0x{phys:05X}  {seg:04X}:{off:04X}{aliases}"
@@ -129,7 +149,7 @@ def extract_address_tokens(text: str) -> list[str]:
     return ADDRESS_TOKEN_RE.findall(text)
 
 
-def parse_addr_expr(value: str) -> tuple[str, int]:
+def parse_addr_expr(value: str, default_seg: int | None = None) -> tuple[str, int]:
     if ":" in value and not value.lower().startswith(("file:", "phys:")):
         seg_text, off_text = value.split(":", 1)
         seg = parse_addr_part(seg_text)
@@ -143,23 +163,39 @@ def parse_addr_expr(value: str) -> tuple[str, int]:
         return f"phys:{raw}", parse_int(raw)
 
     raw = parse_int(value)
+    if default_seg is not None:
+        if not 0 <= raw <= 0xFFFF:
+            raise ValueError(
+                f"segment offset out of range for {default_seg:04X}: 0x{raw:x}"
+            )
+        return f"{default_seg:04X}:{raw:04X}", seg_off_to_phys(default_seg, raw)
     if raw < ROM_SIZE:
         return f"file:0x{raw:X}", file_to_phys(raw)
     return f"phys:0x{raw:X}", raw
 
 
-def format_addr_row(label: str, phys: int, fmt: str) -> str:
+def format_addr_row(
+    label: str, phys: int, fmt: str, preferred_seg: int | None = None
+) -> str:
     if fmt == "tsv":
         offset = phys_to_file(phys)
-        seg, off = canonical_seg_off(phys)
+        if preferred_seg is None:
+            seg, off = canonical_seg_off(phys)
+        else:
+            seg = preferred_seg
+            off = phys_to_seg_off(phys, seg)
         c000 = c000_off(phys)
         alias = c000.strip() if c000 else ""
         return f"{label}\t0x{offset:05X}\t0x{phys:05X}\t{seg:04X}:{off:04X}\t{alias}"
     if fmt == "compact":
         offset = phys_to_file(phys)
-        seg, off = canonical_seg_off(phys)
+        if preferred_seg is None:
+            seg, off = canonical_seg_off(phys)
+        else:
+            seg = preferred_seg
+            off = phys_to_seg_off(phys, seg)
         return f"{label}: file 0x{offset:05X} phys 0x{phys:05X} {seg:04X}:{off:04X}"
-    return describe_phys(phys)
+    return describe_phys(phys, preferred_seg)
 
 
 def bank_base(value: int, size: int) -> int:
@@ -227,10 +263,21 @@ def cmd_addr(args: argparse.Namespace) -> int:
         print("no addresses supplied", file=sys.stderr)
         return 1
 
+    try:
+        preferred_seg = parse_addr_part(args.segment) if args.segment else None
+    except ValueError as exc:
+        print(f"--segment: {exc}", file=sys.stderr)
+        return 1
+    if preferred_seg is not None and not 0 <= preferred_seg <= 0xFFFF:
+        print(f"--segment out of range: 0x{preferred_seg:x}", file=sys.stderr)
+        return 1
+
     for value in values:
         try:
-            label, phys = parse_addr_expr(value)
-            print(format_addr_row(label, phys, args.format))
+            label, phys = parse_addr_expr(value, preferred_seg)
+            if preferred_seg is not None:
+                phys_to_seg_off(phys, preferred_seg)
+            print(format_addr_row(label, phys, args.format, preferred_seg))
         except ValueError as exc:
             print(f"{value}: {exc}", file=sys.stderr)
             return 1
@@ -1073,6 +1120,10 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("text", "compact", "tsv"),
         default="text",
         help="output format",
+    )
+    addr.add_argument(
+        "--segment",
+        help="parse bare values as offsets in this segment and require all inputs to fit it",
     )
     addr.add_argument("--stdin", action="store_true", help="read extra addresses from stdin")
     addr.set_defaults(func=cmd_addr)

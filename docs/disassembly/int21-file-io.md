@@ -48,7 +48,7 @@ C000:3227  8E 06 64 6F       mov  es,[0x6f64]
 C000:322B  8E 1E A6 6F       mov  ds,[0x6fa6]
 C000:3230  F3 A4             rep  movsb
 ...
-C000:3240  E8 88 07          call next_fat_cluster_C000_39C9
+C000:323E  E8 88 07          call next_fat_cluster_C000_39C9
 C000:3241  3D FF 0F          cmp  ax,0x0fff
 ```
 

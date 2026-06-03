@@ -245,9 +245,9 @@ The state targets are shared loop maintenance, not standalone apps:
 Excerpt around the real state targets, with the inline table skipped:
 
 ```asm
-C688:ED9C  F8                clc
-C688:ED9D  E8 5D 01          call C688:EEFE
-C688:EDA0  72 28             jc   C688:EDCB
+C688:ED9C  B1 F8             mov  cl,0xf8
+C688:ED9E  E8 5D 01          call C688:EEFE
+C688:EDA1  72 28             jc   C688:EDCB
 ...
 C688:EDBE  BE 42 00          mov  si,0x0042
 C688:EDC1  E8 26 A9          call C688:96EA

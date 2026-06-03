@@ -152,7 +152,8 @@ words are:
 ```asm
 write_volume_header_C000_3B2B:
 ; file 0x43B2B
-C000:3B31  A1 A3 6F          mov  ax,[0x6fa3]
+C000:3B31  50                push ax
+C000:3B32  A1 A3 6F          mov  ax,[0x6fa3]
 C000:3B3D  C7 06 00 00 97 19 mov  word [0],0x1997
 C000:3B43  C7 06 02 00 26 01 mov  word [2],0x0126
 C000:3B49  A3 04 00          mov  [4],ax

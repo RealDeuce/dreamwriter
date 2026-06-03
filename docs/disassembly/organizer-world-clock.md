@@ -71,13 +71,13 @@ an `FF42` bitmap record for the 96x64 map at `F13C:000A`.
 ```asm
 ; file 0x66A4C
 DC98:A0CC  ...               ; draw F103:0006
-DC98:A103  C7 07 40 00       mov  word [bx],0x0040  ; FF42 height
-DC98:A10E  C7 07 60 00       mov  word [bx],0x0060  ; FF42 width
-DC98:A11A  BA 0A 00          mov  dx,0x000a
-DC98:A11D  B9 3C F1          mov  cx,0xf13c         ; F13C:000A map
+DC98:A124  C7 07 40 00       mov  word [bx],0x0040  ; FF42 height
+DC98:A12F  C7 07 60 00       mov  word [bx],0x0060  ; FF42 width
+DC98:A13A  B9 0A 00          mov  cx,0x000a
+DC98:A13D  B8 3C F1          mov  ax,0xf13c         ; F13C:000A map
 ...
-DC98:A1C8  BA 14 00          mov  dx,0x0014         ; second city marker
-DC98:A285  BA 0E 00          mov  dx,0x000e         ; home city marker
+DC98:A1E7  B9 14 00          mov  cx,0x0014         ; second city marker
+DC98:A27E  B9 0E 00          mov  cx,0x000e         ; home city marker
 ```
 
 `DC98:9AC8` renders the two large time readouts with bitmap digits, not the
@@ -92,14 +92,15 @@ normal text font. The input date/time pointers are `AX=72D7` and `BX=72DF`;
 
 ```asm
 ; file 0x66448
-DC98:9AC8  8B F8             mov  di,ax
+DC98:9AC8  55                push bp
+DC98:9AD2  8B F8             mov  di,ax
 DC98:9AD4  8B C1             mov  ax,cx
-DC98:9AED  C7 04 0B 00       mov  word [si],0x000b  ; date icon height
+DC98:9AF0  C7 04 0B 00       mov  word [si],0x000b  ; date icon height
 DC98:9AFB  C7 04 0B 00       mov  word [si],0x000b  ; date icon width
 DC98:9B03  B9 16 00          mov  cx,0x0016
 DC98:9B0B  B9 78 F1          mov  cx,0xf178         ; date/month icon table
 ...
-DC98:9B4F  C7 04 0C 00       mov  word [si],0x000c  ; digit height
+DC98:9B52  C7 04 0C 00       mov  word [si],0x000c  ; digit height
 DC98:9B5D  C7 04 07 00       mov  word [si],0x0007  ; digit width
 DC98:9B68  BA 99 00          mov  dx,0x0099         ; blank if hour < 10
 DC98:9B6B  B9 6C F1          mov  cx,0xf16c
@@ -118,17 +119,22 @@ In 12-hour mode `[6808] != 0`, `DC98:9AC8` maps hour `0` to `12` and uses
 
 ```asm
 ; file 0x669EC
-DC98:A06C  E8 B9 6C          call DC98:0D2A      ; INT 21h AH=2A wrapper
+DC98:A06C  51                push cx
+DC98:A06D  56                push si
+DC98:A06E  E8 B9 6C          call DC98:0D2A      ; INT 21h AH=2A wrapper
 DC98:A071  E8 DA 6C          call DC98:0D4E      ; INT 21h AH=2C wrapper
 DC98:A082  B8 D7 72          mov  ax,0x72d7
 DC98:A085  BB DF 72          mov  bx,0x72df
 DC98:A088  8B 36 EA 86       mov  si,[0x86ea]
-DC98:A08C  8A 8C F0 88       mov  cl,[si+0x88f0] ; home daylight flag
-DC98:A093  E8 32 FA          call DC98:9AC8
-DC98:A098  A1 EC 86          mov  ax,[0x86ec]
-DC98:A09E  8B C8             mov  cx,ax
-DC98:A0A3  E8 2E FF          call DC98:9FD4      ; apply city delta
-DC98:A0C2  E8 03 FA          call DC98:9AC8
+DC98:A08C  8A 8C F0 88       mov  cl,[si-0x7710] ; home daylight flag
+DC98:A092  E8 33 FA          call DC98:9AC8
+DC98:A095  B8 D7 72          mov  ax,0x72d7
+DC98:A098  BB DF 72          mov  bx,0x72df
+DC98:A09B  B9 00 00          mov  cx,0
+DC98:A09E  8E C1             mov  es,cx
+DC98:A0A0  26 8B 0E EC 86    mov  cx,[es:0x86ec]
+DC98:A0A5  E8 2C FF          call DC98:9FD4      ; apply city delta
+DC98:A0C6  E8 FF F9          call DC98:9AC8
 ```
 
 `DC98:9FD4` treats `CX` as a signed quarter-hour count. It adjusts minutes by

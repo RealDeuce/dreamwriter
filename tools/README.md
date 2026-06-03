@@ -57,6 +57,7 @@ stdin:
 tools/rom2.py addr file:0x46912
 tools/rom2.py addr phys:0xc6912
 tools/rom2.py addr c688:0053
+tools/rom2.py addr --segment c688 44db
 printf 'C688:0080\\n0x6bbb0\\n' | tools/rom2.py addr --stdin --format compact file:0x46912
 ```
 
@@ -74,6 +75,19 @@ validation:
 ```sh
 tools/rom2.py addr --format tsv C688:0053 c688:00A0
 printf '0x46912\\nC700:1234\\nphys:0x8a000\\n' | tools/rom2.py addr --stdin --format compact
+```
+
+Use `--segment` when working inside a known code segment. Bare values are parsed
+as offsets in that segment, and explicit `file:`, `phys:`, or `seg:off` inputs
+must also be representable inside the chosen 64 KiB segment window:
+
+```sh
+tools/rom2.py addr --segment c688 44db --format compact
+# C688:44DB: file 0x4AD5B phys 0xCAD5B C688:44DB
+
+tools/rom2.py addr --segment c688 file:0x4ad5b C000:AD5B --format compact
+# file:0x4ad5b: file 0x4AD5B phys 0xCAD5B C688:44DB
+# C000:AD5B: file 0x4AD5B phys 0xCAD5B C688:44DB
 ```
 
 If the physical address is in `0xC0000..0xCFFFF`, `text` (and `tsv`) also include the
@@ -217,6 +231,43 @@ Options:
 | `--stride` | effective `row-bytes` | Bytes between source rows. |
 | `--scale` | `1` | Nearest-neighbor output scale. |
 | `--invert` | off | Treat zero bits as black pixels. |
+
+### `generate_symbol_index.py`
+
+Builds `docs/disassembly/symbol-index.html`, a static sortable symbol table
+from named labels in `docs/disassembly/*.md`. Labels with address suffixes such
+as `foo_C000_1234:` use the suffix; labels without a suffix use the next nearby
+instruction address.
+
+```sh
+tools/generate_symbol_index.py
+tools/generate_symbol_index.py --check
+```
+
+### `disassembly_audit.py`
+
+Runs semantic consistency checks over `docs/disassembly/*.md` and generates
+review indexes for the annotated disassembly. The check mode validates:
+
+- `; file 0x...` comments against nearby labels or first shown instructions.
+- labels with embedded addresses against nearby instruction addresses.
+- documented PNG asset dimensions against the checked-in PNG files.
+- string-resource table rows for non-empty final text.
+
+The generate mode writes:
+
+- `docs/disassembly/asset-index.md`
+- `docs/disassembly/string-resource-index.md`
+- `docs/disassembly/ram-ledger.md`
+- `docs/disassembly/io-port-ledger.md`
+- `docs/disassembly/transfer-targets.md`
+- `docs/disassembly/call-graph.dot`
+
+```sh
+tools/disassembly_audit.py check
+tools/disassembly_audit.py generate
+tools/disassembly_audit.py check --generated
+```
 
 ### `bitmap-records`
 

@@ -19,9 +19,28 @@ from rom2 import (
 
 INSTR_RE = re.compile(
     r"^(?P<addr>[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4})\s+"
-    r"(?P<byte_line>([0-9A-Fa-f]{2})(?:\s+[0-9A-Fa-f]{2})*)\s+(?P<rest>.*)$"
+    r"(?P<byte_line>([0-9A-Fa-f]{2,})(?:\s+[0-9A-Fa-f]{2,})*)\s+(?P<rest>.*)$"
 )
 OPERAND_NUM_RE = re.compile(r"(0x[0-9a-fA-F]+|[0-9a-fA-F]{4}:[0-9a-fA-F]{4}|[0-9]+)")
+CHAR_LITERAL_RE = re.compile(r"'(?:[^'\\]|\\.)'")
+CONTROL_TRANSFER = {
+    "call",
+    "ja",
+    "jae",
+    "jb",
+    "jbe",
+    "jc",
+    "jcxz",
+    "jg",
+    "jge",
+    "jl",
+    "jle",
+    "jmp",
+    "jnc",
+    "jnz",
+    "jz",
+    "loop",
+}
 COMMENT_ONLY_RE = re.compile(r"^\s*;")
 ELLIPSIS_RE = re.compile(r"^\s*\.\.\.\s*(?:;.*)?$")
 LABEL_RE = re.compile(r"^\s*[A-Za-z0-9._-]+:\s*$")
@@ -78,7 +97,17 @@ def parse_snippet_lines(lines: list[str]) -> list[tuple[str, int, int, bytes, st
         addr_expr = m.group("addr")
         byte_line = m.group("byte_line")
         rest = m.group("rest")
-        bytes_vals = bytes(int(token, 16) for token in byte_line.split())
+        if rest.lstrip().startswith("..."):
+            continue
+        byte_values = []
+        for token in byte_line.split():
+            if len(token) % 2 != 0:
+                byte_values = []
+                break
+            byte_values.extend(int(token[i : i + 2], 16) for i in range(0, len(token), 2))
+        if not byte_values:
+            continue
+        bytes_vals = bytes(byte_values)
 
         try:
             _, phys = parse_addr_expr(addr_expr)
@@ -114,6 +143,9 @@ def normalize_annotated_text(text: str) -> str:
     # obscuring real decode drift.
     if ";" in text:
         text = text.split(";", 1)[0]
+    text = text.replace("byte +", "")
+    text = text.replace("byte -", "-")
+    text = CHAR_LITERAL_RE.sub("0", text)
     return " ".join(text.strip().split()).lower()
 
 
@@ -124,21 +156,123 @@ def normalize_instruction_signature(text: str) -> list[str]:
         mapped = OPERAND_NUM_RE.sub("N", raw)
         if mapped == "N:N":
             mapped = "N"
+        mapped = mapped.removeprefix("+")
         if mapped in {"short", "near", "far"}:
             continue
         tokens.append(mapped)
+    if tokens and tokens[0] in CONTROL_TRANSFER and len(tokens) > 1:
+        return [tokens[0], "N"]
     return tokens
 
 
-def extract_ndisasm_instruction(output: str) -> str:
+def extract_ndisasm_records(output: str) -> list[tuple[int | None, bytes, str]]:
     # ndisasm output format: ADDRESS BYTES  INSTRUCTION
-    first = output.splitlines()[0].strip() if output else ""
-    if not first:
-        return ""
-    parts = first.split(None, 2)
-    if len(parts) < 3:
-        return ""
-    return normalize_annotated_text(parts[2])
+    records = []
+    for line in output.splitlines():
+        parts = line.strip().split(None, 2)
+        if len(parts) < 3:
+            records.append((None, b"", ""))
+            continue
+        try:
+            addr = int(parts[0], 16)
+            bytes_out = bytes.fromhex(parts[1])
+        except ValueError:
+            addr = None
+            bytes_out = b""
+        records.append((addr, bytes_out, normalize_annotated_text(parts[2])))
+    return records
+
+
+def contiguous_groups(records: list[tuple[str, int, int, bytes, str]]):
+    group = []
+    next_phys = None
+    for record in records:
+        _, _, phys, expected, _ = record
+        if group and phys != next_phys:
+            yield group
+            group = []
+        group.append(record)
+        next_phys = phys + len(expected)
+    if group:
+        yield group
+
+
+def validate_disasm_records(records: list[tuple[str, int, int, bytes, str]], path: Path) -> int:
+    if not records:
+        return 0
+
+    start_phys = records[0][2]
+    blob = b"".join(record[3] for record in records)
+    disasm_out, disasm_err = run_ndisasm(blob, start_phys)
+    if disasm_err is not None:
+        for addr_expr, line_no, _, _, _ in records:
+            print(
+                f"{path}:{line_no}: {addr_expr} cannot disassemble as 8086 bytes",
+                file=sys.stderr,
+            )
+            print(f"  ndisasm: {disasm_err}", file=sys.stderr)
+        return len(records)
+
+    actual_records = extract_ndisasm_records(disasm_out or "")
+    if len(actual_records) != len(records):
+        if len(records) > 1:
+            mid = len(records) // 2
+            return validate_disasm_records(records[:mid], path) + validate_disasm_records(records[mid:], path)
+        addr_expr, line_no, _, _, _ = records[0]
+        print(
+            f"{path}:{line_no}: {addr_expr} batched disassembly boundary mismatch",
+            file=sys.stderr,
+        )
+        print(
+            f"  expected {len(records)} instruction rows, ndisasm emitted {len(actual_records)}",
+            file=sys.stderr,
+        )
+        return len(records)
+
+    boundary_mismatch = any(
+        actual_phys != phys or actual_bytes != expected
+        for (_, _, phys, expected, _), (actual_phys, actual_bytes, _) in zip(records, actual_records)
+    )
+    if boundary_mismatch and len(records) > 1:
+        mid = len(records) // 2
+        return validate_disasm_records(records[:mid], path) + validate_disasm_records(records[mid:], path)
+
+    failures = 0
+    for (addr_expr, line_no, phys, expected, rest), (actual_phys, actual_bytes, actual_text) in zip(records, actual_records):
+        if actual_phys != phys or actual_bytes != expected:
+            failures += 1
+            actual_addr = "?" if actual_phys is None else f"0x{actual_phys:05X}"
+            print(
+                f"{path}:{line_no}: {addr_expr} instruction boundary mismatch",
+                file=sys.stderr,
+            )
+            print(
+                f"  expected addr/bytes: 0x{phys:05X} {expected.hex(' ')}",
+                f"actual addr/bytes:   {actual_addr} {actual_bytes.hex(' ')}",
+                file=sys.stderr,
+            )
+            continue
+        expected_text = normalize_annotated_text(rest)
+        if expected_text and actual_text and expected_text != actual_text:
+            expected_sig = normalize_instruction_signature(expected_text)
+            actual_sig = normalize_instruction_signature(actual_text)
+            if expected_sig != actual_sig:
+                failures += 1
+                print(
+                    f"{path}:{line_no}: {addr_expr} disassembly signature mismatch",
+                    file=sys.stderr,
+                )
+                print(
+                    f"  expected: {expected_text}",
+                    f"disasm : {actual_text}",
+                    file=sys.stderr,
+                )
+                print(
+                    f"  expected_sig: {' '.join(expected_sig)}",
+                    f"actual_sig:   {' '.join(actual_sig)}",
+                    file=sys.stderr,
+                )
+    return failures
 
 
 def main() -> int:
@@ -154,6 +288,7 @@ def main() -> int:
     asm_fail = 0
 
     for path in files:
+        disasm_candidates = []
         for addr_expr, line_no, phys, expected, rest in parse_snippet_lines(path.read_text(encoding="utf-8").splitlines()):
             total += 1
             file_off = phys_to_file(phys)
@@ -179,37 +314,10 @@ def main() -> int:
                 )
                 continue
 
-            disasm_out, disasm_err = run_ndisasm(expected, phys)
-            if disasm_err is not None:
-                asm_fail += 1
-                print(
-                    f"{path}:{line_no}: {addr_expr} cannot disassemble as 8086 bytes",
-                    file=sys.stderr,
-                )
-                print(f"  ndisasm: {disasm_err}", file=sys.stderr)
-                continue
+            disasm_candidates.append((addr_expr, line_no, phys, expected, rest))
 
-            expected_text = normalize_annotated_text(rest)
-            actual_text = extract_ndisasm_instruction(disasm_out or "")
-            if expected_text and actual_text and expected_text != actual_text:
-                expected_sig = normalize_instruction_signature(expected_text)
-                actual_sig = normalize_instruction_signature(actual_text)
-                if expected_sig != actual_sig:
-                    asm_fail += 1
-                    print(
-                        f"{path}:{line_no}: {addr_expr} disassembly signature mismatch",
-                        file=sys.stderr,
-                    )
-                    print(
-                        f"  expected: {expected_text}",
-                        f"disasm : {actual_text}",
-                        file=sys.stderr,
-                    )
-                    print(
-                        f"  expected_sig: {' '.join(expected_sig)}",
-                        f"actual_sig:   {' '.join(actual_sig)}",
-                        file=sys.stderr,
-                    )
+        for group in contiguous_groups(disasm_candidates):
+            asm_fail += validate_disasm_records(group, path)
 
     if bytes_fail or asm_fail:
         print(

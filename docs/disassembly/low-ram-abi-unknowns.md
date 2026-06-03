@@ -33,13 +33,14 @@ DC98:1564  F7 E1             mul  cx              ; total capacity = BX * CX
 DC98:157A  C6 05 FF          mov  byte [di],0xff
 DC98:1583  C6 05 40          mov  byte [di],0x40  ; display text record
 ...
-DC98:15A4  AC                lodsb
+DC98:15A4  8A 04             mov  al,[si]
+DC98:15A6  46                inc  si
 ...
-DC98:15B8  C6 05 FF          mov  byte [di],0xff
-DC98:15C1  C6 05 0E          mov  byte [di],0x0e  ; spacing/pad control
+DC98:15BD  C6 04 FF          mov  byte [si],0xff
+DC98:15C6  C6 04 0E          mov  byte [si],0x0e  ; spacing/pad control
 ...
-DC98:164F  9A AD 67 00 C0    call C000:67AD
-DC98:168C  CB                retf
+DC98:165B  9A AD 67 00 C0    call C000:67AD
+DC98:1693  CB                retf
 ```
 
 The emitted string/control format is:

@@ -107,6 +107,7 @@ the command reference.
 | [`docs/reference/csimon.pdf`](docs/reference/csimon.pdf) | CSi-Mon User's Guide v5.0, useful background for the high-ROM `CSiMON-88` monitor code. |
 | [`docs/reference/dreamlink-manual.pdf`](docs/reference/dreamlink-manual.pdf) | DreamLink PC software manual; documents FILE -> STORE/RECALL transfer flow, host-side file format selection, and print-through mode. |
 | [`docs/reference/dreamwriter-t400-manual.pdf`](docs/reference/dreamwriter-t400-manual.pdf) | DreamWriter T400 user manual; broad user-facing reference, currently missing pages 10 and 11 in the source copy. |
+| [`docs/reference/dreamwriter-t400-manual.txt`](docs/reference/dreamwriter-t400-manual.txt) | Layout-preserving OCR text extracted from the two-up T400 manual scan; useful for search and command names, but not authoritative for exact page geometry. |
 | [`tools/README.md`](tools/README.md) | Command reference for `tools/rom2.py`. |
 | [`dw-basic/README.md`](dw-basic/README.md) | NASM-targeted DreamWriter BASIC port workspace and first `EROMCARD.X` smoke target. |
 

@@ -56,9 +56,9 @@ DC98:CFF2  E8 5A EB          call DC98:BB4F       ; create ODB
 DC98:D00C  B8 06 00          mov  ax,0x0006
 DC98:D00F  BB C5 F1          mov  bx,0xf1c5       ; ADDRESS header
 DC98:D012  B9 C8 00          mov  cx,0x00c8
-DC98:D015  E8 2D EA          call DC98:BA42       ; validate/read index
-DC98:D049  E8 99 E9          call DC98:B9F2       ; load first-byte cache
-DC98:D04C  E8 B8 FA          call DC98:CB04       ; foreground UI
+DC98:D015  E8 2A EA          call DC98:BA42       ; validate/read index
+DC98:D049  E8 A6 E9          call DC98:B9F2       ; load first-byte cache
+DC98:D04C  E8 B5 FA          call DC98:CB04       ; foreground UI
 ```
 
 On return, an empty address book is closed and deleted. A nonempty one is
@@ -116,6 +116,7 @@ offset in `[82B0]`, it seeks to the record and reads one byte into
 
 ```asm
 ; file 0x68372
+...
 DC98:B9F9  mov  ax,[0x82a8]
 DC98:BA02  add  bx,[0x82b0]
 DC98:BA0D  call DC98:EE72       ; seek to record offset
@@ -210,6 +211,7 @@ into the six stack field buffers, then `DC98:BD84` renders a row:
 
 ```asm
 ; file 0x68704
+...
 DC98:BDAC  shl  cx,1
 DC98:BDB2  add  cx,0x000c       ; y = row * 8 + 0x0c
 DC98:BDC9  mov  word [bx],0x0008

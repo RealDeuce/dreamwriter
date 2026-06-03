@@ -21,10 +21,9 @@ keyboard_status_C000_4977:
 C000:4977  E8 E7 FF          call retained_request_C000_4961
 C000:497A  72 ...            jc   status_has_event_or_power
 ...
-C000:498D  E8 9D 01          call event_dequeue_C000_4B2D
+C000:498E  E8 BF C1          call timer_disarm_C000_0B50
 ...
-C000:49A6  B0 FF             mov  al,0xff
-C000:49A8  C3                ret
+C000:49A6  E8 DB 00          call idle_halt_C000_4A84
 ```
 
 The retained-power latch helper is intentionally documented with
@@ -43,14 +42,14 @@ style dispatcher.
 ; reached from C000:5155
 keyboard_read_C000_4A8D:
 ; file 0x44A8D
-C000:4A8D  E8 9D 00          call event_dequeue_C000_4B2D
-C000:4A90  73 ...            jnc  got_event_word
+C000:4A8D  E8 D1 FE          call retained_request_C000_4961
+C000:4A90  72 ...            jc   retained_power_path
 ...
-C000:4AA6  E8 88 FF          call idle_until_event_C000_49F8
+C000:4AA6  A3 0B 68          mov  [0x680b],ax
 ...
-C000:4AE2  E8 30 0E          call translate_key_event_C000_5915
+C000:4AE3  FA                cli
 ...
-C000:4B1F  C3                ret
+C000:4B1A  C3                ret
 ```
 
 The service can return `AL=EB` for the special `[70E7]` path observed in the
@@ -69,14 +68,15 @@ event_dequeue_C000_4B2D:
 ; file 0x44B2D
 C000:4B2D  ...               ; compare queue read/write indexes
 C000:4B3E  ...               ; read event word from queue storage
-C000:4B50  80 26 A5 70 FE    and  byte [0x70a5],0xfe
-C000:4B55  C3                ret
+C000:4B4E  80 26 A5 70 FE    and  byte [0x70a5],0xfe
+C000:4B5B  C3                ret
 
 event_enqueue_C000_4B5C:
 ; file 0x44B5C
 C000:4B5C  ...               ; store event word and advance write index
-C000:4B86  80 0E A5 70 01    or   byte [0x70a5],0x01
-C000:4B8B  C3                ret
+C000:4B84  88 0E E3 70       mov  [0x70e3],cl
+C000:4B88  89 97 A6 70       mov  [bx+0x70a6],dx
+C000:4B8C  C3                ret
 ```
 
 ## Row Processor

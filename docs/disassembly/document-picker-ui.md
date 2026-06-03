@@ -215,13 +215,13 @@ DA -> C688:8DC4
 FF -> C688:8D8E
 ```
 
-`C688:8DBF` and `C688:8DC4` differ only in whether `[757D]` is preserved or
-cleared before the selected-search state is committed.
+`C688:8DBF` and `C688:8DC4` differ only in the selected-search state committed
+to `[757D]`.
 
 ```asm
-replace_commit_preserve_prompt_C688_8DBF:
-C688:8DBF  8B 36 7D 75       mov  si,[0x757d]
-C688:8DC3  EB 03             jmp  C688:8DC7
+replace_commit_selected_C688_8DBF:
+C688:8DBF  BE 01 00          mov  si,0x0001
+C688:8DC2  EB 03             jmp  C688:8DC7
 
 replace_commit_clear_prompt_C688_8DC4:
 C688:8DC4  BE 00 00          mov  si,0x0000
