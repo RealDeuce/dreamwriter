@@ -461,7 +461,7 @@ Run a code-only I/O sweep from the first-pass region map:
 tools/rom2.py io-scan --summary
 ```
 
-Run the full disassembly validation workflow (snippet bytes + TODO-xref + queue audit):
+Run the full disassembly validation workflow (snippet bytes + disassembly signature + TODO-xref + queue audit):
 
 ```sh
 tools/disasm-validate.sh

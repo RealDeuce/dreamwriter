@@ -19,8 +19,9 @@ from rom2 import (
 
 INSTR_RE = re.compile(
     r"^(?P<addr>[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4})\s+"
-    r"(?P<byte_line>([0-9A-Fa-f]{2})(?:\s+[0-9A-Fa-f]{2})*)\s+"
+    r"(?P<byte_line>([0-9A-Fa-f]{2})(?:\s+[0-9A-Fa-f]{2})*)\s+(?P<rest>.*)$"
 )
+OPERAND_NUM_RE = re.compile(r"(0x[0-9a-fA-F]+|[0-9a-fA-F]{4}:[0-9a-fA-F]{4}|[0-9]+)")
 COMMENT_ONLY_RE = re.compile(r"^\s*;")
 ELLIPSIS_RE = re.compile(r"^\s*\.\.\.\s*(?:;.*)?$")
 LABEL_RE = re.compile(r"^\s*[A-Za-z0-9._-]+:\s*$")
@@ -51,7 +52,7 @@ def normalize_path(path: Path, include_readme: bool) -> bool:
     return True
 
 
-def parse_snippet_lines(lines: list[str]) -> list[tuple[str, int, int, bytes]]:
+def parse_snippet_lines(lines: list[str]) -> list[tuple[str, int, int, bytes, str]]:
     in_asm = False
     found = []
 
@@ -76,6 +77,7 @@ def parse_snippet_lines(lines: list[str]) -> list[tuple[str, int, int, bytes]]:
 
         addr_expr = m.group("addr")
         byte_line = m.group("byte_line")
+        rest = m.group("rest")
         bytes_vals = bytes(int(token, 16) for token in byte_line.split())
 
         try:
@@ -83,12 +85,12 @@ def parse_snippet_lines(lines: list[str]) -> list[tuple[str, int, int, bytes]]:
         except ValueError:
             continue
 
-        found.append((addr_expr, line_no, phys, bytes_vals))
+        found.append((addr_expr, line_no, phys, bytes_vals, rest))
 
     return found
 
 
-def run_ndisasm(line_bytes: bytes, start_phys: int) -> tuple[bytes | None, str | None]:
+def run_ndisasm(line_bytes: bytes, start_phys: int) -> tuple[str | None, str | None]:
     command = [
         "ndisasm",
         "-b",
@@ -102,9 +104,41 @@ def run_ndisasm(line_bytes: bytes, start_phys: int) -> tuple[bytes | None, str |
     except FileNotFoundError:
         return None, "ndisasm not installed"
     except subprocess.CalledProcessError as exc:
-        return b"", exc.stderr.decode("utf-8", errors="replace").strip() or "ndisasm failed"
+        return None, exc.stderr.decode("utf-8", errors="replace").strip() or "ndisasm failed"
 
-    return line_bytes, result.stdout.decode("utf-8", errors="replace")
+    return result.stdout.decode("utf-8", errors="replace"), None
+
+
+def normalize_annotated_text(text: str) -> str:
+    # Strip inline comments and normalise spacing to keep annotation noise from
+    # obscuring real decode drift.
+    if ";" in text:
+        text = text.split(";", 1)[0]
+    return " ".join(text.strip().split()).lower()
+
+
+def normalize_instruction_signature(text: str) -> list[str]:
+    text = normalize_annotated_text(text)
+    tokens = []
+    for raw in text.replace(",", " , ").replace("[", " [ ").replace("]", " ] ").split():
+        mapped = OPERAND_NUM_RE.sub("N", raw)
+        if mapped == "N:N":
+            mapped = "N"
+        if mapped in {"short", "near", "far"}:
+            continue
+        tokens.append(mapped)
+    return tokens
+
+
+def extract_ndisasm_instruction(output: str) -> str:
+    # ndisasm output format: ADDRESS BYTES  INSTRUCTION
+    first = output.splitlines()[0].strip() if output else ""
+    if not first:
+        return ""
+    parts = first.split(None, 2)
+    if len(parts) < 3:
+        return ""
+    return normalize_annotated_text(parts[2])
 
 
 def main() -> int:
@@ -120,7 +154,7 @@ def main() -> int:
     asm_fail = 0
 
     for path in files:
-        for addr_expr, line_no, phys, expected in parse_snippet_lines(path.read_text(encoding="utf-8").splitlines()):
+        for addr_expr, line_no, phys, expected, rest in parse_snippet_lines(path.read_text(encoding="utf-8").splitlines()):
             total += 1
             file_off = phys_to_file(phys)
             if file_off + len(expected) > len(rom) or file_off < 0:
@@ -145,14 +179,37 @@ def main() -> int:
                 )
                 continue
 
-            _, disasm_out = run_ndisasm(expected, phys)
-            if _ is None:
+            disasm_out, disasm_err = run_ndisasm(expected, phys)
+            if disasm_err is not None:
                 asm_fail += 1
                 print(
                     f"{path}:{line_no}: {addr_expr} cannot disassemble as 8086 bytes",
                     file=sys.stderr,
                 )
-                print(f"  ndisasm: {disasm_out}", file=sys.stderr)
+                print(f"  ndisasm: {disasm_err}", file=sys.stderr)
+                continue
+
+            expected_text = normalize_annotated_text(rest)
+            actual_text = extract_ndisasm_instruction(disasm_out or "")
+            if expected_text and actual_text and expected_text != actual_text:
+                expected_sig = normalize_instruction_signature(expected_text)
+                actual_sig = normalize_instruction_signature(actual_text)
+                if expected_sig != actual_sig:
+                    asm_fail += 1
+                    print(
+                        f"{path}:{line_no}: {addr_expr} disassembly signature mismatch",
+                        file=sys.stderr,
+                    )
+                    print(
+                        f"  expected: {expected_text}",
+                        f"disasm : {actual_text}",
+                        file=sys.stderr,
+                    )
+                    print(
+                        f"  expected_sig: {' '.join(expected_sig)}",
+                        f"actual_sig:   {' '.join(actual_sig)}",
+                        file=sys.stderr,
+                    )
 
     if bytes_fail or asm_fail:
         print(
