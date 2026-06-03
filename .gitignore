@@ -9,6 +9,8 @@ __pycache__/
 /build/
 /out/
 /dw-basic/build/
+/WORKING.md
+/snap/
 
 # MAME runtime state
 /cfg/
