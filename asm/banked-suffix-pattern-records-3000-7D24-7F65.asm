@@ -5,6 +5,10 @@ BITS 16
 org 0x7D24
 
 
+; helper call targets covered by later slices
+suffix_extended_final_letter_C3000_7F96equ 0x7F96
+multiword_expansion_C3000_84A8 equ 0x84A8
+
 suffix_pattern_tail_and_lookup_C3000_7D24:
 ; file 0x37D24
     push word [bp-0x3a]
@@ -140,14 +144,14 @@ loc_7E36:
     sub ax,0x63
     cmp ax,0x17
     jna loc_7E46
-    jmp 0x7f96
+    jmp suffix_extended_final_letter_C3000_7F96
 loc_7E46:
     add ax,ax
     xchg ax,bx
     jmp [cs:bx+0x7f66]
 loc_7E4E:
     mov byte [di-0x1],0x65
-    jmp 0x7f96
+    jmp suffix_extended_final_letter_C3000_7F96
     nop
     mov byte [di-0x2],0x79
     mov byte [di-0x1],0x0
@@ -230,7 +234,7 @@ loc_7ECA:
     push ax
     push di
     push si
-    call 0x84a8
+    call multiword_expansion_C3000_84A8
     add sp,byte +0x8
     pop si
     pop di

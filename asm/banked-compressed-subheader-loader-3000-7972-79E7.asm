@@ -5,6 +5,9 @@ BITS 16
 org 0x7972
 
 
+; helper call targets covered by later slices
+dictionary_stream_init_C3000_8854equ 0x8854
+
 compressed_subheader_loader_C3000_7972:
 ; file 0x37972
     push bp
@@ -16,7 +19,7 @@ compressed_subheader_loader_C3000_7972:
     push ax
     mov ax,0x9650
     push ax
-    call 0x8854
+    call dictionary_stream_init_C3000_8854
     add sp,byte +0x4
     mov word [bp-0x2],0x10
     mov si,0x7166
@@ -37,7 +40,7 @@ loc_799B:
     mov ax,0x7136
     mov [0x9660],ax
     push ax
-    call 0x8854
+    call dictionary_stream_init_C3000_8854
     add sp,byte +0x4
     mov ax,[0x9658]
     shl ax,1

@@ -15,7 +15,7 @@ candidate_formatter_callsite_C3000_A374:
     push ax
     mov  ax,0x7767
     push ax
-    call loc_6964
+    call candidate_row_formatter_C3000_6964
     add  sp,byte +0x8
     lea  ax,[bp-0xce]
     push ax
@@ -23,7 +23,6 @@ candidate_formatter_callsite_C3000_A374:
     call loc_960A
 candidate_row_formatter_C3000_6964:
 ; file 0x36964
-loc_6964:
     push bp
     mov  bp,sp
     sub  sp,byte +0xa
@@ -53,7 +52,7 @@ loc_6964:
     jnz  loc_69CA
     push word [bp-0x2]
     push si
-    call loc_6B40
+    call candidate_selector_label_C3000_6B40
     add  sp,byte +0x4
     mov  si,ax
     jmp  loc_69B0
@@ -86,7 +85,7 @@ loc_69CA:
     mov  word [bp-0x6],0
     mov  ax,[bp-0x2]
     cmp  ax,0xb
-    ja   loc_6A36
+    ja   candidate_formatter_row_bodies_C3000_6A36
     add  ax,ax
     xchg ax,bx
     jmp  [cs:bx+0x6a1e]
@@ -108,7 +107,7 @@ loc_6A0A:
     sub  ax,ax
 loc_6A0C:
     mov  [bp-0x6],ax
-    jmp  loc_6A36
+    jmp  candidate_formatter_row_bodies_C3000_6A36
     nop
     cmp  di,byte +0xb
     jz   loc_6A0A
@@ -117,14 +116,13 @@ loc_6A0C:
     jmp  loc_6A0A
 candidate_formatter_row_bodies_C3000_6A36:
 ; file 0x36A36
-loc_6A36:
     cmp  word [bp-0x6],byte +0x0
     jz   loc_6A3F
     jmp  loc_6AC4
 loc_6A3F:
     push word [bp-0x2]
     push si
-    call loc_6B40
+    call candidate_selector_label_C3000_6B40
     add  sp,byte +0x4
     mov  si,ax
     jmp  loc_6A52
@@ -245,7 +243,6 @@ loc_6B26:
     ret
 candidate_selector_label_C3000_6B40:
 ; file 0x36B40
-loc_6B40:
     push bp
     mov  bp,sp
     cmp  word [bp+0x6],byte +0x0

@@ -5,6 +5,9 @@ BITS 16
 org 0x7164
 
 
+; helper call targets covered by later slices
+suffix_compound_builder_C3000_7686equ 0x7686
+
 suffix_cely_helper_C3000_7164:
 ; file 0x37164
     push bp
@@ -175,7 +178,7 @@ suffix_ay_handlers_C3000_728A:
     or   ax,ax
     jnz  loc_7249
     mov  byte [di-0x1],0x79
-    jmp  loc_7424
+    jmp  suffix_ay_common_retry_C3000_7424
     mov  bx,[0x7134]
     cmp  word [bx+0x6],byte +0x17
     jnz  loc_731E
@@ -203,7 +206,7 @@ suffix_ay_handlers_C3000_728A:
     push ax
     push di
     push si
-    call 0x7686
+    call suffix_compound_builder_C3000_7686
     add  sp,byte +0x8
     or   ax,ax
     jz   loc_72FA
@@ -240,7 +243,7 @@ loc_731E:
 loc_7337:
     mov  byte [di],0x65
     inc  di
-    jmp  loc_7424
+    jmp  suffix_ay_common_retry_C3000_7424
 suffix_ay_small_handlers_C3000_733E:
 ; file 0x3733E
     push word [bp+0x8]
@@ -252,7 +255,7 @@ suffix_ay_small_handlers_C3000_733E:
     add  sp,byte +0x2
     or   ax,ax
     jnz  loc_7356
-    jmp  loc_7424
+    jmp  suffix_ay_common_retry_C3000_7424
 loc_7356:
     jmp  loc_7249
     nop
@@ -275,7 +278,7 @@ loc_7366:
     jmp  loc_7249
 loc_7382:
     dec  di
-    jmp  loc_7424
+    jmp  suffix_ay_common_retry_C3000_7424
     push word [bp+0x8]
     lea  ax,[bp-0x18]
     push ax
@@ -294,7 +297,7 @@ loc_7382:
     push ax
     push di
     push si
-    call 0x7686
+    call suffix_compound_builder_C3000_7686
     add  sp,byte +0x8
     pop  si
     pop  di
@@ -327,7 +330,6 @@ loc_73D4:
     jmp  loc_7249
 suffix_ay_common_retry_C3000_7424:
 ; file 0x37424
-loc_7424:
     push word [bp+0x8]
     push di
     call 0x960a

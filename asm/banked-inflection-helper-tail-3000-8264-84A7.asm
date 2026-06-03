@@ -5,6 +5,9 @@ BITS 16
 org 0x8264
 
 
+; helper call targets covered by later slices
+multiword_expansion_C3000_84A8 equ 0x84A8
+
 inflection_helper_tail_C3000_8264:
 ; file 0x38264
     mov al,[di-0x2]
@@ -192,7 +195,7 @@ loc_83D0:
     push ax
     push di
     push si
-    call 0x84a8
+    call multiword_expansion_C3000_84A8
     add sp,byte +0x8
     pop si
     pop di

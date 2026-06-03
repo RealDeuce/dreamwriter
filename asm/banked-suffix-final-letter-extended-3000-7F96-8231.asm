@@ -5,6 +5,10 @@ BITS 16
 org 0x7F96
 
 
+; helper call targets covered by later slices
+inflection_helper_tail_C3000_8264equ 0x8264
+multiword_expansion_C3000_84A8 equ 0x84A8
+
 suffix_extended_final_letter_C3000_7F96:
 ; file 0x37F96
     mov byte [di],0x0
@@ -81,7 +85,7 @@ loc_8008:
     push ax
     push di
     push si
-    call 0x84a8
+    call multiword_expansion_C3000_84A8
     add sp,byte +0x8
     pop si
     pop di
@@ -158,7 +162,7 @@ loc_80AC:
     sub ax,0x61
     cmp ax,0x18
     jna loc_80BF
-    jmp 0x8264
+    jmp inflection_helper_tail_C3000_8264
 loc_80BF:
     add ax,ax
     xchg ax,bx
@@ -235,7 +239,7 @@ loc_811D:
     push ax
     push di
     push si
-    call 0x84a8
+    call multiword_expansion_C3000_84A8
     add sp,byte +0x8
     or ax,ax
     jz loc_8169
@@ -254,7 +258,7 @@ loc_816D:
     push ax
     push di
     push si
-    call 0x84a8
+    call multiword_expansion_C3000_84A8
     add sp,byte +0x8
     pop si
     pop di
@@ -293,7 +297,7 @@ loc_81CC:
     nop
     cmp byte [di-0x2],0x63
     jz loc_81DD
-    jmp 0x8264
+    jmp inflection_helper_tail_C3000_8264
 loc_81DD:
     jmp loc_811D
     mov ax,0x1
@@ -304,12 +308,12 @@ loc_81DD:
     and ax,0x4111
     and dx,0x110
     or dx,ax
-    jz 0x8264
+    jz inflection_helper_tail_C3000_8264
     push si
     call 0x5260
     add sp,byte +0x2
     cmp ax,0x4
-    jnl 0x8264
+    jnl inflection_helper_tail_C3000_8264
     mov al,[di-0x1]
     mov [di],al
     mov ax,0x2aff
@@ -329,5 +333,5 @@ loc_81DD:
     nop
 loc_822C:
     mov byte [di],0x0
-    jmp short 0x8264
+    jmp short inflection_helper_tail_C3000_8264
     nop

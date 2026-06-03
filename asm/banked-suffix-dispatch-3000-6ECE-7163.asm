@@ -5,6 +5,9 @@ BITS 16
 org 0x6ECE
 
 
+; helper call targets covered by later slices
+suffix_compound_builder_C3000_7686equ 0x7686
+
 suffix_final_letter_dispatch_C3000_6ECE:
 ; file 0x36ECE
     push bp
@@ -19,7 +22,7 @@ suffix_final_letter_dispatch_C3000_6ECE:
     sub  ax,0x65
     cmp  ax,0x15
     jna  loc_6EEC
-    jmp  loc_7150
+    jmp  suffix_default_s_check_C3000_7150
 loc_6EEC:
     add  ax,ax
     xchg ax,bx
@@ -46,7 +49,7 @@ loc_6F10:
 loc_6F14:
     mov  byte [di],0x65
     inc  di
-    jmp  loc_7150
+    jmp  suffix_default_s_check_C3000_7150
     nop
     mov  byte [di],0x73
     mov  byte [di+0x1],0
@@ -127,7 +130,7 @@ loc_6FC2:
     push ax
 loc_6FCE:
     push si
-    call 0x7686
+    call suffix_compound_builder_C3000_7686
     add  sp,byte +0x8
     pop  si
     pop  di
@@ -168,7 +171,7 @@ suffix_remaining_handlers_C3000_701A:
 ; file 0x3701A
     cmp  byte [di-0x2],0x66
     jnz  loc_7023
-    jmp  loc_7150
+    jmp  suffix_default_s_check_C3000_7150
 loc_7023:
     mov  byte [di],0x73
     inc  di
@@ -234,7 +237,7 @@ loc_707E:
     add  sp,byte +0x2
     or   ax,ax
     jnz  loc_70BC
-    jmp  loc_7150
+    jmp  suffix_default_s_check_C3000_7150
 loc_70BC:
     jmp  loc_6F06
     nop
@@ -248,9 +251,9 @@ loc_70C0:
     jmp  loc_7008
     nop
     cmp  byte [di-0x2],0x61
-    jnz  loc_7150
+    jnz  suffix_default_s_check_C3000_7150
     cmp  byte [di-0x3],0x6d
-    jnz  loc_7150
+    jnz  suffix_default_s_check_C3000_7150
     mov  byte [di-0x2],0x65
     push si
     call 0xb0e6
@@ -260,11 +263,11 @@ loc_70C0:
     jmp  loc_6F06
 loc_70F6:
     mov  byte [di-0x2],0x61
-    jmp  loc_7150
+    jmp  suffix_default_s_check_C3000_7150
     cmp  byte [di-0x2],0x75
-    jnz  loc_7150
+    jnz  suffix_default_s_check_C3000_7150
     cmp  word [bp+0x8],byte +0x5
-    jnz  loc_7150
+    jnz  suffix_default_s_check_C3000_7150
     mov  byte [bp-0x18],0x75
     mov  byte [bp-0x17],0x6d
     mov  byte [bp-0x16],0x73
@@ -275,7 +278,6 @@ loc_70F6:
     jmp  loc_6FC2
 suffix_default_s_check_C3000_7150:
 ; file 0x37150
-loc_7150:
     mov  byte [di],0x73
     inc  di
     mov  byte [di],0

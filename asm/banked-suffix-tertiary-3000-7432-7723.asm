@@ -95,7 +95,7 @@ loc_74CC:
     sub  ax,0x62
     cmp  ax,0x17
     jna  loc_74DC
-    jmp  loc_7666
+    jmp  suffix_by_common_fallback_C3000_7666
 loc_74DC:
     add  ax,ax
     xchg ax,bx
@@ -121,7 +121,7 @@ loc_74FD:
     ret
 loc_7506:
     mov  byte [di-0x1],0x79
-    jmp  loc_7666
+    jmp  suffix_by_common_fallback_C3000_7666
     nop
     mov  al,[di-0x1]
     mov  [di],al
@@ -253,7 +253,6 @@ loc_762E:
     jmp  loc_74B5
 suffix_by_common_fallback_C3000_7666:
 ; file 0x37666
-loc_7666:
     push word [bp+0x8]
     push di
     call 0x960a

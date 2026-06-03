@@ -61,7 +61,7 @@ loc_7A09:
     mov [bp-0x2],ax
     inc ax
     jnz loc_7A53
-    jmp loc_7B3E
+    jmp candidate_expansion_pattern_fallback_C3000_7B3E
 loc_7A53:
     cmp word [bp-0x2],byte +0x0
     jnz loc_7A62
@@ -169,7 +169,6 @@ loc_7B34:
     ret
 candidate_expansion_pattern_fallback_C3000_7B3E:
 ; file 0x37B3E
-loc_7B3E:
     push si
     call 0x9626
     add sp,byte +0x2
