@@ -62,10 +62,12 @@ C000:001B  E9 1A 07          jmp  irq_fe_centronics_ack_C000_0738
 seed_irq_ff_stub:
 C000:001E  E9 CD 02          jmp  irq_ff_warm_power_C000_02EE
 
-; Far wrappers near the segment head. Expanded in the C000 service-wrapper slice.
-C000:0021  E8 F2 16          call C000:1716      ; TODO-xref C000 service wrapper
+; Far wrappers near the segment head. The first is the preserved-state front
+; end for the `C000:170E` service table; the second dispatches the `C000:1712`
+; service table, including the `D59C` resource reader at `C000:18EE`.
+C000:0021  E8 F2 16          call C000:1716      ; C000:170E service-table body
 C000:0024  CB                retf
-C000:0025  E8 4B 18          call C000:1873      ; TODO-xref C000 service wrapper
+C000:0025  E8 4B 18          call C000:1873      ; C000:1712 service-table body
 C000:0028  CB                retf
 
 ; ---------------------------------------------------------------------------
@@ -128,10 +130,10 @@ C000:0085  C6 06 05 68 48    mov  byte [0x6805],0x48
 
 ; Seed later roots, then enter early hardware/app validation.
 C000:008A  E8 49 0E          call install_vectors_C000_0ED6
-C000:008D  E8 AB 07          call battery_startup_gate_C000_083B ; TODO-xref
-C000:0090  9A 53 00 88 C6    call C688:0053      ; TODO-xref app-side early helper
+C000:008D  E8 AB 07          call battery_startup_gate_C000_083B ; main-battery startup gate
+C000:0090  9A 53 00 88 C6    call C688:0053      ; retained/warm RAM signature check
 C000:0095  72 4A             jc   cold_start_C000_00E1
-C000:0097  E8 39 47          call C000:47D3      ; TODO-xref retained/startup validation
+C000:0097  E8 39 47          call C000:47D3      ; retained date/time/serial/printer validation
 C000:009A  72 45             jc   cold_start_C000_00E1
 
 ; Warm/resume decision. The exact retained-state values are tracked in
@@ -180,17 +182,17 @@ C000:00E9  E6 60             out  0x60,al
 C000:00EB  A2 4F 6D          mov  [0x6d4f],al
 C000:00EE  E8 34 01          call seed_default_bank_mirrors_C000_0225
 C000:00F1  E8 CA 01          call clear_low_runtime_C000_02BE
-C000:00F4  E8 AB 59          call C000:5AA2      ; TODO-xref keyboard/display setup
-C000:00F7  E8 2B 07          call C000:0825      ; TODO-xref startup sound/display helper
+C000:00F4  E8 AB 59          call display_keyboard_state_init_C000_5AA2
+C000:00F7  E8 2B 07          call startup_buzzer_resource_C000_0825
 C000:00FA  E8 14 47          call C000:4811      ; built-in store validate/format path
-C000:00FD  9A 9E 53 98 DC    call DC98:539E      ; TODO-xref app/menu init
+C000:00FD  9A 9E 53 98 DC    call DC98:539E      ; organizer/menu subsystem initializer
 C000:0102  E8 9E 01          call C000:02A3      ; banked spell/service init pair
 C000:0105  BC 00 10          mov  sp,0x1000
 C000:0108  C7 06 09 68 00 00 mov  word [0x6809],0
 C000:010E  B8 4F 0A          mov  ax,0x0a4f
 C000:0111  8E C0             mov  es,ax
-C000:0113  E8 A5 3B          call C000:3CBB      ; TODO-xref open-file table init
-C000:0116  E8 1F 0F          call keyboard_scan_start_C000_1038 ; TODO-xref
+C000:0113  E8 A5 3B          call open_file_table_init_C000_3CBB
+C000:0116  E8 1F 0F          call keyboard_scan_start_C000_1038
 C000:0119  FB                sti
 C000:011A  EA 0B 00 88 C6    jmp  C688:000B      ; cold app/runtime entry root
 
@@ -205,32 +207,32 @@ C000:011F  E8 03 01          call seed_default_bank_mirrors_C000_0225
 C000:0122  BC 00 10          mov  sp,0x1000
 C000:0125  B8 4F 0A          mov  ax,0x0a4f
 C000:0128  8E C0             mov  es,ax
-C000:012A  E8 0B 0F          call keyboard_scan_start_C000_1038 ; TODO-xref
+C000:012A  E8 0B 0F          call keyboard_scan_start_C000_1038
 C000:012D  FB                sti
 C000:012E  06                push es
 C000:012F  E8 AA 01          call clear_framebuffer_C000_02DC
 C000:0132  07                pop  es
-C000:0133  E8 D1 06          call alarm_wake_wrapper_C000_0807 ; TODO-xref
+C000:0133  E8 D1 06          call alarm_wake_wrapper_C000_0807
 C000:0136  80 3E 54 6D 00    cmp  byte [0x6d54],0
 C000:013B  75 05             jnz  warm_diag_gate_C000_0142
 C000:013D  E8 73 01          call C000:02B3      ; banked spell reset/check
 C000:0140  75 9F             jnz  cold_start_C000_00E1
 warm_diag_gate_C000_0142:
-C000:0142  E8 95 07          call diagnostic_gate_C000_08DA ; TODO-xref
+C000:0142  E8 95 07          call diagnostic_gate_C000_08DA
 C000:0145  C7 06 09 68 00 00 mov  word [0x6809],0
 C000:014B  81 3E 81 6D 95 19 cmp  word [0x6d81],0x1995
 C000:0151  C7 06 81 6D 00 00 mov  word [0x6d81],0
 C000:0157  74 C1             jz   C000:011A
-C000:0159  E8 5F 3B          call C000:3CBB      ; TODO-xref open-file table init
+C000:0159  E8 5F 3B          call open_file_table_init_C000_3CBB
 C000:015C  EA 0F 00 88 C6    jmp  C688:000F      ; warm app/runtime entry root
 
 clean_resume_C000_0161:
-C000:0161  E8 D4 0E          call keyboard_scan_start_C000_1038 ; TODO-xref
+C000:0161  E8 D4 0E          call keyboard_scan_start_C000_1038
 C000:0164  FB                sti
-C000:0165  E8 9F 06          call alarm_wake_wrapper_C000_0807 ; TODO-xref
+C000:0165  E8 9F 06          call alarm_wake_wrapper_C000_0807
 C000:0168  E8 48 01          call C000:02B3      ; banked spell reset/check
 C000:016B  75 22             jnz  resume_failed_C000_018F
-C000:016D  E8 6A 07          call diagnostic_gate_C000_08DA ; TODO-xref
+C000:016D  E8 6A 07          call diagnostic_gate_C000_08DA
 C000:0170  72 AD             jc   warm_path_C000_011F
 C000:0172  FA                cli
 C000:0173  E8 4F 00          call restore_saved_context_C000_01C5
@@ -246,10 +248,10 @@ C000:018F  E9 4F FF          jmp  cold_start_C000_00E1
 C000:0192  EB 8B             jmp  warm_path_C000_011F
 
 warm_resume_alt_C000_0194:
-C000:0194  E8 A1 0E          call keyboard_scan_start_C000_1038 ; TODO-xref
+C000:0194  E8 A1 0E          call keyboard_scan_start_C000_1038
 C000:0197  FB                sti
-C000:0198  E8 84 06          call C000:081F      ; TODO-xref startup buzzer variant
-C000:019B  E8 3C 07          call diagnostic_gate_C000_08DA ; TODO-xref
+C000:0198  E8 84 06          call startup_buzzer_variant_C000_081F
+C000:019B  E8 3C 07          call diagnostic_gate_C000_08DA
 C000:019E  72 F2             jc   C000:0192      ; retry warm path
 C000:01A0  FA                cli
 C000:01A1  E8 21 00          call restore_saved_context_C000_01C5
@@ -299,7 +301,7 @@ C000:01F2  A0 91 6D          mov  al,[0x6d91]
 C000:01F5  E6 15             out  0x15,al
 C000:01F7  F6 06 50 6D 10    test byte [0x6d50],0x10
 C000:01FC  75 04             jnz  restore_irq_latch_C000_0202
-C000:01FE  E8 57 0A          call serial_init_C000_0C58 ; TODO-xref
+C000:01FE  E8 57 0A          call serial_init_C000_0C58
 C000:0201  FA                cli
 restore_irq_latch_C000_0202:
 C000:0202  A0 4F 6D          mov  al,[0x6d4f]

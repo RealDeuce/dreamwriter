@@ -84,7 +84,7 @@ C688:29EE  2E 8B 36 63 2A    mov  si,[cs:0x2a63]
 C688:29F3  89 36 71 76       mov  [0x7671],si
 C688:29F7  C6 06 73 76 00    mov  byte [0x7673],0
 C688:29FC  C6 06 3F 8E 00    mov  byte [0x8e3f],0
-C688:2A01  E8 47 FF          call C688:294B      ; TODO-xref RAM/work-area discovery
+C688:2A01  E8 47 FF          call C688:294B      ; WP editor heap RAM probe
 C688:2A04  E8 6E 03          call C688:2D75
 C688:2A07  B0 02             mov  al,0x02
 C688:2A09  C7 06 ED 75 3B 79 mov  word [0x75ed],0x793b

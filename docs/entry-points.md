@@ -37,6 +37,9 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:07E9` | `0x407E9` | LCD/framebuffer copy candidate, `0x1000 -> 0x94F0`. |
 | `C000:07F4` | `0x407F4` | LCD/framebuffer copy candidate, `0x94F0 -> 0x1000`. |
 | `C000:0807` | `0x40807` | Alarm wake wrapper. Calls `C000:0784`; when an alarm is accepted, plays the configured power-on buzzer and restores the saved screen. |
+| `C000:081F` | `0x4081F` | Startup buzzer variant used by an alternate warm-resume path. Related to the `C000:0807` alarm wake wrapper. |
+| `C000:0825` | `0x40825` | Cold-start buzzer/resource helper. Renders an application startup resource and calls the low-level tone path. |
+| `C000:083B` | `0x4083B` | Main-battery startup gate. Polls main-battery low state, forces `[6809]=1995` and displays the main-battery warning if the startup battery gate fails. |
 | `C000:08E7` | `0x408E7` | Centronics idle helper. Writes `0xFF` to parallel data port `0x40`. |
 | `C000:08EC` | `0x408EC` | Centronics output starter. Enables the ACK-driven path, marks `[6DA4]=1`, and sends the first byte through `C000:0920`. |
 | `C000:08DA` | `0x408DA` | Diagnostic gate on warm path. Calls `C000:1240`. |
@@ -60,6 +63,7 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:0BAF` | `0x40BAF` | Minute-fallback RTC compare helper. Checks whether RTC seconds are `00`. |
 | `C000:0ED6` | `0x40ED6` | Interrupt/vector setup. Fills most IVT entries with `C000:118B`, installs IRQ stubs, installs `INT 21h` as `C000:0006`, installs `INT 1` as `C000:157D`, and copies the `C000:0F94` far-call table to RAM `0x0200`. |
 | `C000:0F94` | `0x40F94` | Startup far-call table copied to RAM `0x0200`. This is the underlying vector table used by the 325 ROM's `F200:xxxx` trampoline page; the T400 keeps the low-RAM table but does not keep the `F200` trampoline page itself. |
+| `C000:1038` | `0x41038` | Keyboard scan-state initializer used by cold and warm startup. Clears debounce/ring-buffer state, then falls into `C000:106F` to arm the row-scan hardware. |
 | `C000:106F` | `0x4106F` | Keyboard row-scan reset/start helper. Enables the `FB` row-scan source through port `0x60`, dummy-reads `0xB0`, pulses port `0x61` from `0xFE` to `0xFF`, and clears row index `[6D29]`. |
 | `C000:123C` | `0x4123C` | Forced diagnostic-monitor entry. Skips the `SPACE+F+J` chord check and enters the `C000:1247` diagnostic banner/parser loop directly. |
 | `C000:1240` | `0x41240` | Diagnostic entry routine. Calls chord compare, then diagnostic UI/loop. |
@@ -69,6 +73,8 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:1534` | `0x41534` | Diagnostic dump byte reader. For `I`/`L` commands, reads the current port through `in al,dx`; otherwise reads memory through the selected segment/address. |
 | `C000:170E` | `0x4170E` | Far-call service wrapper used by `C688:9364`; service `AH=06` reaches the resource/text renderer. |
 | `C000:1712` | `0x41712` | Far-call service wrapper used by `C688:936A`; dispatches the second service table, including `AH=01` for the `D59C` resource table reader and `AH=07` for terminal mode. |
+| `C000:1716` | `0x41716` | Preserved-register body behind the `C000:170E` service wrapper. Saves caller state, dispatches through the `C000:173B` service table, then restores `[75ED]`/`[75EF]`. |
+| `C000:1873` | `0x41873` | Service-table dispatcher body behind `C000:1712`; service `AH=01` reaches the `D59C` resource table reader at `C000:18EE`. |
 | `C000:18EE` | `0x418EE` | Resource table reader for `D59C` / file base `0x559C0`; indexes by `DL` resource ID. |
 | `C000:18A1` | `0x418A1` | Banked spell/grammar/linguistic service helper. Temporarily maps `3000:0000` to ROM file `0x30000` and calls it. |
 | `C000:1DD9` | `0x41DD9` | Transfer-engine script command dispatcher reached by `C000:17ED`; command table includes file, stream, and XMODEM helpers. |
@@ -88,6 +94,7 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:3064` | `0x43064` | Private `INT 21h AX=4428` endpoint probe. Returns availability bits for built-in RAM, PCMCIA SRAM card, and DreamLink. |
 | `C000:311E` | `0x4311E` | Private `INT 21h AX=4429` DreamLink finish/flush helper; returns success without action for non-DreamLink handles. |
 | `C000:3C08` | `0x43C08` | Card-storage capacity probe used during format. Write-tests the banked card window in 32 KiB steps and records the detected count. |
+| `C000:3CBB` | `0x43CBB` | Open-file table initializer. Fills the four open-slot markers at `6FB2..6FB5` with `FF`; paired with allocation/population helpers `3CCD` and `3CFF`. |
 | `C000:3F78` | `0x43F78` | DreamLink command-frame prefix sender. Delays, then sends byte `0x13`. |
 | `C000:4082` | `0x44082` | DreamLink shared response parser. Validates the expected command byte in `[7037]`, reads status/payload bytes, and dispatches command-specific payload handlers. |
 | `C000:4384` | `0x44384` | DreamLink create/truncate sender for `AH=3C`. |
@@ -98,6 +105,8 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:4647` | `0x44647` | DreamLink write data sender. Handles block boundaries and `0x08` escapes for control bytes. |
 | `C000:4707` | `0x44707` | DreamLink close sender for `AH=3E`. |
 | `C000:47AC` | `0x447AC` | DreamLink initialize/format sender reached by private `AH=FF`, `BL=A5`, `DL=0A`. |
+| `C000:47D3` | `0x447D3` | Retained startup-state validator. Checks warm marker `[6D33]`, active target `[6806]`, date/time ranges, serial setup, printer setup, and related startup state; returns carry on invalid retained state. |
+| `C000:4811` | `0x44811` | Cold built-in-store validation/init path. Selects built-in target `08`, validates the `1800:` volume header/checksum, formats via private `AH=FF/BL=A5/DL=08` if needed, then resets startup storage/UI state. |
 | `C000:49C2` | `0x449C2` | Auto power-off countdown check in an idle path. Decrements `[680B]`; when it reaches zero and `[6D31] != 0`, saves resume target `4977` and jumps to the retained power-transition path at `C000:035D`. |
 | `C000:4961` | `0x44961` | Periodic idle warm/power marker check. Sets carry when `[680D] == 0` and `[6809] == 0x1992`, causing timer-driven wait loops to enter the retained power-transition path. |
 | `C000:4A8D` | `0x44A8D` | Main keyboard/event idle loop. Uses `C000:4B2D` to check the keyboard ring buffer, reloads `[680B]` from `[6D31]` on keyboard activity, and enters the retained power-transition path on timeout. |
@@ -119,6 +128,7 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `C000:5870` | `0x45870` | Keyboard event builder/enqueuer. Converts the repeating/current stable key address and bit mask into `DL=(row<<3)+bit`, builds `DH` flags through `C000:58A6`, and queues the resulting word through `C000:4B5C`. |
 | `C000:58A6` | `0x458A6` | Keyboard modifier snapshot builder. Adds shifted/caps/control/alt bits to `DH` from stable row state and sticky/modifier state bytes before an event is queued. |
 | `C000:5915` | `0x45915` | Keyboard event translator. Consumes the dequeued `DX` event word, selects normal/shift/control/caps/alt translation tables, and returns the translated byte used by `INT 21h AH=08`. |
+| `C000:5AA2` | `0x45AA2` | Cold-start display/keyboard state initializer. Seeds display parser state at `70F4..70F5`, clears selected keyboard/display flags, and points the display base at framebuffer `0x1000`. |
 | `C000:5AD6` | `0x45AD6` | Low-level resource/text renderer. Consumes staged bytes, expands glyphs, and writes rows into the framebuffer at `0x1000`. |
 | `C000:6648` | `0x46648` | `FF 42` bitmap blit handler for startup resource records; uses row count, bit width, and source far pointer. |
 | `C000:675D` | `0x4675D` | `FF 44` positioned rectangle/fill handler. The simple form uses `+1 y`, `+3 x`, `+5 height`, `+7 width`, and `+D mode`; nonzero `+9/+B` dispatches to copy/shift-looking helpers. |
@@ -249,6 +259,7 @@ The table below is for the T400 v2.1 ROM unless noted otherwise.
 | `DC98:455F` | `0x60EDF` | WP FILE -> COPY direction selector. Handles Built-in/Card/DreamLink copy directions. |
 | `DC98:4D67` | `0x616E7` | Directory-list builder. Uses DOS find-first/find-next on `X:*.*`, reads standard DTA fields, sorts 19-byte records, and caps at 128 entries. |
 | `DC98:52E5` | `0x61C65` | Document picker/list UI. Calls `DC98:4D67` to enumerate files and `DC98:4EAF`/`5198` to draw and navigate the list. |
+| `DC98:539E` | `0x61D1E` | Organizer/menu subsystem initializer called during cold startup and before the organizer top icon menu when the retained marker check requires it. |
 | `DC98:53C3` | `0x61D43` | Organizer top icon menu wrapper around `DC98:124C`; stores selected index in `[82A6]`. |
 | `DC98:54A9` | `0x61E29` | Calculator numeric-record clear helper. Clears sign, 16 digit bytes, and decimal/exponent byte. |
 | `DC98:54C2` | `0x61E42` | Calculator numeric display renderer. Builds inline `FF 42` bitmap records from the 8x12 digit resource at `F16C:000A`. |
