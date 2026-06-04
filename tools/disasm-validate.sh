@@ -91,6 +91,12 @@ if ! python3 tools/validate_snippets.py "${DOCS[@]}"; then
 fi
 
 echo
+echo "==> asm-bytes"
+if ! python3 tools/validate_asm_slices.py asm/*.asm; then
+  FAIL=1
+fi
+
+echo
 echo "==> queue-audit"
 if ! tools/rom2.py queue-audit --queue "$QUEUE" --scope-docs "${expand_docs[@]}" $([[ "${OPEN_ONLY}" -eq 1 ]] && echo "--open-only"); then
   FAIL=1
