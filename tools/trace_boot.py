@@ -80,10 +80,12 @@ class Block:
 ROM: bytes = b""
 BLOCKS: OrderedDict[tuple[str, int], Block] = OrderedDict()
 
-# Addresses where the tracer should stop disassembling. Used to prevent
-# fall-through past calls that never return, which otherwise causes the
-# tracer to decode data as instructions.
+# Addresses where the tracer should stop disassembling.
 STOP_ADDRS: set[tuple[str, int]] = set()
+
+# Call targets known to never return (JMP to event loop, etc.).
+# Any CALL to one of these terminates the block.
+NORETURN_CALLS: set[tuple[str, int]] = set()
 
 COND_OPS = frozenset({
     "jz", "jnz", "jc", "jnc", "jb", "jnb", "ja", "jna",
@@ -183,21 +185,24 @@ def disasm_block(seg_name: str, offset: int, max_bytes: int = 0x400) -> Block:
 
         # --- near call ---
         if op == "call" and len(words) == 2:
+            resolved_call = None
             w = words[1]
             if w.startswith("0x") and ":" not in w:
                 try:
                     target = int(w, 16)
-                    calls.append((seg_name, target))
+                    resolved_call = (seg_name, target)
                 except ValueError:
                     pass
             elif ":" in mn:
                 far = parse_far_target(mn)
                 if far:
                     far_seg, far_off = far
-                    phys = (far_seg << 4) + far_off
-                    resolved = find_segment_for_far(far_seg, far_off)
-                    if resolved:
-                        calls.append(resolved)
+                    resolved_call = find_segment_for_far(far_seg, far_off)
+            if resolved_call:
+                calls.append(resolved_call)
+                if resolved_call in NORETURN_CALLS:
+                    end_type = "call_noreturn"
+                    break
 
         # --- conditional branch ---
         if op in COND_OPS:
@@ -358,8 +363,32 @@ def main():
                     STOP_ADDRS.add((name, off))
                     break
 
-    # Known-bad fall-through addresses (calls that never return)
-    STOP_ADDRS.add(("C772", 0x40C1))  # after call to C772:022D which is JMP 3944
+    # C772:022D is a dispatch entry (JMP 3944) used as an inline-data call.
+    # Callers do "CALL 022D" followed by inline parameter bytes, not code.
+    # The handler reads the data from the return address on the stack.
+    # Auto-blacklist every address following a "CALL 022D" in the C772 segment.
+    INLINE_DATA_CALLS = {("C772", 0x022D)}
+    for seg_name, call_target in INLINE_DATA_CALLS:
+        seg = SEGMENTS.get(seg_name)
+        if seg is None:
+            continue
+        call_bytes = struct.pack("<BH", 0xE8, (call_target - 3) & 0xFFFF)  # placeholder
+        # Scan the ROM for "E8 xx xx" where target resolves to call_target
+        for off in range(0, seg.max_offset - 2):
+            file_pos = seg.file_base + off
+            if file_pos + 3 > len(ROM):
+                break
+            if ROM[file_pos] == 0xE8:
+                rel = struct.unpack_from("<h", ROM, file_pos + 1)[0]
+                target = (off + 3 + rel) & 0xFFFF
+                if target == call_target:
+                    stop_at = off + 3
+                    STOP_ADDRS.add((seg_name, stop_at))
+
+    # ED1B: city database and padding regions reached via fake branches
+    STOP_ADDRS.add(("ED1B", 0x959E))
+    STOP_ADDRS.add(("ED1B", 0x99B4))
+    STOP_ADDRS.add(("ED1B", 0xA948))
 
     if args.irqs:
         irq_seeds = [
