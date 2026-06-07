@@ -82,12 +82,35 @@ Saves the CPU flags (ZF, SF, CF) to `[74AC]` for conditional branch
 opcodes. Used by comparison and arithmetic opcodes as the intermediate
 step before the branch handlers test `[74AC]`.
 
-### C772:5E35 — Far-Call Service Dispatcher
+### C772:5E35 — Text Editor Service Dispatcher
 
-Saves editor state (`[710F]`, `[745F]`, `[7460]`, `[7407]`, etc.),
-looks up a service handler from the table at `C772:5E08` using
-CL (low nibble), and dispatches. Used by opcodes that invoke
-DEF0 far-call services.
+Saves editor state, then looks up a behavior mode byte from the
+16-byte table at `C772:5E08` using `CL & 0x0F` as index. The
+loaded byte goes into CH and its bits control the editing operation:
+
+| CH bit | Meaning |
+| ---: | --- |
+| `0x01` | Input processing path |
+| `0x02` | Alternate direction |
+| `0x04` | Cursor manipulation |
+| `0x08` | Queue character to `[74B3]` ring buffer |
+| `0x10` | Text buffer read/write |
+| `0x20` | Read from `[710F]` state pointer |
+| `0x80` | State save/restore around operation |
+
+The 16-entry mode table at `C772:5E08`:
+
+```text
+[0]=0x70  [1]=0x31  [2]=0x34  [3]=0xA1
+[4]=0xA4  [5]=0x32  [6]=0x12  [7]=0x72
+[8]=0x2A  [9]=0x22  [A]=0x11  [B]=0x21
+[C]=0x24  [D]=0x3A  [E]=0x02  [F]=0x39
+```
+
+CL values in the handler opcodes select from this table via `CL & 0xF`.
+The upper nibble of CL adds additional flags (`0x10` = direction,
+`0x80` = special mode). So CL is a packed mode selector, not a named
+service ID.
 
 ### C772:041A — Bit Field Resolver
 
@@ -196,36 +219,38 @@ index a word table.
 | `0x58` | `C772:040E` | **Clear bits**: `[SI] &= ~DL`. AND-NOT parameter from field. |
 | `0x5A` | `C772:0406` | **Toggle bits**: `[SI] ^= DL`. XOR parameter into field. |
 
-### Service Dispatch
+### Editor Service Dispatch
 
-These set CL (service ID) and optionally DL (parameter), then
-jump to `C772:5E35` (far-call service dispatcher).
+These set CL (mode selector) and optionally DL (parameter), then
+jump to `C772:5E35`. CL's low nibble selects a behavior mode from
+the table at `5E08`; CL's upper bits add direction/special flags.
+See the `5E35` documentation above for CH bit meanings.
 
-| Bytecode | Handler | CL | DL | Service |
-| ---: | --- | --- | --- | --- |
-| `0x0A` | `C772:37D5` | `0x02` | `[7415]+1` | Cursor right |
-| `0x0C` | `C772:37DF` | `0x12` | `[7415]-1` | Cursor left |
-| `0x1A` | `C772:380E` | `0x17` | `0x02` | Service 0x17 |
-| `0x1C` | `C772:383E` | `0x01` | `0xFF` | Call service, test result bit 4, if set return, else read-backward |
-| `0x1E` | `C772:3830` | `0x11` | `0xFF` | Call service 0x11, test result, if set return, else chain to 0x1A |
-| `0x20` | `C772:5E18` | `0x11` | `0xFF` | Display update |
-| `0x26` | `C772:385D` | `0x00` | `0x00` | Null service (refresh) |
-| `0x2A` | `C772:5E2B` | `0x19` | `0x00` | Insert mode |
-| `0x2C` | `C772:5E2F` | `0x29` | `0x00` | Delete mode |
-| `0x2E` | `C772:386A` | from `[74B5]` | from `[74B5]` | Key-driven service, uses 5E1E |
-| `0x30` | `C772:3872` | from `[74B5]` | from `[74B5]` | Key-driven service, uses 5E22 |
-| `0x32` | `C772:3856` | `0x07` | `0x01` | Service 0x07 |
-| `0x34` | `C772:3824` | `0x05` | `0x01` | Service 0x05 |
-| `0x36` | `C772:380A` | `0x17` | `0x01` | Service 0x17 variant |
-| `0x44` | `C772:384C` | `0x01` | from DL | Service 0x01 with parameter |
-| `0x46` | `C772:3851` | `0x11` | from DL | Service 0x11 with parameter |
-| `0x48` | `C772:3810` | `0x17` | from DL | Service 0x17 with parameter |
-| `0x4A` | `C772:382B` | `0x85` | from DL | Service 0x85 (high bit = flag) |
-| `0x4C` | `C772:3815` | `0x15` | from DL | Service 0x15 with parameter |
-| `0x4E` | `C772:3826` | `0x05` | from DL | Service 0x05 with parameter |
-| `0x64` | `C772:5E1E` | `0x0A` | from DL | Service 0x0A |
-| `0x7E` | `C772:5E22` | `0x3A` | from DL | Service 0x3A |
-| `0xBC` | `C772:0BE9` | `0x05` | from DL | Service 0x05 (call, not jump) |
+| Bytecode | Handler | CL | DL | Effect |
+| ---: | --- | ---: | --- | --- |
+| `0x0A` | `C772:37D5` | `0x02` | `[7415]+1` | Cursor right (mode `[2]=0x34`: buf r/w + alt) |
+| `0x0C` | `C772:37DF` | `0x12` | `[7415]-1` | Cursor left (mode `[2]=0x34` + direction) |
+| `0x1A` | `C772:380E` | `0x17` | `0x02` | Cursor op (mode `[7]=0x72`: buf r/w + cursor) |
+| `0x1C` | `C772:383E` | `0x01` | `0xFF` | Input + test: if result bit 4 set, return; else read-backward |
+| `0x1E` | `C772:3830` | `0x11` | `0xFF` | Input + direction: test result, chain to `0x1A` |
+| `0x20` | `C772:5E18` | `0x11` | `0xFF` | Display refresh (mode `[1]=0x31` + direction) |
+| `0x26` | `C772:385D` | `0x00` | `0x00` | Null/refresh (mode `[0]=0x70`: cursor + buf r/w) |
+| `0x2A` | `C772:5E2B` | `0x19` | `0x00` | Insert mode (mode `[9]=0x22`: alt + input) |
+| `0x2C` | `C772:5E2F` | `0x29` | `0x00` | Delete mode (mode `[9]=0x22` + direction) |
+| `0x2E` | `C772:386A` | `[74B5]` | `[74B5]` | Key-driven edit (key code selects mode) |
+| `0x30` | `C772:3872` | `[74B5]` | `[74B5]` | Key-driven edit (alternate entry via `5E22`) |
+| `0x32` | `C772:3856` | `0x07` | `0x01` | Cursor op (mode `[7]=0x72`) |
+| `0x34` | `C772:3824` | `0x05` | `0x01` | Buffer op (mode `[5]=0x32`: buf r/w + alt) |
+| `0x36` | `C772:380A` | `0x17` | `0x01` | Cursor op (mode `[7]=0x72` + direction) |
+| `0x44` | `C772:384C` | `0x01` | param | Input (mode `[1]=0x31`) with parameter |
+| `0x46` | `C772:3851` | `0x11` | param | Input + direction with parameter |
+| `0x48` | `C772:3810` | `0x17` | param | Cursor (mode `[7]=0x72` + direction) with parameter |
+| `0x4A` | `C772:382B` | `0x85` | param | Special mode (mode `[5]=0x32` + `0x80` flag) |
+| `0x4C` | `C772:3815` | `0x15` | param | Buffer + direction with parameter |
+| `0x4E` | `C772:3826` | `0x05` | param | Buffer (mode `[5]=0x32`) with parameter |
+| `0x64` | `C772:5E1E` | `0x0A` | param | Queue char (mode `[A]=0x11`) |
+| `0x7E` | `C772:5E22` | `0x3A` | param | Queue + state save (mode `[A]=0x11` + direction + state) |
+| `0xBC` | `C772:0BE9` | `0x05` | param | Buffer op (call, not jump, returns to caller) |
 
 ### State Management
 
