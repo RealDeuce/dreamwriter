@@ -2,7 +2,7 @@
 
 The banked routine at `3000:0000` is a service thunk into the spelling /
 grammar / linguistic engine region. It is reached through the `C000:18A1`
-banked far-call helper described in [`banking.md`](banking.md).
+banked far-call helper described in [`banking.md`](../../docs/banking.md).
 
 ## Thunk
 

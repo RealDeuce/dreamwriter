@@ -14,7 +14,7 @@ sha256: d88cf3739b6d44318c1ab14215f748fe3f5e70aa34f1594e3c629795a0201c61
 The source file is outside this repo and is not part of the T400 ROM map.
 Addresses below are file offsets in the 325 image unless otherwise noted.
 Treat this page as a comparative experiment. T400 loader behavior cited here
-should agree with [`file-system.md`](file-system.md#rom-card-loader); claims
+should agree with [`file-system.md`](../v2.1/docs/file-system.md#rom-card-loader); claims
 about the 325 BASIC body require the external 325 ROM named above.
 
 ## First-Pass Findings
@@ -216,7 +216,7 @@ physical targets fall inside the copied 325 high-ROM span.
 
 The T400 `ROM CARD` loader reads `EROMCARD.X` to physical `0x0A4F0`, validates
 the `0xA4F0/0x1997` header, and calls the far pointer at file offset `+0x04`.
-See [`file-system.md`](file-system.md#rom-card-loader).
+See [`file-system.md`](../v2.1/docs/file-system.md#rom-card-loader).
 
 A practical package would likely look like:
 

@@ -1,7 +1,7 @@
 # ROM Tool Reference
 
 `rom2.py` contains small inspection helpers for the DreamWriter T400 ROM 2.1
-image. By default it reads `t4_ir_2.1.ic303` from the repository root and
+image. By default it reads `v2.1/t4_ir_2.1.ic303` from the repository root and
 expects the 512 KiB image with SHA-256:
 
 ```text
@@ -11,7 +11,7 @@ bb6a437d4c25f90eb7a0b8bc3d41e1ca2c74196aabe60954a598c66405397757
 Use `--rom PATH` before the subcommand to inspect a different file:
 
 ```sh
-tools/rom2.py --rom t4_ir_2.1.ic303 verify
+tools/rom2.py --rom v2.1/t4_ir_2.1.ic303 verify
 ```
 
 The script assumes the 2.1 ROM is loaded at physical `0x80000`, matching the
@@ -180,7 +180,7 @@ Options:
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--rom` | `t4_ir_2.1.ic303` | ROM image to read font data from. |
+| `--rom` | `v2.1/t4_ir_2.1.ic303` | ROM image to read font data from. |
 | `--font-base` | `0x580b6` | File offset for the first glyph. |
 | `--first-code` | `0x20` | Character code represented by the first glyph. |
 | `--last-code` | `0x7e` | Last character code accepted as text. |
@@ -226,7 +226,7 @@ Options:
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--rom` | `t4_ir_2.1.ic303` | ROM image to read. |
+| `--rom` | `v2.1/t4_ir_2.1.ic303` | ROM image to read. |
 | `--row-bytes` | `ceil(width / 8)` | Bytes per source bitmap row. |
 | `--stride` | effective `row-bytes` | Bytes between source rows. |
 | `--scale` | `1` | Nearest-neighbor output scale. |
@@ -234,8 +234,8 @@ Options:
 
 ### `generate_symbol_index.py`
 
-Builds `docs/disassembly/symbol-index.html`, a static sortable symbol table
-from named labels in `docs/disassembly/*.md`. Labels with address suffixes such
+Builds `v2.1/docs/disassembly/symbol-index.html`, a static sortable symbol table
+from named labels in `v2.1/docs/disassembly/*.md`. Labels with address suffixes such
 as `foo_C000_1234:` use the suffix; labels without a suffix use the next nearby
 instruction address.
 
@@ -246,7 +246,7 @@ tools/generate_symbol_index.py --check
 
 ### `disassembly_audit.py`
 
-Runs semantic consistency checks over `docs/disassembly/*.md` and generates
+Runs semantic consistency checks over `v2.1/docs/disassembly/*.md` and generates
 review indexes for the annotated disassembly. The check mode validates:
 
 - `; file 0x...` comments against nearby labels or first shown instructions.
@@ -256,12 +256,12 @@ review indexes for the annotated disassembly. The check mode validates:
 
 The generate mode writes:
 
-- `docs/disassembly/asset-index.md`
-- `docs/disassembly/string-resource-index.md`
-- `docs/disassembly/ram-ledger.md`
-- `docs/disassembly/io-port-ledger.md`
-- `docs/disassembly/transfer-targets.md`
-- `docs/disassembly/call-graph.dot`
+- `v2.1/docs/disassembly/asset-index.md`
+- `v2.1/docs/disassembly/string-resource-index.md`
+- `v2.1/docs/disassembly/ram-ledger.md`
+- `v2.1/docs/disassembly/io-port-ledger.md`
+- `v2.1/docs/disassembly/transfer-targets.md`
+- `v2.1/docs/disassembly/call-graph.dot`
 
 ```sh
 tools/disassembly_audit.py check
@@ -368,15 +368,15 @@ Scans Markdown files for `TODO-xref` markers and validates that each marker has 
 least one parsable address token (`seg:off`, `file:...`, or `phys:...`).
 
 ```sh
-tools/rom2.py xref-scan docs/disassembly/README.md docs/disassembly/*.md
-tools/rom2.py xref-scan --format markdown docs/disassembly/boot.md
+tools/rom2.py xref-scan v2.1/docs/disassembly/README.md v2.1/docs/disassembly/*.md
+tools/rom2.py xref-scan --format markdown v2.1/docs/disassembly/boot.md
 ```
 
 Options:
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `scope` | `docs/disassembly/*.md` | Markdown files, globs, or directories to scan. |
+| `scope` | `v2.1/docs/disassembly/*.md` | Markdown files, globs, or directories to scan. |
 | `--format` | `text` | Output format: `text` or `markdown`. |
 
 Exit status is non-zero when any `TODO-xref` line cannot be resolved to a known
@@ -384,21 +384,21 @@ address form.
 
 ### `queue-audit`
 
-Audits the queue in `docs/disassembly/README.md`, checks whether queue roots also
+Audits the queue in `v2.1/docs/disassembly/README.md`, checks whether queue roots also
 appear in other disassembly markdown files, and shows open vs already-seen roots.
 
 ```sh
 tools/rom2.py queue-audit
 tools/rom2.py queue-audit --open-only
-tools/rom2.py queue-audit --format markdown --queue docs/disassembly/README.md
+tools/rom2.py queue-audit --format markdown --queue v2.1/docs/disassembly/README.md
 ```
 
 Options:
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--queue` | `docs/disassembly/README.md` | Path for the queue section to audit. |
-| `--scope-docs` | `docs/disassembly/*.md` | Markdown files used to determine if a root is already seen elsewhere. |
+| `--queue` | `v2.1/docs/disassembly/README.md` | Path for the queue section to audit. |
+| `--scope-docs` | `v2.1/docs/disassembly/*.md` | Markdown files used to determine if a root is already seen elsewhere. |
 | `--open-only` | off | Show only roots currently not found outside the queue file. |
 | `--format` | `text` | Output format: `text` or `markdown`. |
 
@@ -434,7 +434,7 @@ targets are resolved through `--near-seg`.
 ### `regions`
 
 Lists the machine-readable first-pass ROM region map. The default map is
-`docs/rom-regions.tsv`. File ranges are always standalone ROM offsets; CPU
+`v2.1/docs/rom-regions.tsv`. File ranges are always standalone ROM offsets; CPU
 ranges are derived from the region `segment` column when present, so banked
 code can disassemble at the address it expects to run from.
 
@@ -447,7 +447,7 @@ Options:
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--regions` | `docs/rom-regions.tsv` | TSV region map path. |
+| `--regions` | `v2.1/docs/rom-regions.tsv` | TSV region map path. |
 | `--types` | none | Comma-separated region types to include. |
 | `--format` | `text` | Output format: `text` or `markdown`. |
 
@@ -455,7 +455,7 @@ Options:
 
 Disassembles mapped regions with `ndisasm` and lists x86 `in`/`out`/string I/O
 instructions. This is intended for code-only sweeps: by default it scans only
-`code` and `monitor-code` regions from `docs/rom-regions.tsv`, which avoids the
+`code` and `monitor-code` regions from `v2.1/docs/rom-regions.tsv`, which avoids the
 worst false positives from text, fonts, bitmaps, and display-resource streams.
 The results are only as accurate as the current region map.
 
@@ -469,7 +469,7 @@ Options:
 
 | Option | Default | Meaning |
 | --- | --- | --- |
-| `--regions` | `docs/rom-regions.tsv` | TSV region map path. |
+| `--regions` | `v2.1/docs/rom-regions.tsv` | TSV region map path. |
 | `--types` | `code,monitor-code` | Comma-separated region types to disassemble and scan. |
 | `--summary` | off | Print counts by direct port, with `DX/string` for variable-port/string I/O. |
 | `--limit` | `0` | Maximum rows to print; `0` means all. |
@@ -523,14 +523,14 @@ Run the full disassembly validation workflow (snippet bytes + disassembly signat
 
 ```sh
 tools/disasm-validate.sh
-tools/disasm-validate.sh --open-only --docs docs/disassembly/*.md --queue docs/disassembly/README.md
+tools/disasm-validate.sh --open-only --docs v2.1/docs/disassembly/*.md --queue v2.1/docs/disassembly/README.md
 ```
 
 You can scope validation to a single markdown file:
 
 ```sh
-python3 tools/validate_snippets.py docs/disassembly/app-menu-event-loop.md
-tools/disasm-validate.sh --docs docs/disassembly/app-menu-event-loop.md
+python3 tools/validate_snippets.py v2.1/docs/disassembly/app-menu-event-loop.md
+tools/disasm-validate.sh --docs v2.1/docs/disassembly/app-menu-event-loop.md
 ```
 
 `validate_snippets.py` maps bank-local `3000:` snippets to file `0x30000` by

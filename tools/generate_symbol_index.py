@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-DEFAULT_DOC_GLOBS = ["docs/disassembly/*.md"]
-DEFAULT_OUTPUT = Path("docs/disassembly/symbol-index.html")
+DEFAULT_DOC_GLOBS = ["v2.1/docs/disassembly/*.md"]
+DEFAULT_OUTPUT = Path("v2.1/docs/disassembly/symbol-index.html")
 
 LABEL_RE = re.compile(r"^(?P<name>[A-Za-z_.$][A-Za-z0-9_.$-]*):\s*$")
 ADDR_SUFFIX_RE = re.compile(r"_([0-9A-Fa-f]{4})_([0-9A-Fa-f]{4})$")
@@ -172,7 +172,7 @@ def render(symbols: list[Symbol]) -> str:
 </head>
 <body>
   <h1>DreamWriter T400 Disassembly Symbol Index</h1>
-  <p>Generated from named labels in <code>docs/disassembly/*.md</code>. Click Address or Name to sort.</p>
+  <p>Generated from named labels in <code>v2.1/docs/disassembly/*.md</code>. Click Address or Name to sort.</p>
   <input id="filter" type="search" placeholder="Filter symbols, addresses, or files" aria-label="Filter symbols">
   <table id="symbols">
     <thead>

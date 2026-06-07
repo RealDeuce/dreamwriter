@@ -551,7 +551,7 @@ progress count. On the T400 v2.1 path observed in MAME, the upper value is
 filesystem formatter's built-in geometry: five 32 KiB units starting at segment
 `0x1800`. A progress failure in the high 20s pointed back to the bank mapping
 for CPU `0x20000..0x3FFFF`; see [`file-system.md`](file-system.md) and
-[`banking.md`](banking.md).
+[`banking.md`](../../docs/banking.md).
 
 The reason `INITIALIZING` appears before the menu is now accounted for by the
 reset cold/warm decision and the built-in RAM-store validation described above.

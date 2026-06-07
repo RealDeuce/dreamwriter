@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOCS=("docs/disassembly/*.md")
-QUEUE="docs/disassembly/README.md"
+DOCS=("v2.1/docs/disassembly/*.md")
+QUEUE="v2.1/docs/disassembly/README.md"
 OPEN_ONLY=0
 DOCS_SET=0
 
@@ -18,8 +18,8 @@ Run disassembly validation checks:
   5) disassembly_audit.py semantic checks and generated artifact freshness
 
 Options:
-  --docs <glob>    Markdown docs/glob to include (repeatable). Default: docs/disassembly/*.md
-  --queue <file>   Queue file path. Default: docs/disassembly/README.md
+  --docs <glob>    Markdown docs/glob to include (repeatable). Default: v2.1/docs/disassembly/*.md
+  --queue <file>   Queue file path. Default: v2.1/docs/disassembly/README.md
   --open-only      In queue-audit, show only open queue roots
   -h, --help       Show this help message
 USAGE
@@ -92,7 +92,7 @@ fi
 
 echo
 echo "==> asm-bytes"
-if ! python3 tools/validate_asm_slices.py asm/*.asm; then
+if ! python3 tools/validate_asm_slices.py v2.1/asm/*.asm; then
   FAIL=1
 fi
 

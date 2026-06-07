@@ -10,7 +10,7 @@ import zlib
 from pathlib import Path
 
 
-ROM_PATH = Path("t4_ir_2.1.ic303")
+ROM_PATH = Path("v2.1/t4_ir_2.1.ic303")
 
 
 def parse_int(value: str) -> int:

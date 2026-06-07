@@ -77,7 +77,7 @@ ROM startup code. Real-mode segment aliases matter; always track `CS`, `DS`,
 
 Working notes are split by topic under `docs`, with this README serving as the
 central index for the repo. Address, string, and direct branch/call inspection
-helpers are in `tools/rom2.py`; see [`tools/README.md`](tools/README.md) for
+helpers are in `tools/rom2.py`; see [`tools/README.md`](../tools/README.md) for
 the command reference.
 
 ## Documentation Index
@@ -87,29 +87,29 @@ the command reference.
 | [`docs/README.md`](docs/README.md) | Index for the topic-specific ROM notes. |
 | [`docs/map.md`](docs/map.md) | Address model, coarse ROM layout, and reset chain. |
 | [`docs/rom-regions.tsv`](docs/rom-regions.tsv) | Machine-readable first-pass code/data/resource region map. |
-| [`docs/banking.md`](docs/banking.md) | MAME bank formula and confirmed ROM bank-switching routines. |
+| [`docs/banking.md`](../docs/banking.md) | MAME bank formula and confirmed ROM bank-switching routines. |
 | [`docs/spell-engine.md`](docs/spell-engine.md) | Banked spell/grammar/linguistic service thunk and dispatcher notes. |
 | [`docs/entry-points.md`](docs/entry-points.md) | Confirmed code entry points and direct branch/call inventory. |
 | [`docs/startup-ui.md`](docs/startup-ui.md) | Cold-start UI path, inline display scripts, boot update sequence, and first menu graphic. |
 | [`docs/menu-dispatch.md`](docs/menu-dispatch.md) | Inline key dispatch tables and the shared application menu event loop. |
 | [`docs/file-system.md`](docs/file-system.md) | FILE menu storage flow, DOS-like file API wrappers, and directory/DTA evidence. |
-| [`docs/running-rom-card-binaries.md`](docs/running-rom-card-binaries.md) | Practical workflow for running arbitrary `EROMCARD.X` binaries through OTHERS -> ROM CARD. |
-| [`docs/basic-eromcard.md`](docs/basic-eromcard.md) | Comparative feasibility notes for wrapping the DreamWriter 325 BASIC interpreter as T400 `EROMCARD.X`; depends on a non-T400 source ROM. |
-| [`docs/dreamlink-protocol.md`](docs/dreamlink-protocol.md) | DreamLink RS-232 file-transfer protocol, command frames, listings, and data stream framing. |
+| [`docs/running-rom-card-binaries.md`](../docs/running-rom-card-binaries.md) | Practical workflow for running arbitrary `EROMCARD.X` binaries through OTHERS -> ROM CARD. |
+| [`docs/basic-eromcard.md`](../docs/basic-eromcard.md) | Comparative feasibility notes for wrapping the DreamWriter 325 BASIC interpreter as T400 `EROMCARD.X`; depends on a non-T400 source ROM. |
+| [`docs/dreamlink-protocol.md`](../docs/dreamlink-protocol.md) | DreamLink RS-232 file-transfer protocol, command frames, listings, and data stream framing. |
 | [`docs/wp-editor-heap.md`](docs/wp-editor-heap.md) | Word-processor live document heap, block allocator, and cross-application use evidence. |
-| [`docs/diagnostics.md`](docs/diagnostics.md) | Diagnostic chord, command loop, banner/help strings, and warm IRQ entry. |
-| [`docs/hardware.md`](docs/hardware.md) | Keyboard, LCD/framebuffer, I/O ports, serial, printer, PCMCIA, sound, RTC, power, and low RAM state. |
-| [`docs/hardware-confirmation.md`](docs/hardware-confirmation.md) | Board-inspection checklist for confirming clocks, devices, ports, and status wiring. |
+| [`docs/diagnostics.md`](../docs/diagnostics.md) | Diagnostic chord, command loop, banner/help strings, and warm IRQ entry. |
+| [`docs/hardware.md`](../docs/hardware.md) | Keyboard, LCD/framebuffer, I/O ports, serial, printer, PCMCIA, sound, RTC, power, and low RAM state. |
+| [`docs/hardware-confirmation.md`](../docs/hardware-confirmation.md) | Board-inspection checklist for confirming clocks, devices, ports, and status wiring. |
 | [`docs/fonts.md`](docs/fonts.md) | Main glyph table, width table candidates, and font variants. |
 | [`docs/bitmaps.md`](docs/bitmaps.md) | Confirmed LCD bitmap icons and candidate UI/icon resources. |
 | [`docs/strings.md`](docs/strings.md) | String/resource landmarks for application-level mapping. |
 | [`docs/open-questions.md`](docs/open-questions.md) | Unresolved questions after the current ROM/tooling audit. |
-| [`docs/reference/csimon.pdf`](docs/reference/csimon.pdf) | CSi-Mon User's Guide v5.0, useful background for the high-ROM `CSiMON-88` monitor code. |
-| [`docs/reference/dreamlink-manual.pdf`](docs/reference/dreamlink-manual.pdf) | DreamLink PC software manual; documents FILE -> STORE/RECALL transfer flow, host-side file format selection, and print-through mode. |
-| [`docs/reference/dreamwriter-t400-manual.pdf`](docs/reference/dreamwriter-t400-manual.pdf) | DreamWriter T400 user manual; broad user-facing reference, currently missing pages 10 and 11 in the source copy. |
-| [`docs/reference/dreamwriter-t400-manual.txt`](docs/reference/dreamwriter-t400-manual.txt) | Layout-preserving OCR text extracted from the two-up T400 manual scan; useful for search and command names, but not authoritative for exact page geometry. |
-| [`tools/README.md`](tools/README.md) | Command reference for `tools/rom2.py`. |
-| [`dw-basic/README.md`](dw-basic/README.md) | NASM-targeted DreamWriter BASIC port workspace and first `EROMCARD.X` smoke target. |
+| [`docs/reference/csimon.pdf`](../docs/reference/csimon.pdf) | CSi-Mon User's Guide v5.0, useful background for the high-ROM `CSiMON-88` monitor code. |
+| [`docs/reference/dreamlink-manual.pdf`](../docs/reference/dreamlink-manual.pdf) | DreamLink PC software manual; documents FILE -> STORE/RECALL transfer flow, host-side file format selection, and print-through mode. |
+| [`docs/reference/dreamwriter-t400-manual.pdf`](../docs/reference/dreamwriter-t400-manual.pdf) | DreamWriter T400 user manual; broad user-facing reference, currently missing pages 10 and 11 in the source copy. |
+| [`docs/reference/dreamwriter-t400-manual.txt`](../docs/reference/dreamwriter-t400-manual.txt) | Layout-preserving OCR text extracted from the two-up T400 manual scan; useful for search and command names, but not authoritative for exact page geometry. |
+| [`tools/README.md`](../tools/README.md) | Command reference for `tools/rom2.py`. |
+| [`dw-basic/README.md`](../dw-basic/README.md) | NASM-targeted DreamWriter BASIC port workspace and first `EROMCARD.X` smoke target. |
 
 ## Boot Path
 
@@ -346,8 +346,8 @@ positioned bitmap-record scans, and the code-only I/O summary on 2026-06-02.
 
 Items that still cannot be answered from the T400 2.1 ROM alone are kept in
 [`docs/open-questions.md`](docs/open-questions.md). Comparative files such as
-[`docs/basic-eromcard.md`](docs/basic-eromcard.md) and the non-T400 rows in
-[`docs/running-rom-card-binaries.md`](docs/running-rom-card-binaries.md) require
+[`docs/basic-eromcard.md`](../docs/basic-eromcard.md) and the non-T400 rows in
+[`docs/running-rom-card-binaries.md`](../docs/running-rom-card-binaries.md) require
 the external ROM images named in those pages.
 
 ## Open Questions

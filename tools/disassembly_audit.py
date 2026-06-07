@@ -15,14 +15,14 @@ from pathlib import Path
 from rom2 import expand_markdown_inputs, parse_addr_expr, phys_to_file
 
 
-DOC_GLOBS = ["docs/disassembly/*.md"]
+DOC_GLOBS = ["v2.1/docs/disassembly/*.md"]
 OUTPUTS = {
-    "assets": Path("docs/disassembly/asset-index.md"),
-    "strings": Path("docs/disassembly/string-resource-index.md"),
-    "ram": Path("docs/disassembly/ram-ledger.md"),
-    "io": Path("docs/disassembly/io-port-ledger.md"),
-    "transfers": Path("docs/disassembly/transfer-targets.md"),
-    "graph": Path("docs/disassembly/call-graph.dot"),
+    "assets": Path("v2.1/docs/disassembly/asset-index.md"),
+    "strings": Path("v2.1/docs/disassembly/string-resource-index.md"),
+    "ram": Path("v2.1/docs/disassembly/ram-ledger.md"),
+    "io": Path("v2.1/docs/disassembly/io-port-ledger.md"),
+    "transfers": Path("v2.1/docs/disassembly/transfer-targets.md"),
+    "graph": Path("v2.1/docs/disassembly/call-graph.dot"),
 }
 GENERATED_NAMES = {path.name for path in OUTPUTS.values()} | {"symbol-index.html"}
 
@@ -298,7 +298,7 @@ def collect_assets(lines: list[SourceLine]) -> list[dict[str, object]]:
     assets: list[dict[str, object]] = []
     for line in lines:
         for image in IMAGE_RE.finditer(line.text):
-            image_path = Path("docs/disassembly") / image.group("path")
+            image_path = Path("v2.1/docs/disassembly") / image.group("path")
             before_files = list(FILE_RE.finditer(line.text[: image.start()]))
             after_files = list(FILE_RE.finditer(line.text[image.end() :]))
             file_match = before_files[-1] if before_files else (after_files[0] if after_files else None)

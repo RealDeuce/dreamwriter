@@ -5,7 +5,7 @@ stops at the shared app/editor loop and redraw/update helpers; the actual editor
 commands remain downstream branches.
 
 The local manual OCR text in
-[`../reference/dreamwriter-t400-manual.txt`](../reference/dreamwriter-t400-manual.txt)
+[`../reference/dreamwriter-t400-manual.txt`](../../../docs/reference/dreamwriter-t400-manual.txt)
 is a split-left/right extraction of a messy two-up scan. It is useful for
 user-facing names such as `EDIT TEXT`, `WORDL`, `REFORMAT`, `SELECT`, `SEARCH`,
 and `UNDELETE`, but ROM control flow is still the source of truth.

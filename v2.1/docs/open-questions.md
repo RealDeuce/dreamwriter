@@ -73,7 +73,7 @@
     loaded stub can intentionally execute more code from the mapped card window.
     A separate feasibility thread for wrapping the DreamWriter 325 BASIC
     interpreter as `EROMCARD.X` is parked in
-    [`basic-eromcard.md`](basic-eromcard.md).
+    [`basic-eromcard.md`](../../docs/basic-eromcard.md).
 16. Decode the custom volume header and geometry used under the FAT12-style file
     implementation. The lower handlers use standard 8.3 directory entries and
     FAT12 allocation, but mount/format code checks header words `0x1997` and

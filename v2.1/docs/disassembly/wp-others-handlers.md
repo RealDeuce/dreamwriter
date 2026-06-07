@@ -303,7 +303,7 @@ DC98:2D2A  C3                ret
 
 `ROM CARD` therefore bottoms out here as a file loader, not as an
 execute-in-place card mapping path. The broader loader ABI and example payload
-format are summarized in [`../running-rom-card-binaries.md`](../running-rom-card-binaries.md).
+format are summarized in [`../running-rom-card-binaries.md`](../../../docs/running-rom-card-binaries.md).
 
 ## Next Splits
 

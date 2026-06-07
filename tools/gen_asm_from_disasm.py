@@ -668,13 +668,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--asm-dir",
         type=Path,
-        default=Path("asm"),
+        default=Path("v2.1/asm"),
         help="Directory with existing asm files for symbol lookup",
     )
     parser.add_argument(
         "--rom",
         type=Path,
-        default=Path("t4_ir_2.1.ic303"),
+        default=Path("v2.1/t4_ir_2.1.ic303"),
         help="ROM image to read for omitted byte ranges",
     )
     parser.add_argument(

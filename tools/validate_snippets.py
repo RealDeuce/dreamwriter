@@ -54,10 +54,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "scope",
         nargs="*",
-        default=["docs/disassembly/*.md"],
+        default=["v2.1/docs/disassembly/*.md"],
         help="markdown files, globs, or directories to scan",
     )
-    parser.add_argument("--rom", type=Path, default=Path("t4_ir_2.1.ic303"), help="ROM image to validate against")
+    parser.add_argument("--rom", type=Path, default=Path("v2.1/t4_ir_2.1.ic303"), help="ROM image to validate against")
     parser.add_argument(
         "--include-readme",
         action="store_true",

@@ -10,7 +10,7 @@ This is not a PC DOS `.COM` or `.EXE` path. The firmware uses the storage layer
 to find a file named exactly `EROMCARD.X`, reads that file into RAM at a
 ROM-specific load address, may validate a small DreamWriter header, and calls the
 far entry pointer stored in the file header. The T400 2.1 loader behavior and
-failure strings are tracked in [`file-system.md`](file-system.md#rom-card-loader).
+failure strings are tracked in [`file-system.md`](../v2.1/docs/file-system.md#rom-card-loader).
 
 ## User-Facing Flow
 
@@ -33,8 +33,8 @@ The endpoint map currently identifies drive/endpoint `0x08` as built-in RAM
 storage and `0x09` as PCMCIA SRAM storage. Therefore, when `[0x6805]` is the
 built-in endpoint (`0x08`), `ROM CARD` tries PCMCIA (`0x09`) and then built-in
 RAM (`0x08`). The disassembly evidence for the two probes is in
-[`menu-dispatch.md`](menu-dispatch.md#file-menu-and-rom-card-storage), and the
-endpoint map is in [`file-system.md`](file-system.md#ioctl-and-endpoint-status).
+[`menu-dispatch.md`](../v2.1/docs/menu-dispatch.md#file-menu-and-rom-card-storage), and the
+endpoint map is in [`file-system.md`](../v2.1/docs/file-system.md#ioctl-and-endpoint-status).
 
 ## File Format
 
@@ -83,10 +83,10 @@ See also:
 
 | Topic | Reference |
 | --- | --- |
-| Loader search order, load address, header check, errors | [`file-system.md`](file-system.md#rom-card-loader) |
-| Menu disassembly showing first candidate then fallback drive | [`menu-dispatch.md`](menu-dispatch.md#file-menu-and-rom-card-storage) |
+| Loader search order, load address, header check, errors | [`file-system.md`](../v2.1/docs/file-system.md#rom-card-loader) |
+| Menu disassembly showing first candidate then fallback drive | [`menu-dispatch.md`](../v2.1/docs/menu-dispatch.md#file-menu-and-rom-card-storage) |
 | Practical `EROMCARD.X` image shape and relocation notes | [`basic-eromcard.md`](basic-eromcard.md#plausible-eromcardx-shape) |
-| DreamWriter storage format and card image layout | [`file-system.md`](file-system.md#directory-format-evidence) |
+| DreamWriter storage format and card image layout | [`file-system.md`](../v2.1/docs/file-system.md#directory-format-evidence) |
 | ROM-card program ABI notes from the BASIC port | [`../dw-basic/docs/porting.md`](../dw-basic/docs/porting.md) |
 | DreamLink file transfer protocol notes | [`dreamlink-protocol.md`](dreamlink-protocol.md) |
 

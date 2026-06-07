@@ -235,7 +235,7 @@ def cells_to_attrs(cells: list[DecodedCell]) -> str:
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("png", type=Path, help="MAME drwrt400 LCD snapshot PNG")
-    parser.add_argument("--rom", type=Path, default=Path("t4_ir_2.1.ic303"), help="DreamWriter ROM image")
+    parser.add_argument("--rom", type=Path, default=Path("v2.1/t4_ir_2.1.ic303"), help="DreamWriter ROM image")
     parser.add_argument("--font-base", type=parse_int, default=MAIN_GLYPH_BASE)
     parser.add_argument("--first-code", type=parse_int, default=FIRST_CODE)
     parser.add_argument("--last-code", type=parse_int, default=DEFAULT_LAST_CODE)

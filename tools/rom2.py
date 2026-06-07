@@ -13,8 +13,8 @@ import sys
 from pathlib import Path
 
 
-ROM_PATH = Path("t4_ir_2.1.ic303")
-REGION_MAP_PATH = Path("docs/rom-regions.tsv")
+ROM_PATH = Path("v2.1/t4_ir_2.1.ic303")
+REGION_MAP_PATH = Path("v2.1/docs/rom-regions.tsv")
 ROM_SIZE = 0x80000
 ROM_LOAD_PHYS = 0x80000
 RAM_SIZE = 0x40000
@@ -1417,7 +1417,7 @@ def build_parser() -> argparse.ArgumentParser:
     xref_scan.add_argument(
         "scope",
         nargs="*",
-        default=["docs/disassembly/*.md"],
+        default=["v2.1/docs/disassembly/*.md"],
         help="markdown files, globs, or directories to scan",
     )
     xref_scan.add_argument(
@@ -1434,13 +1434,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     queue_audit.add_argument(
         "--queue",
-        default="docs/disassembly/README.md",
+        default="v2.1/docs/disassembly/README.md",
         help="path to the root queue file",
     )
     queue_audit.add_argument(
         "--scope-docs",
         nargs="*",
-        default=["docs/disassembly/*.md"],
+        default=["v2.1/docs/disassembly/*.md"],
         help="markdown files that define already-implemented roots",
     )
     queue_audit.add_argument(

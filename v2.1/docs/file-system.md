@@ -257,7 +257,7 @@ endpoint `0x09` is PCMCIA card storage, and endpoint `0x0A` is the RS-232
 DreamLink peer.
 
 The protocol details are now tracked in
-[`dreamlink-protocol.md`](dreamlink-protocol.md). In short, the normal DOS-like
+[`dreamlink-protocol.md`](../../docs/dreamlink-protocol.md). In short, the normal DOS-like
 handlers branch to DreamLink-specific command senders when `C000:4064` resolves
 a handle to endpoint `0x0A`:
 
@@ -271,7 +271,7 @@ a handle to endpoint `0x0A`:
 | `AH=FF`, `BL=A5`, `DL=0A` | `C000:47AC` | Sends command `0x44 0x05 0x00`; used by the initialize/format path. |
 
 The local DreamLink PC manual at
-[`reference/dreamlink-manual.pdf`](reference/dreamlink-manual.pdf) matches this
+[`reference/dreamlink-manual.pdf`](../../docs/reference/dreamlink-manual.pdf) matches this
 model. From the DreamWriter's perspective, the file-transfer and
 print-through operations map onto ordinary FILE menu actions:
 
@@ -458,7 +458,7 @@ whether official ROM cards used the same filesystem or a ROM image arranged so
 the file API could see `EROMCARD.X`.
 
 For the separate idea of repackaging the DreamWriter 325 BASIC interpreter as a
-T400 `EROMCARD.X`, see [`basic-eromcard.md`](basic-eromcard.md).
+T400 `EROMCARD.X`, see [`basic-eromcard.md`](../../docs/basic-eromcard.md).
 
 ## Directory Format Evidence
 

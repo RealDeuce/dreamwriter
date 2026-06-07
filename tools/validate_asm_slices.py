@@ -30,10 +30,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "scope",
         nargs="*",
-        default=["asm"],
+        default=["v2.1/asm"],
         help="asm files, globs, or directories to validate.",
     )
-    parser.add_argument("--rom", type=Path, default=Path("t4_ir_2.1.ic303"), help="ROM image to validate against")
+    parser.add_argument("--rom", type=Path, default=Path("v2.1/t4_ir_2.1.ic303"), help="ROM image to validate against")
     parser.add_argument(
         "--bank-base",
         action="append",

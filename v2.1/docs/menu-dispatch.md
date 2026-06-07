@@ -583,7 +583,7 @@ On accept, `DC98:AAD5` writes year/month/day back to `72D7`/`72D9`/`72DB`,
 writes hour/minute to `72DF`/`72E1`, forces `72E3` to zero, calls
 `DC98:0D72` and `DC98:0D8F`, then calls `DC98:D3BB` to refresh the broader
 time state. The C000 handlers behind those wrappers update the RTC BCD shadow
-and write ports `0xD0..0xDC`; see [`hardware.md`](hardware.md).
+and write ports `0xD0..0xDC`; see [`hardware.md`](../../docs/hardware.md).
 
 The full annotated foreground slice is in
 [`disassembly/organizer-world-clock.md`](disassembly/organizer-world-clock.md).
@@ -703,7 +703,7 @@ active auto-off reload value in `[6D31]`:
 | `UNLIMITED` | `6` | `0x0000` |
 
 The values match a 10 Hz idle countdown. The buzzer hardware path and auto-off
-power path are documented in [`hardware.md`](hardware.md).
+power path are documented in [`hardware.md`](../../docs/hardware.md).
 
 `DC98:2A83` is the WP OTHERS -> PREFERENCES screen. It draws the resource at
 `EF8E:0000` / file `0x6F8EE`, then edits two toggle rows:

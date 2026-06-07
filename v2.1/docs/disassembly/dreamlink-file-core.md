@@ -5,7 +5,7 @@ This slice follows the DreamLink endpoint code reached from
 [`int21-file-io.md`](int21-file-io.md),
 [`int21-handle-core.md`](int21-handle-core.md), and
 [`int21-endpoints.md`](int21-endpoints.md). It annotates reachable ROM code;
-[`../dreamlink-protocol.md`](../dreamlink-protocol.md) remains the compact
+[`../dreamlink-protocol.md`](../../../docs/dreamlink-protocol.md) remains the compact
 host-protocol reference.
 
 No image assets or string resources are reached in this slice. The inline
