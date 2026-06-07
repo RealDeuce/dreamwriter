@@ -310,6 +310,8 @@ def main():
                         help="Add hardware IRQ entry points as seeds")
     parser.add_argument("--thunks", action="store_true",
                         help="Add banked thunk dispatch table entries as seeds")
+    parser.add_argument("--int21", action="store_true",
+                        help="Add INT 21h handler dispatch table entries as seeds")
     parser.add_argument("--max-blocks", type=int, default=5000)
     parser.add_argument("--stop", action="append", default=[], metavar="SEG:OFF",
                         help="Blacklist address: stop tracing if reached (e.g. C772:40C1)")
@@ -392,6 +394,10 @@ def main():
 
     if args.irqs:
         irq_seeds = [
+            # Explicit IVT vectors (installed by C000:1161)
+            ("C000", 0x1832, "int_01h_debug"),
+            ("C000", 0x04D0, "int_02h_nmi"),
+            # Hardware IRQs F8-FF
             ("C000", 0x04D0, "irq_f8_nmi"),
             ("C000", 0x05C0, "irq_f9"),
             ("C000", 0x05D4, "irq_fa"),
@@ -405,6 +411,47 @@ def main():
 
     if args.thunks:
         seeds.extend(read_thunk_table())
+
+    if args.int21:
+        # INT 21h validity table at C000:61DF maps AH (0..5F) to slot index.
+        # Dispatch table at C000:623F has word entries indexed by slot.
+        validity_off = 0xC0000 + 0x61DF
+        dispatch_off = 0xC0000 + 0x623F
+        dos_names = {
+            0x03: "aux_input", 0x04: "aux_output", 0x05: "printer_output",
+            0x08: "char_input", 0x0B: "input_status", 0x0E: "select_disk",
+            0x19: "get_disk", 0x1A: "set_dta", 0x2A: "get_date",
+            0x2B: "set_date", 0x2C: "get_time", 0x2D: "set_time",
+            0x2F: "get_dta", 0x36: "disk_free", 0x3C: "create_file",
+            0x3D: "open_file", 0x3E: "close_file", 0x3F: "read_file",
+            0x40: "write_file", 0x41: "delete_file", 0x42: "seek",
+            0x43: "get_set_attrs", 0x44: "ioctl", 0x4E: "find_first",
+            0x4F: "find_next", 0x56: "rename", 0x57: "get_set_date",
+            0x5B: "create_new",
+        }
+        seen_handlers = set()
+        for ah in range(0x60):
+            if validity_off + ah >= len(ROM):
+                break
+            slot = ROM[validity_off + ah]
+            if slot == 0xFF:
+                continue
+            handler_off = dispatch_off + slot * 2
+            if handler_off + 2 > len(ROM):
+                continue
+            handler = struct.unpack_from("<H", ROM, handler_off)[0]
+            if handler not in seen_handlers and 0 < handler < 0x10000:
+                seen_handlers.add(handler)
+                name = dos_names.get(ah, f"ah_{ah:02x}")
+                seeds.append(("C000", handler, f"int21_{name}"))
+                # If the handler is a CALL+RET stub, also seed the call target
+                stub_off = 0xC0000 + handler
+                if stub_off + 3 <= len(ROM) and ROM[stub_off] == 0xE8:
+                    rel = struct.unpack_from("<h", ROM, stub_off + 1)[0]
+                    target = (handler + 3 + rel) & 0xFFFF
+                    if target not in seen_handlers:
+                        seen_handlers.add(target)
+                        seeds.append(("C000", target, f"int21_{name}_impl"))
 
     trace(seeds, args.max_blocks)
 
