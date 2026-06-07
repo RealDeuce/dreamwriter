@@ -1,4 +1,5 @@
-Traced 3563 blocks, 41987 instructions (AD00:18, C000:944, C772:898, DEF0:1488, ED1B:3, EE17:212)
+Loaded 3563 blocks from v3.1/docs/disassembly/trace-full.txt
+Traced 3647 blocks (84 new), 42421 instructions (AD00:18, C000:944, C772:982, DEF0:1488, ED1B:3, EE17:212)
 --- AD00:009A..00DE  ; call_ED1B:0D25  calls:AD00:00FC  branches:AD00:00DE
   AD00:009A  55             push bp
   AD00:009B  8BEC           mov bp,sp
@@ -12763,6 +12764,107 @@ Traced 3563 blocks, 41987 instructions (AD00:18, C000:944, C772:898, DEF0:1488, 
   C772:022D  E91437         jmp 0x3944
   ; end: jmp
 
+--- C772:03E6..03EC  ; vm_op_9E  calls:C772:0446  branches:C772:3889
+  C772:03E6  E85D00         call 0x446
+  C772:03E9  E99D34         jmp 0x3889
+  ; end: jmp
+
+--- C772:03EC..03F2  ; vm_op_A0  calls:C772:0446  branches:C772:3891
+  C772:03EC  E85700         call 0x446
+  C772:03EF  E99F34         jmp 0x3891
+  ; end: jmp
+
+--- C772:03F2..03F8  ; vm_op_A4  calls:C772:044B  branches:C772:3891
+  C772:03F2  E85600         call 0x44b
+  C772:03F5  E99934         jmp 0x3891
+  ; end: jmp
+
+--- C772:03F8..03FE  ; vm_op_A2  calls:C772:044B  branches:C772:3889
+  C772:03F8  E85000         call 0x44b
+  C772:03FB  E98B34         jmp 0x3889
+  ; end: jmp
+
+--- C772:03FE..0406  ; vm_op_56  calls:C772:041A
+  C772:03FE  E81900         call 0x41a
+  C772:0401  0AC2           or al,dl
+  C772:0403  8804           mov [si],al
+  C772:0405  C3             ret
+  ; end: ret
+
+--- C772:0406..040E  ; vm_op_5A  calls:C772:041A
+  C772:0406  E81100         call 0x41a
+  C772:0409  32C2           xor al,dl
+  C772:040B  8804           mov [si],al
+  C772:040D  C3             ret
+  ; end: ret
+
+--- C772:040E..041A  ; vm_op_58  calls:C772:041A
+  C772:040E  E80900         call 0x41a
+  C772:0411  8AC2           mov al,dl
+  C772:0413  34FF           xor al,0xff
+  C772:0415  2204           and al,[si]
+  C772:0417  8804           mov [si],al
+  C772:0419  C3             ret
+  ; end: ret
+
+--- C772:041A..0446  ; call_C772:03FE
+  C772:041A  8AC2           mov al,dl
+  C772:041C  241F           and al,0x1f
+  C772:041E  02C0           add al,al
+  C772:0420  8AC8           mov cl,al
+  C772:0422  B500           mov ch,0x0
+  C772:0424  BE6A04         mov si,0x46a
+  C772:0427  03F1           add si,cx
+  C772:0429  2E8B0C         mov cx,[cs:si]
+  C772:042C  46             inc si
+  C772:042D  8AC2           mov al,dl
+  C772:042F  24E0           and al,0xe0
+  C772:0431  D0C0           rol al,1
+  C772:0433  D0C0           rol al,1
+  C772:0435  D0C0           rol al,1
+  C772:0437  8AD0           mov dl,al
+  C772:0439  BE6204         mov si,0x462
+  C772:043C  03F2           add si,dx
+  C772:043E  2E8A14         mov dl,[cs:si]
+  C772:0441  8BF1           mov si,cx
+  C772:0443  8A04           mov al,[si]
+  C772:0445  C3             ret
+  ; end: ret
+
+--- C772:0446..044B  ; call_C772:03E6  branches:C772:044E
+  C772:0446  A01675         mov al,[0x7516]
+  C772:0449  EB03           jmp short 0x44e
+  ; end: jmp
+
+--- C772:044B..0462  ; call_C772:03F8  calls:C772:041A,C772:393E
+  C772:044B  E8CCFF         call 0x41a
+  C772:044E  22C2           and al,dl
+  C772:0450  E8EB34         call 0x393e
+  C772:0453  59             pop cx
+  C772:0454  5A             pop dx
+  C772:0455  5E             pop si
+  C772:0456  2E8A04         mov al,[cs:si]
+  C772:0459  46             inc si
+  C772:045A  56             push si
+  C772:045B  52             push dx
+  C772:045C  51             push cx
+  C772:045D  8AD0           mov dl,al
+  C772:045F  FECA           dec dl
+  C772:0461  C3             ret
+  ; end: ret
+
+--- C772:04E8..04EE  ; vm_op_B8
+  C772:04E8  C810C3E8       enter 0xc310,0xe8
+  C772:04EC  3F             aas
+  C772:04ED  FD             std
+  ; end: blacklisted
+
+--- C772:0BE9..0BEF  ; vm_op_BC  calls:C772:5E35
+  C772:0BE9  B105           mov cl,0x5
+  C772:0BEB  E84752         call 0x5e35
+  C772:0BEE  C3             ret
+  ; end: ret
+
 --- C772:0D20..0D54  ; call_C772:8534  calls:C772:0D7E,C772:0DAB,C772:78FE,C772:0D7E,C772:795D  branches:C772:0D7A,C772:0D4A,C772:0D54,C772:0D33
   C772:0D20  A0F773         mov al,[0x73f7]
   C772:0D23  0AC0           or al,al
@@ -15804,11 +15906,575 @@ Traced 3563 blocks, 41987 instructions (AD00:18, C000:944, C772:898, DEF0:1488, 
   C772:2EAD  EB85           jmp short 0x2e34
   ; end: jmp
 
+--- C772:3668..3672  ; vm_op_04  calls:C772:3BB6,C772:3C2D  branches:C772:367C,C772:3668
+  C772:3668  E84B05         call 0x3bb6
+  C772:366B  720F           jc 0x367c
+  C772:366D  E8BD05         call 0x3c2d
+  C772:3670  EBF6           jmp short 0x3668
+  ; end: jmp
+
+--- C772:3672..367D  ; vm_op_06
+  C772:3672  8B361675       mov si,[0x7516]
+  C772:3676  D1EE           shr si,1
+  C772:3678  89361675       mov [0x7516],si
+  C772:367C  C3             ret
+  ; end: ret
+
+--- C772:367D..367E  ; vm_op_02
+  C772:367D  5E             pop si
+  ; end: already_covered
+
+--- C772:367E..3684  ; vm_op_00
+  C772:367E  5E             pop si
+  C772:367F  8B361675       mov si,[0x7516]
+  C772:3683  C3             ret
+  ; end: ret
+
+--- C772:3684..3690  ; vm_op_B2
+  C772:3684  59             pop cx
+  C772:3685  5E             pop si
+  C772:3686  2E8A34         mov dh,[cs:si]
+  C772:3689  46             inc si
+  C772:368A  56             push si
+  C772:368B  51             push cx
+  C772:368C  87D6           xchg si,dx
+  C772:368E  FFE6           jmp si
+  ; end: jmp_indirect
+
+--- C772:3690..3696  ; vm_op_68  calls:C772:37B3  branches:C772:369A
+  C772:3690  E82001         call 0x37b3
+  C772:3693  49             dec cx
+  C772:3694  EB04           jmp short 0x369a
+  ; end: jmp
+
+--- C772:3696..369E  ; vm_op_66  calls:C772:37B3
+  C772:3696  E81A01         call 0x37b3
+  C772:3699  41             inc cx
+  C772:369A  890C           mov [si],cx
+  C772:369C  46             inc si
+  C772:369D  C3             ret
+  ; end: ret
+
+--- C772:369E..36B0  ; vm_op_B6  calls:C772:98EC
+  C772:369E  8AC2           mov al,dl
+  C772:36A0  59             pop cx
+  C772:36A1  5E             pop si
+  C772:36A2  2E8B14         mov dx,[cs:si]
+  C772:36A5  83C602         add si,byte +0x2
+  C772:36A8  56             push si
+  C772:36A9  51             push cx
+  C772:36AA  87D6           xchg si,dx
+  C772:36AC  E83D62         call 0x98ec
+  C772:36AF  C3             ret
+  ; end: ret
+
+--- C772:36B0..36B9  ; vm_op_6E  calls:C772:37B3  branches:C772:3945
+  C772:36B0  E80001         call 0x37b3
+  C772:36B3  5E             pop si
+  C772:36B4  5E             pop si
+  C772:36B5  51             push cx
+  C772:36B6  E98C02         jmp 0x3945
+  ; end: jmp
+
+--- C772:36B9..36BD  ; vm_op_70  branches:C772:36BF
+  C772:36B9  32C0           xor al,al
+  C772:36BB  EB02           jmp short 0x36bf
+  ; end: jmp
+
+--- C772:36BD..36D3  ; vm_op_72  calls:C772:37B3  branches:C772:36CE,C772:3945
+  C772:36BD  B001           mov al,0x1
+  C772:36BF  E8F100         call 0x37b3
+  C772:36C2  5A             pop dx
+  C772:36C3  5A             pop dx
+  C772:36C4  59             pop cx
+  C772:36C5  880C           mov [si],cl
+  C772:36C7  0AC0           or al,al
+  C772:36C9  7403           jz 0x36ce
+  C772:36CB  46             inc si
+  C772:36CC  882C           mov [si],ch
+  C772:36CE  87D6           xchg si,dx
+  C772:36D0  E97202         jmp 0x3945
+  ; end: jmp
+
+--- C772:36D3..36DC  ; vm_op_6A  calls:C772:37B3  branches:C772:36F0
+  C772:36D3  E8DD00         call 0x37b3
+  C772:36D6  87D6           xchg si,dx
+  C772:36D8  13F1           adc si,cx
+  C772:36DA  EB14           jmp short 0x36f0
+  ; end: jmp
+
+--- C772:36DC..36E9  ; vm_op_12  branches:C772:36EE
+  C772:36DC  5E             pop si
+  C772:36DD  5A             pop dx
+  C772:36DE  59             pop cx
+  C772:36DF  52             push dx
+  C772:36E0  56             push si
+  C772:36E1  8B361675       mov si,[0x7516]
+  C772:36E5  0AC0           or al,al
+  C772:36E7  EB05           jmp short 0x36ee
+  ; end: jmp
+
+--- C772:36E9..36F8  ; vm_op_6C  calls:C772:37B3,C772:393E
+  C772:36E9  E8C700         call 0x37b3
+  C772:36EC  87D6           xchg si,dx
+  C772:36EE  1BF1           sbb si,cx
+  C772:36F0  E84B02         call 0x393e
+  C772:36F3  89361675       mov [0x7516],si
+  C772:36F7  C3             ret
+  ; end: ret
+
+--- C772:36F8..36FE  ; vm_op_76  calls:C772:37B3
+  C772:36F8  E8B800         call 0x37b3
+  C772:36FB  8814           mov [si],dl
+  C772:36FD  C3             ret
+  ; end: ret
+
+--- C772:36FE..370E  ; vm_op_A8  calls:C772:37B3
+  C772:36FE  E8B200         call 0x37b3
+  C772:3701  59             pop cx
+  C772:3702  5A             pop dx
+  C772:3703  8BDA           mov bx,dx
+  C772:3705  2E8A07         mov al,[cs:bx]
+  C772:3708  42             inc dx
+  C772:3709  52             push dx
+  C772:370A  51             push cx
+  C772:370B  8804           mov [si],al
+  C772:370D  C3             ret
+  ; end: ret
+
+--- C772:370E..3715  ; vm_op_7C  calls:C772:37B3
+  C772:370E  E8A200         call 0x37b3
+  C772:3711  8914           mov [si],dx
+  C772:3713  46             inc si
+  C772:3714  C3             ret
+  ; end: ret
+
+--- C772:3715..371C  ; vm_op_74  calls:C772:37B3  branches:C772:36F3
+  C772:3715  E89B00         call 0x37b3
+  C772:3718  8BF1           mov si,cx
+  C772:371A  EBD7           jmp short 0x36f3
+  ; end: jmp
+
+--- C772:371C..3724  ; vm_op_A6
+  C772:371C  59             pop cx
+  C772:371D  5E             pop si
+  C772:371E  2E8A34         mov dh,[cs:si]
+  C772:3721  46             inc si
+  C772:3722  56             push si
+  C772:3723  51             push cx
+  ; end: already_covered
+
+--- C772:3724..3728  ; vm_op_78  branches:C772:36F3
+  C772:3724  87D6           xchg si,dx
+  C772:3726  EBCB           jmp short 0x36f3
+  ; end: jmp
+
+--- C772:3728..373B  ; vm_op_AA  calls:C772:37B3
+  C772:3728  E88800         call 0x37b3
+  C772:372B  5A             pop dx
+  C772:372C  59             pop cx
+  C772:372D  8BD9           mov bx,cx
+  C772:372F  2E8A07         mov al,[cs:bx]
+  C772:3732  41             inc cx
+  C772:3733  51             push cx
+  C772:3734  52             push dx
+  C772:3735  B400           mov ah,0x0
+  C772:3737  8904           mov [si],ax
+  C772:3739  46             inc si
+  C772:373A  C3             ret
+  ; end: ret
+
+--- C772:373B..374A  ; vm_op_7A  branches:C772:3742,C772:36F0
+  C772:373B  F6C280         test dl,0x80
+  C772:373E  7402           jz 0x3742
+  C772:3740  B6FF           mov dh,0xff
+  C772:3742  8B361675       mov si,[0x7516]
+  C772:3746  13F2           adc si,dx
+  C772:3748  EBA6           jmp short 0x36f0
+  ; end: jmp
+
+--- C772:374A..3763  ; vm_op_B0  calls:C772:37B3  branches:C772:3936
+  C772:374A  E86600         call 0x37b3
+  C772:374D  5A             pop dx
+  C772:374E  5B             pop bx
+  C772:374F  43             inc bx
+  C772:3750  53             push bx
+  C772:3751  52             push dx
+  C772:3752  4B             dec bx
+  C772:3753  8BCB           mov cx,bx
+  C772:3755  2E8A07         mov al,[cs:bx]
+  C772:3758  8AD0           mov dl,al
+  C772:375A  8BDE           mov bx,si
+  C772:375C  8A1C           mov bl,[si]
+  C772:375E  8BF3           mov si,bx
+  C772:3760  E9D301         jmp 0x3936
+  ; end: jmp
+
+--- C772:3763..3767  ; vm_op_AE  branches:C772:3769
+  C772:3763  B000           mov al,0x0
+  C772:3765  EB02           jmp short 0x3769
+  ; end: jmp
+
+--- C772:3767..378E  ; vm_op_AC  calls:C772:37B3,C772:37B3  branches:C772:378D
+  C772:3767  B001           mov al,0x1
+  C772:3769  E84700         call 0x37b3
+  C772:376C  5A             pop dx
+  C772:376D  5B             pop bx
+  C772:376E  43             inc bx
+  C772:376F  53             push bx
+  C772:3770  52             push dx
+  C772:3771  4B             dec bx
+  C772:3772  9F             lahf
+  C772:3773  50             push ax
+  C772:3774  2E8A07         mov al,[cs:bx]
+  C772:3777  8AD0           mov dl,al
+  C772:3779  B600           mov dh,0x0
+  C772:377B  8BCB           mov cx,bx
+  C772:377D  56             push si
+  C772:377E  E83200         call 0x37b3
+  C772:3781  5E             pop si
+  C772:3782  880C           mov [si],cl
+  C772:3784  58             pop ax
+  C772:3785  9E             sahf
+  C772:3786  FEC8           dec al
+  C772:3788  7803           js 0x378d
+  C772:378A  46             inc si
+  C772:378B  882C           mov [si],ch
+  C772:378D  C3             ret
+  ; end: ret
+
+--- C772:378E..37B3  ; vm_op_B4  calls:C772:37B3,C772:37B3
+  C772:378E  59             pop cx
+  C772:378F  5E             pop si
+  C772:3790  2E8A34         mov dh,[cs:si]
+  C772:3793  46             inc si
+  C772:3794  2E8B0C         mov cx,[cs:si]
+  C772:3797  83C602         add si,byte +0x2
+  C772:379A  56             push si
+  C772:379B  BE4439         mov si,0x3944
+  C772:379E  56             push si
+  C772:379F  51             push cx
+  C772:37A0  8AC6           mov al,dh
+  C772:37A2  B600           mov dh,0x0
+  C772:37A4  E80C00         call 0x37b3
+  C772:37A7  51             push cx
+  C772:37A8  8AD0           mov dl,al
+  C772:37AA  B600           mov dh,0x0
+  C772:37AC  E80400         call 0x37b3
+  C772:37AF  8BD1           mov dx,cx
+  C772:37B1  5E             pop si
+  C772:37B2  C3             ret
+  ; end: ret
+
+--- C772:37B3..37C1  ; call_C772:3696
+  C772:37B3  BEF773         mov si,0x73f7
+  C772:37B6  03F2           add si,dx
+  C772:37B8  8B0C           mov cx,[si]
+  C772:37BA  8B161675       mov dx,[0x7516]
+  C772:37BE  0AC0           or al,al
+  C772:37C0  C3             ret
+  ; end: ret
+
+--- C772:37C1..37CB  ; vm_op_40  branches:C772:3945
+  C772:37C1  5E             pop si
+  C772:37C2  5E             pop si
+  C772:37C3  8B161675       mov dx,[0x7516]
+  C772:37C7  52             push dx
+  C772:37C8  E97A01         jmp 0x3945
+  ; end: jmp
+
+--- C772:37CB..37D5  ; vm_op_42  branches:C772:3945
+  C772:37CB  5E             pop si
+  C772:37CC  5E             pop si
+  C772:37CD  5A             pop dx
+  C772:37CE  89161675       mov [0x7516],dx
+  C772:37D2  E97001         jmp 0x3945
+  ; end: jmp
+
+--- C772:37D5..37DF  ; vm_op_0A  branches:C772:5E35
+  C772:37D5  B102           mov cl,0x2
+  C772:37D7  8B161574       mov dx,[0x7415]
+  C772:37DB  42             inc dx
+  C772:37DC  E95626         jmp 0x5e35
+  ; end: jmp
+
+--- C772:37DF..37E9  ; vm_op_0C  branches:C772:5E35
+  C772:37DF  B112           mov cl,0x12
+  C772:37E1  8B161574       mov dx,[0x7415]
+  C772:37E5  4A             dec dx
+  C772:37E6  E94C26         jmp 0x5e35
+  ; end: jmp
+
+--- C772:37E9..37FB  ; vm_op_24  calls:C772:1ADB  branches:C772:37F8,C772:3D4B
+  C772:37E9  E8EFE2         call 0x1adb
+  C772:37EC  A05D74         mov al,[0x745d]
+  C772:37EF  A802           test al,0x2
+  C772:37F1  7405           jz 0x37f8
+  C772:37F3  B005           mov al,0x5
+  C772:37F5  A22B74         mov [0x742b],al
+  C772:37F8  E95005         jmp 0x3d4b
+  ; end: jmp
+
+--- C772:37FB..3800  ; vm_op_14  branches:C772:3C2D
+  C772:37FB  B0EA           mov al,0xea
+  C772:37FD  E92D04         jmp 0x3c2d
+  ; end: jmp
+
+--- C772:3800..3805  ; vm_op_18  branches:C772:3C2D
+  C772:3800  B0FF           mov al,0xff
+  C772:3802  E92804         jmp 0x3c2d
+  ; end: jmp
+
+--- C772:3805..380A  ; vm_op_16  branches:C772:3BFA
+  C772:3805  B0FF           mov al,0xff
+  C772:3807  E9F003         jmp 0x3bfa
+  ; end: jmp
+
+--- C772:380A..380E  ; vm_op_36  branches:C772:3810
+  C772:380A  B201           mov dl,0x1
+  C772:380C  EB02           jmp short 0x3810
+  ; end: jmp
+
 --- C772:380E..3815  ; call_C772:10BF  branches:C772:5E35
   C772:380E  B202           mov dl,0x2
   C772:3810  B117           mov cl,0x17
   C772:3812  E92026         jmp 0x5e35
   ; end: jmp
+
+--- C772:3815..381A  ; vm_op_4C  branches:C772:5E35
+  C772:3815  B115           mov cl,0x15
+  C772:3817  E91B26         jmp 0x5e35
+  ; end: jmp
+
+--- C772:381A..3824  ; vm_op_80  calls:C772:45A7  branches:C772:4556
+  C772:381A  52             push dx
+  C772:381B  E8890D         call 0x45a7
+  C772:381E  5A             pop dx
+  C772:381F  8AC2           mov al,dl
+  C772:3821  E9320D         jmp 0x4556
+  ; end: jmp
+
+--- C772:3824..382B  ; vm_op_34  branches:C772:5E35
+  C772:3824  B201           mov dl,0x1
+  C772:3826  B105           mov cl,0x5
+  C772:3828  E90A26         jmp 0x5e35
+  ; end: jmp
+
+--- C772:382B..3830  ; vm_op_4A  branches:C772:5E35
+  C772:382B  B185           mov cl,0x85
+  C772:382D  E90526         jmp 0x5e35
+  ; end: jmp
+
+--- C772:3830..383E  ; vm_op_1E  calls:C772:5E35,C772:380E  branches:C772:387F
+  C772:3830  B2FF           mov dl,0xff
+  C772:3832  B111           mov cl,0x11
+  C772:3834  E8FE25         call 0x5e35
+  C772:3837  A810           test al,0x10
+  C772:3839  7544           jnz 0x387f
+  C772:383B  E8D0FF         call 0x380e
+  ; end: already_covered
+
+--- C772:383E..384C  ; vm_op_1C  calls:C772:5E35  branches:C772:387F,C772:3BD8
+  C772:383E  B2FF           mov dl,0xff
+  C772:3840  B101           mov cl,0x1
+  C772:3842  E8F025         call 0x5e35
+  C772:3845  A810           test al,0x10
+  C772:3847  7536           jnz 0x387f
+  C772:3849  E98C03         jmp 0x3bd8
+  ; end: jmp
+
+--- C772:384C..3851  ; vm_op_44  branches:C772:5E35
+  C772:384C  B101           mov cl,0x1
+  C772:384E  E9E425         jmp 0x5e35
+  ; end: jmp
+
+--- C772:3851..3856  ; vm_op_46  branches:C772:5E35
+  C772:3851  B111           mov cl,0x11
+  C772:3853  E9DF25         jmp 0x5e35
+  ; end: jmp
+
+--- C772:3856..385D  ; vm_op_32  branches:C772:5E35
+  C772:3856  B201           mov dl,0x1
+  C772:3858  B107           mov cl,0x7
+  C772:385A  E9D825         jmp 0x5e35
+  ; end: jmp
+
+--- C772:385D..3864  ; vm_op_26  branches:C772:5E35
+  C772:385D  B200           mov dl,0x0
+  C772:385F  B100           mov cl,0x0
+  C772:3861  E9D125         jmp 0x5e35
+  ; end: jmp
+
+--- C772:3864..386A  ; vm_op_3E  calls:C772:2B21  branches:C772:2DBD
+  C772:3864  E8BAF2         call 0x2b21
+  C772:3867  E953F5         jmp 0x2dbd
+  ; end: jmp
+
+--- C772:386A..3872  ; vm_op_2E  branches:C772:5E1E
+  C772:386A  A0B574         mov al,[0x74b5]
+  C772:386D  8AD0           mov dl,al
+  C772:386F  E9AC25         jmp 0x5e1e
+  ; end: jmp
+
+--- C772:3872..387A  ; vm_op_30  branches:C772:5E22
+  C772:3872  A0B574         mov al,[0x74b5]
+  C772:3875  8AD0           mov dl,al
+  C772:3877  E9A825         jmp 0x5e22
+  ; end: jmp
+
+--- C772:387A..3880  ; vm_op_08
+  C772:387A  B082           mov al,0x82
+  C772:387C  A2C874         mov [0x74c8],al
+  C772:387F  C3             ret
+  ; end: ret
+
+--- C772:3880..3889  ; vm_op_9A  branches:C772:387F,C772:38F0
+  C772:3880  A05D74         mov al,[0x745d]
+  C772:3883  A810           test al,0x10
+  C772:3885  74F8           jz 0x387f
+  C772:3887  EB67           jmp short 0x38f0
+  ; end: jmp
+
+--- C772:3889..3891  ; vm_op_8E  branches:C772:38F0
+  C772:3889  A0AC74         mov al,[0x74ac]
+  C772:388C  A840           test al,0x40
+  C772:388E  7560           jnz 0x38f0
+  C772:3890  C3             ret
+  ; end: ret
+
+--- C772:3891..3899  ; vm_op_98  branches:C772:38F0
+  C772:3891  A0AC74         mov al,[0x74ac]
+  C772:3894  A840           test al,0x40
+  C772:3896  7458           jz 0x38f0
+  C772:3898  C3             ret
+  ; end: ret
+
+--- C772:3899..38A1  ; vm_op_94  branches:C772:38F0
+  C772:3899  A0AC74         mov al,[0x74ac]
+  C772:389C  A8C0           test al,0xc0
+  C772:389E  7550           jnz 0x38f0
+  C772:38A0  C3             ret
+  ; end: ret
+
+--- C772:38A1..38A9  ; vm_op_92  branches:C772:38F0
+  C772:38A1  A0AC74         mov al,[0x74ac]
+  C772:38A4  A8C0           test al,0xc0
+  C772:38A6  7448           jz 0x38f0
+  C772:38A8  C3             ret
+  ; end: ret
+
+--- C772:38A9..38B1  ; vm_op_90  branches:C772:38F0
+  C772:38A9  A0AC74         mov al,[0x74ac]
+  C772:38AC  A880           test al,0x80
+  C772:38AE  7440           jz 0x38f0
+  C772:38B0  C3             ret
+  ; end: ret
+
+--- C772:38B1..38B9  ; vm_op_96  branches:C772:38F0
+  C772:38B1  A0AC74         mov al,[0x74ac]
+  C772:38B4  A880           test al,0x80
+  C772:38B6  7538           jnz 0x38f0
+  C772:38B8  C3             ret
+  ; end: ret
+
+--- C772:38B9..38C1  ; vm_op_8C  branches:C772:38F0
+  C772:38B9  A05D74         mov al,[0x745d]
+  C772:38BC  A810           test al,0x10
+  C772:38BE  7430           jz 0x38f0
+  C772:38C0  C3             ret
+  ; end: ret
+
+--- C772:38C1..38C9  ; vm_op_8A  branches:C772:38F0
+  C772:38C1  A05D74         mov al,[0x745d]
+  C772:38C4  A802           test al,0x2
+  C772:38C6  7428           jz 0x38f0
+  C772:38C8  C3             ret
+  ; end: ret
+
+--- C772:38C9..38D1  ; vm_op_9C  branches:C772:38F0
+  C772:38C9  A05D74         mov al,[0x745d]
+  C772:38CC  A808           test al,0x8
+  C772:38CE  7520           jnz 0x38f0
+  C772:38D0  C3             ret
+  ; end: ret
+
+--- C772:38D1..38DB  ; vm_op_84  branches:C772:38F0
+  C772:38D1  8B362B74       mov si,[0x742b]
+  C772:38D5  83FE00         cmp si,byte +0x0
+  C772:38D8  7516           jnz 0x38f0
+  C772:38DA  C3             ret
+  ; end: ret
+
+--- C772:38DB..38E8  ; vm_op_86  branches:C772:38F0
+  C772:38DB  8B363474       mov si,[0x7434]
+  C772:38DF  8B0E1574       mov cx,[0x7415]
+  C772:38E3  2BF1           sub si,cx
+  C772:38E5  7309           jnc 0x38f0
+  C772:38E7  C3             ret
+  ; end: ret
+
+--- C772:38E8..38F0  ; vm_op_88  branches:C772:38F0
+  C772:38E8  A05D74         mov al,[0x745d]
+  C772:38EB  A802           test al,0x2
+  C772:38ED  7501           jnz 0x38f0
+  C772:38EF  C3             ret
+  ; end: ret
+
+--- C772:38F0..3903  ; vm_op_82  branches:C772:38F9,C772:3945
+  C772:38F0  B600           mov dh,0x0
+  C772:38F2  F6C280         test dl,0x80
+  C772:38F5  7402           jz 0x38f9
+  C772:38F7  FECE           dec dh
+  C772:38F9  83EA02         sub dx,byte +0x2
+  C772:38FC  59             pop cx
+  C772:38FD  5E             pop si
+  C772:38FE  03F2           add si,dx
+  C772:3900  E94200         jmp 0x3945
+  ; end: jmp
+
+--- C772:3903..390A  ; vm_op_50  branches:C772:393E
+  C772:3903  A0F773         mov al,[0x73f7]
+  C772:3906  22C2           and al,dl
+  C772:3908  EB34           jmp short 0x393e
+  ; end: jmp
+
+--- C772:390A..3911  ; vm_op_52  branches:C772:393E
+  C772:390A  A05F74         mov al,[0x745f]
+  C772:390D  22C2           and al,dl
+  C772:390F  EB2D           jmp short 0x393e
+  ; end: jmp
+
+--- C772:3911..3918  ; vm_op_54  branches:C772:393E
+  C772:3911  A05D74         mov al,[0x745d]
+  C772:3914  22C2           and al,dl
+  C772:3916  EB26           jmp short 0x393e
+  ; end: jmp
+
+--- C772:3918..3925  ; vm_op_5E  branches:C772:393E,C772:3936
+  C772:3918  A0B574         mov al,[0x74b5]
+  C772:391B  3CE9           cmp al,0xe9
+  C772:391D  751F           jnz 0x393e
+  C772:391F  8B36E674       mov si,[0x74e6]
+  C772:3923  EB11           jmp short 0x3936
+  ; end: jmp
+
+--- C772:3925..3932  ; vm_op_60  branches:C772:393E,C772:3936
+  C772:3925  A0B574         mov al,[0x74b5]
+  C772:3928  3CEF           cmp al,0xef
+  C772:392A  7512           jnz 0x393e
+  C772:392C  8B36E674       mov si,[0x74e6]
+  C772:3930  EB04           jmp short 0x3936
+  ; end: jmp
+
+--- C772:3932..3944  ; vm_op_5C
+  C772:3932  8B36B574       mov si,[0x74b5]
+  C772:3936  81E6FF00       and si,0xff
+  C772:393A  B600           mov dh,0x0
+  C772:393C  2BF2           sub si,dx
+  C772:393E  9F             lahf
+  C772:393F  8826AC74       mov [0x74ac],ah
+  C772:3943  C3             ret
+  ; end: ret
 
 --- C772:3944..396A  ; from_C772:022D  branches:C772:3959
   C772:3944  5E             pop si
@@ -18366,6 +19032,22 @@ Traced 3563 blocks, 41987 instructions (AD00:18, C000:944, C772:898, DEF0:1488, 
   C772:5D4A  EBE4           jmp short 0x5d30
   ; end: jmp
 
+--- C772:5E00..5E1B  ; vm_op_BA  branches:C772:5E3B,C772:5E3B
+  C772:5E00  2C2C           sub al,0x2c
+  C772:5E02  2C2C           sub al,0x2c
+  C772:5E04  3A2C           cmp ch,[si]
+  C772:5E06  2C2C           sub al,0x2c
+  C772:5E08  7031           jo 0x5e3b
+  C772:5E0A  34A1           xor al,0xa1
+  C772:5E0C  A4             movsb
+  C772:5E0D  3212           xor dl,[bp+si]
+  C772:5E0F  722A           jc 0x5e3b
+  C772:5E11  2211           and dl,[bx+di]
+  C772:5E13  2124           and [si],sp
+  C772:5E15  3A02           cmp al,[bp+si]
+  C772:5E17  39B111B2       cmp [bx+di-0x4def],si
+  ; end: already_covered
+
 --- C772:5E18..5E1E  ; call_C772:99C0  branches:C772:5E35
   C772:5E18  B111           mov cl,0x11
   C772:5E1A  B2FF           mov dl,0xff
@@ -19815,6 +20497,11 @@ Traced 3563 blocks, 41987 instructions (AD00:18, C000:944, C772:898, DEF0:1488, 
   C772:6CDD  A800           test al,0x0
   C772:6CDF  C3             ret
   ; end: ret
+
+--- C772:6CE0..6CE4  ; vm_op_10  branches:C772:6CE6
+  C772:6CE0  B001           mov al,0x1
+  C772:6CE2  EB02           jmp short 0x6ce6
+  ; end: jmp
 
 --- C772:6CE4..6D07  ; call_C772:3DAC  calls:C772:0DC0,C772:6D09,C772:6C90
   C772:6CE4  32C0           xor al,al

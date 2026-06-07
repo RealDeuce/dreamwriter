@@ -7,11 +7,16 @@ at the instruction level so no address is disassembled twice.
 
 Usage:
     python3 tools/trace_boot.py [--rom PATH] [--seed SEG:OFF ...] [--irqs] [--thunks]
+        [--int21] [--menu-vm] [--load FILE]
 
 Default seeds: C000:0029 (boot entry).
 --irqs adds hardware IRQ entry points (NMI, keyboard, warm/power).
 --thunks reads the banked thunk dispatch table at C000:1B38 and adds
 each slot as a seed.
+--menu-vm reads the C772 bytecode interpreter dispatch table at C772:396F
+(96 entries) and adds each handler as a seed.
+--load FILE reloads a previous trace output file to avoid re-tracing
+unchanged blocks. Only new seeds are traced incrementally.
 """
 
 from __future__ import annotations
@@ -298,6 +303,124 @@ def read_thunk_table(table_offset: int = 0x1B38, count: int = 12) -> list[tuple[
     return seeds
 
 
+def read_menu_vm_table(table_offset: int = 0x396F, count: int = 96) -> list[tuple[str, int, str]]:
+    """Read the C772 menu VM bytecode dispatch table and return seed entries."""
+    seg = SEGMENTS["C772"]
+    seeds = []
+    for i in range(count):
+        file_off = seg.file_base + table_offset + i * 2
+        if file_off + 2 > len(ROM):
+            break
+        target = struct.unpack_from("<H", ROM, file_off)[0]
+        if 0 < target < seg.max_offset:
+            bytecode = i * 2
+            seeds.append(("C772", target, f"vm_op_{bytecode:02X}"))
+    return seeds
+
+
+def load_trace(path: str) -> int:
+    """Load a previous trace output file, reconstructing BLOCKS and covered sets."""
+    header_re = re.compile(
+        r'^--- ([A-Z0-9]+):([0-9A-Fa-f]+)\.\.([0-9A-Fa-f]+)(.*)')
+    insn_re = re.compile(
+        r'^\s+[A-Z0-9]+:([0-9A-Fa-f]+)\s+([0-9A-Fa-f]+)\s+(.*)')
+    end_re = re.compile(r'^\s+; end:\s+(\S+)')
+
+    cur_seg = None
+    cur_start = 0
+    cur_end = 0
+    cur_label = ""
+    cur_calls = []
+    cur_branches = []
+    cur_insns = []
+    cur_end_type = ""
+    in_block = False
+    loaded = 0
+
+    def parse_targets(s: str) -> list[tuple[str, int]]:
+        result = []
+        for item in s.split(","):
+            item = item.strip()
+            if ":" in item:
+                seg_str, off_str = item.split(":", 1)
+                try:
+                    result.append((seg_str, int(off_str, 16)))
+                except ValueError:
+                    pass
+        return result
+
+    def finalize():
+        nonlocal loaded, in_block
+        if not cur_insns:
+            in_block = False
+            return
+        seg = SEGMENTS.get(cur_seg)
+        if seg is None:
+            print(f"warning: unknown segment '{cur_seg}' in loaded trace, skipping",
+                  file=sys.stderr)
+            in_block = False
+            return
+        block = Block(cur_seg, cur_start, cur_end, list(cur_insns),
+                      list(cur_calls), list(cur_branches), cur_end_type, cur_label)
+        BLOCKS[(cur_seg, cur_start)] = block
+        for addr, _, _, insn_len in cur_insns:
+            for a in range(addr, addr + insn_len):
+                seg.covered.add(a)
+        loaded += 1
+        in_block = False
+
+    with open(path) as f:
+        for line in f:
+            line = line.rstrip("\n")
+
+            m = header_re.match(line)
+            if m:
+                if in_block:
+                    finalize()
+                cur_seg = m.group(1)
+                cur_start = int(m.group(2), 16)
+                cur_end = int(m.group(3), 16)
+                remainder = m.group(4)
+                cur_label = ""
+                cur_calls = []
+                cur_branches = []
+                cur_insns = []
+                cur_end_type = ""
+                in_block = True
+
+                lm = re.search(r";\s+(\S+)", remainder)
+                if lm:
+                    cur_label = lm.group(1)
+                cm = re.search(r"calls:(\S+)", remainder)
+                if cm:
+                    cur_calls = parse_targets(cm.group(1))
+                bm = re.search(r"branches:(\S+)", remainder)
+                if bm:
+                    cur_branches = parse_targets(bm.group(1))
+                continue
+
+            if in_block:
+                em = end_re.match(line)
+                if em:
+                    cur_end_type = em.group(1)
+                    continue
+                im = insn_re.match(line)
+                if im:
+                    addr = int(im.group(1), 16)
+                    bytehex = im.group(2)
+                    mnemonic = im.group(3).rstrip()
+                    insn_len = len(bytehex) // 2
+                    cur_insns.append((addr, bytehex, mnemonic, insn_len))
+                    continue
+                if not line.strip():
+                    finalize()
+
+    if in_block:
+        finalize()
+
+    return loaded
+
+
 def main():
     global ROM
 
@@ -312,6 +435,10 @@ def main():
                         help="Add banked thunk dispatch table entries as seeds")
     parser.add_argument("--int21", action="store_true",
                         help="Add INT 21h handler dispatch table entries as seeds")
+    parser.add_argument("--menu-vm", action="store_true",
+                        help="Add C772 menu VM bytecode handler dispatch table entries as seeds")
+    parser.add_argument("--load", type=str, metavar="FILE",
+                        help="Load previous trace output to resume from")
     parser.add_argument("--max-blocks", type=int, default=5000)
     parser.add_argument("--stop", action="append", default=[], metavar="SEG:OFF",
                         help="Blacklist address: stop tracing if reached (e.g. C772:40C1)")
@@ -453,6 +580,14 @@ def main():
                         seen_handlers.add(target)
                         seeds.append(("C000", target, f"int21_{name}_impl"))
 
+    if args.menu_vm:
+        seeds.extend(read_menu_vm_table())
+
+    loaded = 0
+    if args.load:
+        loaded = load_trace(args.load)
+        print(f"Loaded {loaded} blocks from {args.load}", file=sys.stderr)
+
     trace(seeds, args.max_blocks)
 
     total_insns = sum(len(b.insns) for b in BLOCKS.values())
@@ -460,8 +595,13 @@ def main():
     for (sn, _), b in BLOCKS.items():
         seg_counts[sn] = seg_counts.get(sn, 0) + 1
     seg_summary = ", ".join(f"{n}:{c}" for n, c in sorted(seg_counts.items()))
-    print(f"Traced {len(BLOCKS)} blocks, {total_insns} instructions ({seg_summary})",
-          file=sys.stderr)
+    new_blocks = len(BLOCKS) - loaded
+    if loaded:
+        print(f"Traced {len(BLOCKS)} blocks ({new_blocks} new), {total_insns} instructions ({seg_summary})",
+              file=sys.stderr)
+    else:
+        print(f"Traced {len(BLOCKS)} blocks, {total_insns} instructions ({seg_summary})",
+              file=sys.stderr)
 
     output()
 
