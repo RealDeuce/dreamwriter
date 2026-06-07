@@ -1,9 +1,11 @@
-# C000 Editor/Spell Utility
+# C000 Editor Utility (Edit Text)
 
 The editor utility block at `C000:929B..9D63` (115 blocks,
 self-contained). Reached via banked thunk B slot 10 (`C000:98E9`).
 Contains text buffer management, cursor movement, and formatting
-helpers used by the WP editor.
+helpers for the "Edit Text" word processor function (WP menu item 1).
+Handles the typing area, status area, ruler, and cursor operations
+described in the manual (p.13-19).
 
 See [`banked-thunk-dispatch.md`](banked-thunk-dispatch.md) for the
 thunk B dispatch table.

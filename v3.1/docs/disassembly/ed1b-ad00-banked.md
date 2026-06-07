@@ -3,8 +3,10 @@
 The banked ROM segments in window 7 (`ED1B`, 12 blocks) and window 5
 (`AD00`, 458 blocks). ED1B provides the bank-switching wrappers that
 enter the AD00 segment and the callback stubs that AD00 uses to reach
-DEF0 services. AD00 contains the ROM CARD subsystem — a complete
-21-opcode command processor for external storage.
+DEF0 services. AD00 contains the Card Memory subsystem — a complete
+21-opcode command processor for PCMCIA Type 1 SRAM cards (64 KB to
+1 MB). This is the "ROM Card" / "Card Memory" feature from the manual
+(p.11, 71).
 
 ## ED1B — Bank Switch Wrappers (12 blocks)
 

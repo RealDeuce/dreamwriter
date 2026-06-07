@@ -1,9 +1,11 @@
 # DEF0 File Dialogs
 
-The file management UI at `DEF0:29DC..4AA9` (269 blocks). Implements
-the file open, save, delete, and directory listing dialogs. Uses
-display services for screen rendering and file services for storage
-operations.
+The File Menu UI at `DEF0:29DC..4AA9` (269 blocks). Implements
+the six file operations from the WP menu: Recall (1), Store (2),
+Delete (3), Rename (4), Copy (5), and Initialize (6). Uses display
+services for screen rendering and file services for storage
+operations. Supports three storage targets switchable via TAB:
+Built-in memory, Card memory (PCMCIA), and DreamLink.
 
 Called from the menu display system (`DEF0:2DF1` via `DEF0:27C8`) and
 from the application init path (`DEF0:5B14`).

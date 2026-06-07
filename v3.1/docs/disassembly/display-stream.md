@@ -151,13 +151,13 @@ bytes `[1729]` and `[1728]`, then return to the renderer loop.
 
 | Address | Bit | Meaning |
 | --- | --- | --- |
-| `[1728]` | bit 0 | Alternate font |
-| `[1728]` | bit 1 | Double-strike component |
-| `[1729]` | bit 0 | Strike-through |
-| `[1729]` | bit 1 | Bold |
-| `[1729]` | bit 2 | Underline |
-| `[1729]` | bit 3 | Inverse |
-| `[1729]` | bit 4 | Wide (double-width) |
+| `[1728]` | bit 0 | Alternate font (Character Pitch change) |
+| `[1728]` | bit 1 | Overtype / double-strike (CTRL+underscore) |
+| `[1729]` | bit 0 | Overtype stroke component |
+| `[1729]` | bit 1 | Boldface (CTRL+B) |
+| `[1729]` | bit 2 | Underline (CTRL+X) |
+| `[1729]` | bit 3 | Inverse video |
+| `[1729]` | bit 4 | Expanded Type / double-width (CTRL+Z) |
 | `[1729]` | bit 5 | Glyph render active |
 
 The renderer is called from:

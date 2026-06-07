@@ -118,7 +118,7 @@ the crossroads — both `C000` and `C772` call into it heavily.
 
 | Segment | Window | Bank ports | Role |
 | --- | ---: | --- | --- |
-| `3000` | 1 | `0x11=0x02, 0x12=0x17, 0x13=0x03, 0x14=0x02` | Banked ROM mapped by `C000:18A5`. Content and purpose not determined from trace. |
+| `3000` | 1 | `0x11=0x02, 0x12=0x17, 0x13=0x03, 0x14=0x02` | Spell check / dictionary data (Inso CorrectSpell). ROM banks mapped by `C000:18A5` into windows 3-4 as data tables. Engine code is in C000:1523..18FA. |
 
 ### RAM Segments (Not Traceable From ROM)
 

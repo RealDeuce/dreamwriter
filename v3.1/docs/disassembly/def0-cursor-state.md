@@ -99,11 +99,13 @@ Called from `DEF0:CE03` (clear) and from display update paths.
 Updates the display state after content changes. Called from
 `DEF0:CE92` and internal update paths.
 
-## DEF0:C5BC — Date/Time Processor
+## DEF0:C5BC — World Clock Processor
 
-Called from `C000:0498` (boot path). Reads current date (`DEF0:0074`,
-INT 21h AH=2Ah) and time (`DEF0:0098`, INT 21h AH=2Ch), converts
-to a single value for the world clock display.
+Called from `C000:0498` (boot path). Supports the World Clock
+organizer function (222 cities, home + 2nd city display). Reads
+current date (`DEF0:0074`, INT 21h AH=2Ah) and time (`DEF0:0098`,
+INT 21h AH=2Ch), converts to a single value for timezone offset
+calculation.
 
 Calculates days since base date (`0x63DF`) and time in minutes
 (hours * 60 + minutes):

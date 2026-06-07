@@ -6,6 +6,13 @@ after `CALL C772:022D` instructions. The interpreter reads and dispatches
 opcodes from these programs, executing native handler routines for each
 one.
 
+The bytecode programs drive all user-visible features: the Organizer
+menu (Calculator, Calendar, Scheduler, World Clock, Address Book) and
+the Word Processor menu (Edit Text, File, Clear Text, Printer,
+Communicate, Others). Menu strings are in EE17 ROM data
+(`EE17:31D4..4390`). See `docs/reference/dreamwriter-t400-manual-summary.md`
+for the complete feature map.
+
 160 call sites in the ROM use this pattern. A duplicate interpreter
 loop exists at `C000:B064` (reached from thunk B slot 11) allowing
 the editor utility to yield back to the interpreter without returning
