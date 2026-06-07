@@ -7,13 +7,8 @@ Size:   524288 bytes
 SHA256: bb6a437d4c25f90eb7a0b8bc3d41e1ca2c74196aabe60954a598c66405397757
 ```
 
-This repo is for mapping and tooling around the T400 2.1 ROM. MAME also has a
-3.1 BIOS for `drwrt400`; it is not copied here. Be careful not to mix addresses
-between 2.1 and 3.1. Comparative notes may reference other DreamWriter ROMs, but
-those addresses are explicitly labeled as non-T400.
-
 Unless a page explicitly says it is comparative, treat `t4_ir_2.1.ic303` plus
-the disassembly helpers in `tools/` as the source of truth. The first-pass
+the disassembly helpers in `../../tools/` as the source of truth. The first-pass
 machine-readable split is [`docs/rom-regions.tsv`](docs/rom-regions.tsv);
 topic pages should agree with that map or explain why they are provisional.
 
