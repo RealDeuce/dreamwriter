@@ -290,7 +290,7 @@ See the `5E35` documentation above for CH bit meanings.
 | `0xB6` | `C772:369E` | **Inline far-call**: read word from bytecode stream as DX, swap SI/DX, call `C772:98EC` (state check). Calls a native routine whose address is inline in the bytecode. |
 | `0xB8` | `C772:04E8` | **Application entry** (complex): enters a native code block (handler code extends past the simple dispatch pattern). |
 | `0xBA` | `C772:5E00` | **Jump table**: a 24-byte lookup table (not executable code). Contains service parameters used by `5E35`. |
-| `0xBE` | `C772:E81F` | **Not traced**: handler at far end of C772. Likely an application launcher for a major module. |
+| `0xBE` | `C772:E81F` | **Document operation**: enters 5 bytes into the `C772:E81A` callback (skips register saves), sets `ES=0xCEF`, calls `C772:7115` (document open/validate loop: input via `9530`, process via `73F6`, validate via `85D2`, execute via `8976`, commit via `51E0`, snapshot via `45A7`). |
 
 ## Bytecode Program Format
 

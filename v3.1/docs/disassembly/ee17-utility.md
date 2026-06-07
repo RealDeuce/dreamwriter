@@ -107,16 +107,20 @@ initialization through `EE17:173E`.
 
 ## Segment Role
 
-EE17 appears to manage a set of 34-byte state blocks (17+17 byte
-paired fields) and associated display pages. The state blocks live
-in the `[A300..A400]` RAM area. The library provides:
+EE17 manages a set of 34-byte state blocks (17+17 byte paired fields)
+and associated display pages. The state blocks live in the
+`[A300..A400]` RAM area. Called from `DEF0:5C07` (cold init via
+`EE17:16C1`) and `DEF0:5C2E` (warm reinit via `EE17:16CA`). The
+library provides:
 
-- **Init/clear** (`0047`) — zero out a state block
+- **Init/clear** (`0047`) — zero out a state block, AX = base address
 - **Copy** (`08AD`) — duplicate a state block
 - **Display** — render pages through `C000:3F35`
 
-The exact application-level purpose (document list? organizer entries?
-clipboard?) requires tracing how the callers use these state blocks.
+The state blocks track the display subsystem's page configuration.
+`EE17:16C1` initializes them with base `AX=0xA37E`, and `EE17:16CA`
+reinitializes after a warm restart with display page re-rendering via
+`DEF0:0D80` and `DEF0:0DF5`.
 
 ## Address Summary
 

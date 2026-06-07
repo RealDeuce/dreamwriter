@@ -49,7 +49,10 @@ The first 10 bytes at `DEF0:0000..0009` appear to be data, not code:
 DEF0:0000  20 20 00 00 20 40 F8 40 20 00
 ```
 
-This may be a display-resource header or padding.
+Data bytes, not code: `20 20 00 00 20 40 F8 40 20 00`. No `FF`
+prefix, so not a display script. Contains spaces (0x20) and two
+values with bit 6 set (0x40, 0xF8) — consistent with a glyph
+bitmap or pixel mask used by the display rendering chain.
 
 ## Far-Call Table References
 

@@ -147,8 +147,11 @@ C000:0966  E9 29FB           jmp C000:0492   ; -> halt
 
 ## C000:0969 — Save Framebuffer
 
-Calls `C000:33E2` (purpose not yet traced), then copies 4 KiB from
-`[8000..8FFF]` to `[9000..9FFF]`.
+Calls `C000:33E2` (serial output buffer flush — tests `[143D]`
+bit 7, clears `[143D]` to 0, and if the flag was set, copies 16
+bytes from `[9000]` to `[803A]` in 2-byte chunks across 8 rows
+spaced 0x40 apart — a display overlay transfer), then copies 4 KiB
+from `[8000..8FFF]` to `[9000..9FFF]`.
 
 ```asm
 ; file 0xC0969

@@ -108,8 +108,8 @@ and `[7403]-[7401]`, stores to `[74C4]` and `[74C6]`.
 
 ### C772:970F / 9715 — Thunk Wrappers (13 / 9 callers)
 
-Thin wrappers calling `C000:19C3` and `C000:19C7` — likely the
-thunk A entry with specific register setups.
+Far-call wrappers: `C000:19C3` calls `C000:19CB` (thunk A entry)
+then RETF. `C000:19C7` calls `C000:1B28` (thunk B entry) then RETF.
 
 ### C772:9A8C — Invalidate State Cache
 

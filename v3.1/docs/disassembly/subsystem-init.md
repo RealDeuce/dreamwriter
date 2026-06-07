@@ -24,8 +24,10 @@ C000:033A  C3                ret
 
 ## C000:03A5 — Clear High-RAM Area
 
-Clears 0x400 bytes at `[AAFB..]` to zero. Purpose of this specific
-region is not yet determined.
+Clears 0x400 bytes at `[AAFB..AEFA]` to zero. This region is in
+the application state area above the file handle table `[A022..A342]`
+— it holds display subsystem workspace used by `DEF0:A718` and the
+display configuration routines.
 
 ```asm
 ; file 0xC03A5
@@ -71,9 +73,12 @@ C000:03E3  B9 FF0B           mov cx,BFF      ; CX = 0xBFF
 C000:03E6  F3 AA             rep stosb       ; fill [0400..0FFE] with 0x73
 ```
 
-The `0x73` fill pattern at `[0400..0FFE]` overlaps the low-RAM area
-below the signature check region `[1000..1004]`. Its purpose is not yet
-determined.
+The `0x73` fill pattern at `[0400..0FFE]` fills the low-RAM area
+below the signature check region `[1000..1004]`. This is the
+far-call table area (`[0200..029C]`) and surrounding workspace.
+The non-zero fill value `0x73` serves as a sentinel — any entry
+that still contains `0x73` after IVT installation was never
+written, allowing detection of uninitialized table slots.
 
 ## C000:03EA — Clear Framebuffer
 

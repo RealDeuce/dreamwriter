@@ -44,9 +44,11 @@ INT 21h file handlers these eventually call.
 ## DEF0:DFD5 — File Service Core
 
 The shared core routine called by 13 of the 23 file service entries.
-Likely provides common file handle resolution, error checking, and
-INT 21h dispatch. The callers set up parameters (AX=operation,
-BX=handle/path, CX=count, DX=buffer) and call `DFD5` to execute.
+Checks AX against known operation codes (0x15 → set `[110F]=0x0D`,
+0x50 → set `[110F]=0x11`, 0x20/0x21 → use `[F6E0:BX+0x0E]` lookup,
+others → clamp to 0x13 and look up from segment `F6E0`). Stores
+the resolved operation mode to `[110F]` and returns. Callers set up
+AX=operation, BX=handle/path, CX=count, DX=buffer before the call.
 
 Called by entries: #18, #20, #21, #22, #24, #25, #32, #33, #34, #37, #38,
 and also indirectly through `DEF0:E08C` (#19, #27, #28) and
@@ -63,7 +65,8 @@ after the display wrappers.
 ## DEF0:DCA2 — Standalone File Service (#26)
 
 One of the standalone entries that doesn't use the `DFD5` core.
-Likely a specialized operation (directory listing? file info query?).
+Calls `DEF0:E08C` with AX=0, BX=0, CX=0, DX=0, BX=1 — a single-file
+query operation that reads the result into `[BP-4]`/`[BP-2]`.
 
 ## Address Range
 
