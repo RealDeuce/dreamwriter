@@ -1,5 +1,3 @@
-Loaded 4161 blocks from /tmp/trace-ee17.txt
-Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, DEF0:1494, ED1B:12, EE17:243)
 --- AD00:003C..0058  ; call_AD00:1408
   AD00:003C  55             push bp
   AD00:003D  8BEC           mov bp,sp
@@ -288,7 +286,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   AD00:01FD  2EFFA70202     jmp [cs:bx+0x202]
   ; end: jmp_indirect
 
---- AD00:022C..0236  ; from_AD00:00FC  branches:AD00:0236,AD00:0108
+--- AD00:022C..0236  ; from_AD00:0164  branches:AD00:0236,AD00:0108
   AD00:022C  833E041B0A     cmp word [0x1b04],byte +0xa
   AD00:0231  7403           jz 0x236
   AD00:0233  E9D2FE         jmp 0x108
@@ -7471,11 +7469,6 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:1914  C3             ret
   ; end: ret
 
---- C000:1915..1919  ; call_C772:73B5  calls:C000:1905
-  C000:1915  E8EDFF         call 0x1905
-  C000:1918  CB             retf
-  ; end: retf
-
 --- C000:1919..1929  ; call_C000:1905  branches:C000:1924
   C000:1919  80E30F         and bl,0xf
   C000:191C  80FB0A         cmp bl,0xa
@@ -14442,7 +14435,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:6556  C3             ret
   ; end: ret
 
---- C000:6557..65AA  ; call_C000:1506  calls:C000:6CA7  branches:C000:6555,C000:6555,C000:6585,C000:65AA,C000:6851
+--- C000:6557..65AA  ; from_C000:68D5  calls:C000:6CA7  branches:C000:6555,C000:6555,C000:6585,C000:65AA,C000:6851
   C000:6557  06             push es
   C000:6558  BD0000         mov bp,0x0
   C000:655B  8EC5           mov es,bp
@@ -14490,7 +14483,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:65C9  E9C303         jmp 0x698f
   ; end: jmp
 
---- C000:65CC..6622  ; from_C000:65AA  branches:C000:65EF,C000:660A,C000:660A,C000:660A,C000:660A,C000:6622,C000:66EB
+--- C000:65CC..65EF  ; from_C000:65AA  branches:C000:65EF
   C000:65CC  0AED           or ch,ch
   C000:65CE  751F           jnz 0x65ef
   C000:65D0  32F6           xor dh,dh
@@ -14505,6 +14498,9 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:65E8  03DA           add bx,dx
   C000:65EA  268A2F         mov ch,[es:bx]
   C000:65ED  8EC5           mov es,bp
+  ; end: already_covered
+
+--- C000:65EF..6622  ; from_C000:68D2  branches:C000:660A,C000:660A,C000:660A,C000:660A,C000:6622,C000:66EB
   C000:65EF  8A3E2917       mov bh,[0x1729]
   C000:65F3  80FAA0         cmp dl,0xa0
   C000:65F6  7212           jc 0x660a
@@ -14526,7 +14522,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:661F  E9C900         jmp 0x66eb
   ; end: jmp
 
---- C000:6622..6686  ; from_C000:65CC  branches:C000:662A,C000:6686,C000:663D,C000:6647,C000:6652,C000:6659,C000:6673,C000:666E,C000:6683,C000:6585
+--- C000:6622..6686  ; from_C000:65EF  branches:C000:662A,C000:6686,C000:663D,C000:6647,C000:6652,C000:6659,C000:6673,C000:666E,C000:6683,C000:6585
   C000:6622  F6C701         test bh,0x1
   C000:6625  7403           jz 0x662a
   C000:6627  83C603         add si,byte +0x3
@@ -14619,7 +14615,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:66E7  8C1EA318       mov [0x18a3],ds
   ; end: already_covered
 
---- C000:66EB..6740  ; from_C000:65CC  branches:C000:672F,C000:672F,C000:670A,C000:673D,C000:6740,C000:6E9E
+--- C000:66EB..6740  ; from_C000:65EF  branches:C000:672F,C000:672F,C000:670A,C000:673D,C000:6740,C000:6E9E
   C000:66EB  F606291720     test byte [0x1729],0x20
   C000:66F0  753D           jnz 0x672f
   C000:66F2  F606291710     test byte [0x1729],0x10
@@ -15016,7 +15012,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:6A53  E92FFB         jmp 0x6585
   ; end: jmp
 
---- C000:6A56..6A99  ; from_C000:69F5  branches:C000:6A79,C000:6A69,C000:6A90,C000:6A99,C000:6E9E
+--- C000:6A56..6A79  ; from_C000:69F5  branches:C000:6A79,C000:6A69
   C000:6A56  F6C708         test bh,0x8
   C000:6A59  741E           jz 0x6a79
   C000:6A5B  8CDD           mov bp,ds
@@ -15032,7 +15028,13 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:6A73  FECD           dec ch
   C000:6A75  75F2           jnz 0x6a69
   C000:6A77  8EDD           mov ds,bp
+  ; end: already_covered
+
+--- C000:6A79..6A7B  ; from_C000:6900
   C000:6A79  B50C           mov ch,0xc
+  ; end: already_covered
+
+--- C000:6A7B..6A99  ; from_C000:68A7  branches:C000:6A90,C000:6A99,C000:6E9E
   C000:6A7B  BEE816         mov si,0x16e8
   C000:6A7E  8C1EA318       mov [0x18a3],ds
   C000:6A82  803E2C1700     cmp byte [0x172c],0x0
@@ -15043,7 +15045,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:6A96  E90504         jmp 0x6e9e
   ; end: jmp
 
---- C000:6A99..6B21  ; from_C000:6A56  branches:C000:6AC0,C000:6ABB,C000:6AD3,C000:6ACA,C000:6AEE,C000:6AE5,C000:6ADD,C000:6B1E,C000:6B21,C000:6585
+--- C000:6A99..6B21  ; from_C000:6A7B  branches:C000:6AC0,C000:6ABB,C000:6AD3,C000:6ACA,C000:6AEE,C000:6AE5,C000:6ADD,C000:6B1E,C000:6B21,C000:6585
   C000:6A99  FC             cld
   C000:6A9A  BAF0FF         mov dx,0xfff0
   C000:6A9D  8B3E9F18       mov di,[0x189f]
@@ -15201,7 +15203,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:6C05  C3             ret
   ; end: ret
 
---- C000:6CA7..6CD7  ; call_C000:6523  branches:C000:6CAD
+--- C000:6CA7..6CD7  ; call_C000:693A  branches:C000:6CAD
   C000:6CA7  3C0C           cmp al,0xc
   C000:6CA9  7502           jnz 0x6cad
   C000:6CAB  B004           mov al,0x4
@@ -15249,7 +15251,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C000:6E7C  C3             ret
   ; end: ret
 
---- C000:6E9E..6F00  ; from_C000:66EB  branches:C000:6EE8,C000:6EE8,C000:6ED4,C000:6EE8,C000:6EE8,C000:6EE8,C000:6EE8,C000:6F00,C000:6EFD,C000:6F00,C000:6FE8
+--- C000:6E9E..6F00  ; from_C000:6A7B  branches:C000:6EE8,C000:6EE8,C000:6ED4,C000:6EE8,C000:6EE8,C000:6EE8,C000:6EE8,C000:6F00,C000:6EFD,C000:6F00,C000:6FE8
   C000:6E9E  803E3B1700     cmp byte [0x173b],0x0
   C000:6EA3  7443           jz 0x6ee8
   C000:6EA5  022E3C17       add ch,[0x173c]
@@ -17155,7 +17157,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:0013  C3             ret
   ; end: ret
 
---- C772:0014..002E  ; call_C772:EBD0  branches:C772:0033,C772:0033,C772:0033
+--- C772:0014..0035  ; call_C772:EBD0  branches:C772:0033,C772:0033,C772:0033
   C772:0014  803E061108     cmp byte [0x1106],0x8
   C772:0019  7418           jz 0x33
   C772:001B  803E061109     cmp byte [0x1106],0x9
@@ -17163,9 +17165,6 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:0022  803E06110A     cmp byte [0x1106],0xa
   C772:0027  740A           jz 0x33
   C772:0029  803E06110B     cmp byte [0x1106],0xb
-  ; end: already_covered
-
---- C772:002E..0035  ; call_C772:7327
   C772:002E  C606061108     mov byte [0x1106],0x8
   C772:0033  F8             clc
   C772:0034  C3             ret
@@ -17268,7 +17267,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:0226  CB             retf
   ; end: retf
 
---- C772:022D..0230  ; call_C772:2A6A  branches:C772:3944
+--- C772:022D..0230  ; call_C772:0DC0  branches:C772:3944
   C772:022D  E91437         jmp 0x3944
   ; end: jmp
 
@@ -17408,7 +17407,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:0BEE  C3             ret
   ; end: ret
 
---- C772:0D20..0D54  ; call_C772:8534  calls:C772:0D7E,C772:0DAB,C772:78FE,C772:0D7E,C772:795D  branches:C772:0D7A,C772:0D4A,C772:0D54,C772:0D33
+--- C772:0D20..0D54  ; call_C772:990C  calls:C772:0D7E,C772:0DAB,C772:78FE,C772:0D7E,C772:795D  branches:C772:0D7A,C772:0D4A,C772:0D54,C772:0D33
   C772:0D20  A0F773         mov al,[0x73f7]
   C772:0D23  0AC0           or al,al
   C772:0D25  7453           jz 0xd7a
@@ -17506,7 +17505,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:0EBC  8CCF           mov di,cs
   ; end: already_covered
 
---- C772:0EBE..0EF6  ; call_C772:9ED6  branches:C772:0ED4,C772:0EC0,C772:0EF6
+--- C772:0EBE..0EF6  ; from_C772:0EFB  branches:C772:0ED4,C772:0EC0,C772:0EF6
   C772:0EBE  B503           mov ch,0x3
   C772:0EC0  8B1E0F71       mov bx,[0x710f]
   C772:0EC4  1E             push ds
@@ -17865,7 +17864,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:133B  C3             ret
   ; end: ret
 
---- C772:1916..191E  ; call_C772:45E6  branches:C772:191E,C772:1A1C
+--- C772:1916..191E  ; call_C772:1ADB  branches:C772:191E,C772:1A1C
   C772:1916  F6C104         test cl,0x4
   C772:1919  7503           jnz 0x191e
   C772:191B  E9FE00         jmp 0x1a1c
@@ -18013,7 +18012,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1A80  C3             ret
   ; end: ret
 
---- C772:1A81..1A8E  ; call_C772:1E24  branches:C772:1A8D
+--- C772:1A81..1A8E  ; call_C772:1E03  branches:C772:1A8D
   C772:1A81  8B360B74       mov si,[0x740b]
   C772:1A85  2BF2           sub si,dx
   C772:1A87  7504           jnz 0x1a8d
@@ -18021,7 +18020,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1A8D  C3             ret
   ; end: ret
 
---- C772:1A8E..1ABB  ; call_C772:1E24  branches:C772:1ABA
+--- C772:1A8E..1ABB  ; call_C772:1E03  branches:C772:1ABA
   C772:1A8E  89168974       mov [0x7489],dx
   C772:1A92  8B36F774       mov si,[0x74f7]
   C772:1A96  03F2           add si,dx
@@ -18057,7 +18056,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1AD9  EB0A           jmp short 0x1ae5
   ; end: jmp
 
---- C772:1ADB..1AEF  ; call_C772:51E0  calls:C772:1916,C772:3A80
+--- C772:1ADB..1AEF  ; call_C772:37E9  calls:C772:1916,C772:3A80
   C772:1ADB  B12B           mov cl,0x2b
   C772:1ADD  32C0           xor al,al
   C772:1ADF  A2A174         mov [0x74a1],al
@@ -18185,7 +18184,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1BAA  C3             ret
   ; end: ret
 
---- C772:1BAB..1BD9  ; call_C772:5BBE  calls:C772:6476
+--- C772:1BAB..1BD9  ; call_C772:45E6  calls:C772:6476
   C772:1BAB  A06074         mov al,[0x7460]
   C772:1BAE  C7060D717E74   mov word [0x710d],0x747e
   C772:1BB4  E8BF48         call 0x6476
@@ -18201,8 +18200,11 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1BD8  C3             ret
   ; end: ret
 
---- C772:1BD9..1BFC  ; call_C772:480F  branches:C772:1C04,C772:1BFD,C772:1BFC
+--- C772:1BD9..1BDC  ; call_C772:480F
   C772:1BD9  A08074         mov al,[0x7480]
+  ; end: already_covered
+
+--- C772:1BDC..1BFC  ; call_C772:1C13  branches:C772:1C04,C772:1BFD,C772:1BFC
   C772:1BDC  8B360475       mov si,[0x7504]
   C772:1BE0  BA4A7A         mov dx,0x7a4a
   C772:1BE3  2BF2           sub si,dx
@@ -18219,17 +18221,17 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1BFB  C3             ret
   ; end: ret
 
---- C772:1BFC..1BFD  ; from_C772:1BD9
+--- C772:1BFC..1BFD  ; from_C772:1BDC
   C772:1BFC  46             inc si
   ; end: already_covered
 
---- C772:1BFD..1C04  ; from_C772:1BD9  branches:C772:1BED
+--- C772:1BFD..1C04  ; from_C772:1BDC  branches:C772:1BED
   C772:1BFD  D0E8           shr al,1
   C772:1BFF  80C602         add dh,0x2
   C772:1C02  EBE9           jmp short 0x1bed
   ; end: jmp
 
---- C772:1C04..1C13  ; from_C772:1BD9  calls:C772:1ABB  branches:C772:1C12
+--- C772:1C04..1C13  ; from_C772:1BDC  calls:C772:1ABB  branches:C772:1C12
   C772:1C04  8B167074       mov dx,[0x7470]
   C772:1C08  A08174         mov al,[0x7481]
   C772:1C0B  3AC2           cmp al,dl
@@ -18426,7 +18428,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1D8E  C3             ret
   ; end: ret
 
---- C772:1D8F..1DB7  ; from_C772:1D41  calls:C772:1C13,C772:1C8A  branches:C772:1DB6,C772:1DA5
+--- C772:1D8F..1DB6  ; from_C772:1D41  calls:C772:1C13,C772:1C8A  branches:C772:1DB6,C772:1DA5
   C772:1D8F  87D6           xchg si,dx
   C772:1D91  8B167274       mov dx,[0x7472]
   C772:1D95  2BF2           sub si,dx
@@ -18443,6 +18445,9 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1DAE  B001           mov al,0x1
   C772:1DB0  A20175         mov [0x7501],al
   C772:1DB3  E8D4FE         call 0x1c8a
+  ; end: already_covered
+
+--- C772:1DB6..1DB7  ; from_C772:1DB7
   C772:1DB6  C3             ret
   ; end: ret
 
@@ -18472,11 +18477,8 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1DE4  EB01           jmp short 0x1de7
   ; end: jmp
 
---- C772:1DE6..1DE7  ; from_C772:1FE8
+--- C772:1DE6..1E03  ; from_C772:21BA  branches:C772:1E03,C772:1DFB,C772:1E91
   C772:1DE6  5A             pop dx
-  ; end: already_covered
-
---- C772:1DE7..1E03  ; from_C772:1A6D  branches:C772:1E03,C772:1DFB,C772:1E91
   C772:1DE7  F6C140         test cl,0x40
   C772:1DEA  7417           jz 0x1e03
   C772:1DEC  8BDA           mov bx,dx
@@ -18493,12 +18495,9 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1E00  E98E00         jmp 0x1e91
   ; end: jmp
 
---- C772:1E03..1E09  ; from_C772:1DE7
+--- C772:1E03..1E57  ; from_C772:1DE6  calls:C772:3A89,C772:1A8E,C772:1A81,C772:A702  branches:C772:1E55,C772:1E57,C772:1E09,C772:1E4A,C772:1DE7,C772:1E91
   C772:1E03  8B367E74       mov si,[0x747e]
   C772:1E07  03F2           add si,dx
-  ; end: already_covered
-
---- C772:1E09..1E24  ; from_C772:1E24  branches:C772:1E55
   C772:1E09  268A04         mov al,[es:si]
   C772:1E0C  87D6           xchg si,dx
   C772:1E0E  8B368574       mov si,[0x7485]
@@ -18509,9 +18508,6 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1E1E  03F2           add si,dx
   C772:1E20  268B14         mov dx,[es:si]
   C772:1E23  46             inc si
-  ; end: already_covered
-
---- C772:1E24..1E57  ; from_C772:1A0E  calls:C772:3A89,C772:1A8E,C772:1A81,C772:A702  branches:C772:1E57,C772:1E09,C772:1E4A,C772:1DE7,C772:1E91
   C772:1E24  F6C240         test dl,0x40
   C772:1E27  752E           jnz 0x1e57
   C772:1E29  E85D1C         call 0x3a89
@@ -18534,7 +18530,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1E55  EB3A           jmp short 0x1e91
   ; end: jmp
 
---- C772:1E57..1E77  ; from_C772:1E24  branches:C772:1E6D,C772:1E77,C772:1FAF
+--- C772:1E57..1E77  ; from_C772:1E03  branches:C772:1E6D,C772:1E77,C772:1FAF
   C772:1E57  B01F           mov al,0x1f
   C772:1E59  A25D74         mov [0x745d],al
   C772:1E5C  8B368574       mov si,[0x7485]
@@ -18565,7 +18561,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1E8E  E91E01         jmp 0x1faf
   ; end: jmp
 
---- C772:1E91..1E9C  ; from_C772:1E24  branches:C772:1E9C,C772:1FE8
+--- C772:1E91..1E9C  ; from_C772:1DE6  branches:C772:1E9C,C772:1FE8
   C772:1E91  52             push dx
   C772:1E92  8AE8           mov ch,al
   C772:1E94  F6C180         test cl,0x80
@@ -18713,7 +18709,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:1FAD  87D6           xchg si,dx
   ; end: already_covered
 
---- C772:1FAF..1FBD  ; from_C772:1E77  calls:C772:1996,C772:1A8E
+--- C772:1FAF..1FBD  ; from_C772:1E57  calls:C772:1996,C772:1A8E
   C772:1FAF  89169174       mov [0x7491],dx
   C772:1FB3  E8E0F9         call 0x1996
   C772:1FB6  8B168974       mov dx,[0x7489]
@@ -19152,7 +19148,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:2377  E96CFA         jmp 0x1de6
   ; end: jmp
 
---- C772:237A..2386  ; from_C772:2241
+--- C772:237A..2386  ; from_C772:1DB7
   C772:237A  89162B74       mov [0x742b],dx
   C772:237E  5E             pop si
   C772:237F  5E             pop si
@@ -20037,7 +20033,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:2AA3  E887D7         call 0x22d
   ; end: blacklisted
 
---- C772:2AF6..2B21  ; call_C772:6E06  calls:C772:45C5,C772:12A1,C772:2668  branches:C772:2B21,C772:2B21
+--- C772:2AF6..2B20  ; call_C772:6E06  calls:C772:45C5,C772:12A1,C772:2668  branches:C772:2B21,C772:2B21
   C772:2AF6  8B16FB73       mov dx,[0x73fb]
   C772:2AFA  8B360374       mov si,[0x7403]
   C772:2AFE  2BF2           sub si,dx
@@ -20052,10 +20048,13 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:2B17  E8AB1A         call 0x45c5
   C772:2B1A  E884E7         call 0x12a1
   C772:2B1D  E848FB         call 0x2668
+  ; end: already_covered
+
+--- C772:2B20..2B21  ; from_C772:2B21
   C772:2B20  C3             ret
   ; end: ret
 
---- C772:2B21..2B45  ; from_C772:2AF6  branches:C772:2B20,C772:2B45,C772:2BDA
+--- C772:2B21..2B45  ; call_C772:3864  branches:C772:2B20,C772:2B45,C772:2BDA
   C772:2B21  A0B274         mov al,[0x74b2]
   C772:2B24  A801           test al,0x1
   C772:2B26  75F8           jnz 0x2b20
@@ -20366,7 +20365,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:2DBA  E936FF         jmp 0x2cf3
   ; end: jmp
 
---- C772:2DBD..2DCA  ; call_C772:8415  branches:C772:2DCA,C772:41AC
+--- C772:2DBD..2DCA  ; vm_op_22  branches:C772:2DCA,C772:41AC
   C772:2DBD  8B36B274       mov si,[0x74b2]
   C772:2DC1  F7C60100       test si,0x1
   C772:2DC5  7403           jz 0x2dca
@@ -20380,7 +20379,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:2DD3  E95AFF         jmp 0x2d30
   ; end: jmp
 
---- C772:2DE9..2E34  ; call_C772:78F0  calls:C772:970F,C772:1203,C772:970F  branches:C772:2E1E,C772:2E1E,C772:2E1E
+--- C772:2DE9..2E38  ; call_C772:78F0  calls:C772:970F,C772:1203,C772:970F  branches:C772:2E1E,C772:2E1E,C772:2E1E
   C772:2DE9  C7060F714C7D   mov word [0x710f],0x7d4c
   C772:2DEF  8B366474       mov si,[0x7464]
   C772:2DF3  F7C60200       test si,0x2
@@ -20405,9 +20404,6 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:2E2C  FEC0           inc al
   C772:2E2E  A2B774         mov [0x74b7],al
   C772:2E31  8A4704         mov al,[bx+0x4]
-  ; end: already_covered
-
---- C772:2E34..2E38  ; from_C772:2E3F
   C772:2E34  A2B874         mov [0x74b8],al
   C772:2E37  C3             ret
   ; end: ret
@@ -20872,7 +20868,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:380C  EB02           jmp short 0x3810
   ; end: jmp
 
---- C772:380E..3815  ; call_C772:10BF  branches:C772:5E35
+--- C772:380E..3815  ; vm_op_1A  branches:C772:5E35
   C772:380E  B202           mov dl,0x2
   C772:3810  B117           mov cl,0x17
   C772:3812  E92026         jmp 0x5e35
@@ -21113,8 +21109,11 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3943  C3             ret
   ; end: ret
 
---- C772:3944..396A  ; from_C772:022D  branches:C772:3959
+--- C772:3944..3945  ; from_C772:022D
   C772:3944  5E             pop si
+  ; end: already_covered
+
+--- C772:3945..396A  ; from_C772:37C1  branches:C772:3959
   C772:3945  2E8A04         mov al,[cs:si]
   C772:3948  46             inc si
   C772:3949  8AC8           mov cl,al
@@ -21140,7 +21139,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3A2E  E8FCC7         call 0x22d
   ; end: blacklisted
 
---- C772:3A80..3A89  ; call_C772:0D54  branches:C772:3A88
+--- C772:3A80..3A89  ; call_C772:1ADB  branches:C772:3A88
   C772:3A80  F6C240         test dl,0x40
   C772:3A83  7503           jnz 0x3a88
   C772:3A85  80E2C0         and dl,0xc0
@@ -21153,7 +21152,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3A90  EBF3           jmp short 0x3a85
   ; end: jmp
 
---- C772:3A92..3AA5  ; call_C772:3CA9  branches:C772:3AA5,C772:019D
+--- C772:3A92..3AA5  ; call_C772:3C0F  branches:C772:3AA5,C772:019D
   C772:3A92  51             push cx
   C772:3A93  8B167275       mov dx,[0x7572]
   C772:3A97  F6C240         test dl,0x40
@@ -21200,7 +21199,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3B02  C3             ret
   ; end: ret
 
---- C772:3B03..3B0B  ; call_C772:0D7E  branches:C772:3B0B
+--- C772:3B03..3B0B  ; call_C772:3BEF  branches:C772:3B0B
   C772:3B03  F6C240         test dl,0x40
   C772:3B06  7403           jz 0x3b0b
   C772:3B08  B0FE           mov al,0xfe
@@ -21280,7 +21279,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3BB5  C3             ret
   ; end: ret
 
---- C772:3BB6..3BCF  ; call_C772:5C65  branches:C772:3BCF
+--- C772:3BB6..3BCF  ; call_C772:3668  branches:C772:3BCF
   C772:3BB6  BB1374         mov bx,0x7413
   C772:3BB9  8A07           mov al,[bx]
   C772:3BBB  FEC0           inc al
@@ -21301,7 +21300,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3BD6  EBED           jmp short 0x3bc5
   ; end: jmp
 
---- C772:3BD8..3BEF  ; call_C772:6435  branches:C772:3BEF
+--- C772:3BD8..3BEF  ; vm_op_28  branches:C772:3BEF
   C772:3BD8  BB1174         mov bx,0x7411
   C772:3BDB  8A07           mov al,[bx]
   C772:3BDD  FEC8           dec al
@@ -21322,7 +21321,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3BF8  EBEB           jmp short 0x3be5
   ; end: jmp
 
---- C772:3BFA..3C0F  ; call_C772:5C65  branches:C772:3C0F
+--- C772:3BFA..3C0F  ; vm_op_62  branches:C772:3C0F
   C772:3BFA  BE1374         mov si,0x7413
   C772:3BFD  8A14           mov dl,[si]
   C772:3BFF  FE0C           dec byte [si]
@@ -21350,7 +21349,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3C2B  EBDC           jmp short 0x3c09
   ; end: jmp
 
---- C772:3C2D..3C43  ; call_C772:5F30  branches:C772:3C43
+--- C772:3C2D..3C43  ; call_C772:3668  branches:C772:3C43
   C772:3C2D  BE1174         mov si,0x7411
   C772:3C30  8A14           mov dl,[si]
   C772:3C32  FE04           inc byte [si]
@@ -21449,26 +21448,20 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3CF2  C3             ret
   ; end: ret
 
---- C772:3CF4..3CF6  ; call_C772:3D6A
+--- C772:3CF4..3D00  ; call_C772:3D6A  branches:C772:3D09
   C772:3CF4  B00A           mov al,0xa
-  ; end: already_covered
-
---- C772:3CF6..3D00  ; call_C772:2942  branches:C772:3D09
   C772:3CF6  59             pop cx
   C772:3CF7  BE0000         mov si,0x0
   C772:3CFA  89366372       mov [0x7263],si
   C772:3CFE  EB09           jmp short 0x3d09
   ; end: jmp
 
---- C772:3D00..3D09  ; call_C772:2B67
+--- C772:3D00..3D2D  ; call_C772:2B67  branches:C772:3D2D
   C772:3D00  B003           mov al,0x3
   C772:3D02  59             pop cx
   C772:3D03  5E             pop si
   C772:3D04  89366372       mov [0x7263],si
   C772:3D08  5E             pop si
-  ; end: already_covered
-
---- C772:3D09..3D2D  ; from_C772:3CF6  branches:C772:3D2D
   C772:3D09  89366572       mov [0x7265],si
   C772:3D0D  A26772         mov [0x7267],al
   C772:3D10  5E             pop si
@@ -21486,13 +21479,13 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3D2C  C3             ret
   ; end: ret
 
---- C772:3D2D..3D33  ; from_C772:3D09  branches:C772:3D33
+--- C772:3D2D..3D33  ; from_C772:3D00  branches:C772:3D33
   C772:3D2D  83FE00         cmp si,byte +0x0
   C772:3D30  7501           jnz 0x3d33
   C772:3D32  C3             ret
   ; end: ret
 
---- C772:3D33..3D3B  ; call_C772:1B60  branches:C772:3D3B
+--- C772:3D33..3D3B  ; from_C772:3D2D  branches:C772:3D3B
   C772:3D33  A07875         mov al,[0x7578]
   C772:3D36  A801           test al,0x1
   C772:3D38  7401           jz 0x3d3b
@@ -21508,7 +21501,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:3D4A  C3             ret
   ; end: ret
 
---- C772:3D4B..3D62  ; call_C772:5694  branches:C772:3D57,C772:3D62
+--- C772:3D4B..3D62  ; from_C772:37E9  branches:C772:3D57,C772:3D62
   C772:3D4B  8B1E2B74       mov bx,[0x742b]
   C772:3D4F  8AC3           mov al,bl
   C772:3D51  0AC0           or al,al
@@ -22067,7 +22060,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:4554  EBF2           jmp short 0x4548
   ; end: jmp
 
---- C772:4556..45A7  ; call_C772:944C  calls:C772:4542,C772:0EFB  branches:C772:45A0,C772:459C
+--- C772:4556..45A7  ; call_C772:64F4  calls:C772:4542,C772:0EFB  branches:C772:45A0,C772:459C
   C772:4556  A2BD74         mov [0x74bd],al
   C772:4559  E8E6FF         call 0x4542
   C772:455C  BFF773         mov di,0x73f7
@@ -22101,7 +22094,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:45A6  C3             ret
   ; end: ret
 
---- C772:45A7..45BE  ; call_C772:8415
+--- C772:45A7..45BE  ; vm_op_38
   C772:45A7  8B3E8774       mov di,[0x7487]
   C772:45AB  BEF773         mov si,0x73f7
   C772:45AE  B96B00         mov cx,0x6b
@@ -22482,7 +22475,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:4AA7  E883B7         call 0x22d
   ; end: blacklisted
 
---- C772:4C6D..4C78  ; from_C772:3FA8  calls:C772:A1A8  branches:C772:4C78
+--- C772:4C6D..4C78  ; fmt_op_0  calls:C772:A1A8  branches:C772:4C78
   C772:4C6D  E83855         call 0xa1a8
   C772:4C70  BA0001         mov dx,0x100
   C772:4C73  2BF2           sub si,dx
@@ -22585,7 +22578,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:4E08  E936FF         jmp 0x4d41
   ; end: jmp
 
---- C772:4E0B..4E2E  ; call_C772:4E02  calls:C772:5335,C772:4E72,C772:6507,C772:5505
+--- C772:4E0B..4E2E  ; call_C772:8046  calls:C772:5335,C772:4E72,C772:6507,C772:5505
   C772:4E0B  C606767D00     mov byte [0x7d76],0x0
   C772:4E10  E82205         call 0x5335
   C772:4E13  E85C00         call 0x4e72
@@ -22822,7 +22815,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:5278  C3             ret
   ; end: ret
 
---- C772:5294..529E  ; call_C772:3F72  calls:C772:022D  branches:C772:52AA
+--- C772:5294..529E  ; call_C772:4C78  calls:C772:022D  branches:C772:52AA
   C772:5294  A0BB74         mov al,[0x74bb]
   C772:5297  A801           test al,0x1
   C772:5299  740F           jz 0x52aa
@@ -22841,7 +22834,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:52BE  C3             ret
   ; end: ret
 
---- C772:5335..534D  ; call_C772:4DD5  calls:C772:A22B,C772:3DAC,C772:5E35,C772:022D
+--- C772:5335..534D  ; call_C772:4E0B  calls:C772:A22B,C772:3DAC,C772:5E35,C772:022D
   C772:5335  E8F34E         call 0xa22b
   C772:5338  BED08A         mov si,0x8ad0
   C772:533B  B001           mov al,0x1
@@ -22853,7 +22846,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:534A  E8E0AE         call 0x22d
   ; end: blacklisted
 
---- C772:5505..552E  ; call_C772:4DD5  calls:C772:5E2B,C772:5E22  branches:C772:553D,C772:552E,C772:553A,C772:553A,C772:550E
+--- C772:5505..552E  ; call_C772:4E0B  calls:C772:5E2B,C772:5E22  branches:C772:553D,C772:552E,C772:553A,C772:553A,C772:550E
   C772:5505  A05F74         mov al,[0x745f]
   C772:5508  9F             lahf
   C772:5509  50             push ax
@@ -23541,7 +23534,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:5C64  C3             ret
   ; end: ret
 
---- C772:5C65..5CBB  ; call_C772:5C5E  calls:C772:5B7C,C772:3BB6,C772:3BFA,C772:5E35,C772:5E2B,C772:5CF8  branches:C772:5C75,C772:5C7F,C772:5CA1,C772:5C9A,C772:5CBB,C772:5CA4,C772:5CA4
+--- C772:5C65..5CBB  ; call_C772:5C37  calls:C772:5B7C,C772:3BB6,C772:3BFA,C772:5E35,C772:5E2B,C772:5CF8  branches:C772:5C75,C772:5C7F,C772:5CA1,C772:5C9A,C772:5CBB,C772:5CA4,C772:5CA4
   C772:5C65  8B363474       mov si,[0x7434]
   C772:5C69  56             push si
   C772:5C6A  A05E74         mov al,[0x745e]
@@ -23685,39 +23678,36 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:5E17  39B111B2       cmp [bx+di-0x4def],si
   ; end: already_covered
 
---- C772:5E18..5E1E  ; call_C772:99C0  branches:C772:5E35
+--- C772:5E18..5E1E  ; vm_op_20  branches:C772:5E35
   C772:5E18  B111           mov cl,0x11
   C772:5E1A  B2FF           mov dl,0xff
   C772:5E1C  EB17           jmp short 0x5e35
   ; end: jmp
 
---- C772:5E1E..5E22  ; call_C772:99BB  branches:C772:5E24
+--- C772:5E1E..5E22  ; vm_op_64  branches:C772:5E24
   C772:5E1E  B10A           mov cl,0xa
   C772:5E20  EB02           jmp short 0x5e24
   ; end: jmp
 
---- C772:5E22..5E24  ; call_C772:5505
+--- C772:5E22..5E2B  ; vm_op_7E  branches:C772:5E35
   C772:5E22  B13A           mov cl,0x3a
-  ; end: already_covered
-
---- C772:5E24..5E2B  ; from_C772:5E1E  branches:C772:5E35
   C772:5E24  8AC2           mov al,dl
   C772:5E26  A2E574         mov [0x74e5],al
   C772:5E29  EB0A           jmp short 0x5e35
   ; end: jmp
 
---- C772:5E2B..5E2F  ; call_C772:5505  branches:C772:5E31
+--- C772:5E2B..5E2F  ; vm_op_2A  branches:C772:5E31
   C772:5E2B  B119           mov cl,0x19
   C772:5E2D  EB02           jmp short 0x5e31
   ; end: jmp
 
---- C772:5E2F..5E35  ; call_C772:4E2E  branches:C772:5E35
+--- C772:5E2F..5E35  ; vm_op_2C  branches:C772:5E35
   C772:5E2F  B129           mov cl,0x29
   C772:5E31  B200           mov dl,0x0
   C772:5E33  EB00           jmp short 0x5e35
   ; end: jmp
 
---- C772:5E35..5E8D  ; from_C772:5E18  branches:C772:5E8D,C772:5F30
+--- C772:5E35..5E8D  ; from_C772:37D5  branches:C772:5E8D,C772:5F30
   C772:5E35  FF360F71       push word [0x710f]
   C772:5E39  C7060F71E574   mov word [0x710f],0x74e5
   C772:5E3F  C606787400     mov byte [0x7478],0x0
@@ -24278,7 +24268,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:62D5  A25D74         mov [0x745d],al
   ; end: already_covered
 
---- C772:62D8..62E7  ; from_C772:6878  branches:C772:62E7,C772:62E7,C772:63BF
+--- C772:62D8..62E7  ; from_C772:5E95  branches:C772:62E7,C772:62E7,C772:63BF
   C772:62D8  F6C508         test ch,0x8
   C772:62DB  740A           jz 0x62e7
   C772:62DD  A0B374         mov al,[0x74b3]
@@ -24424,7 +24414,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:63F6  C3             ret
   ; end: ret
 
---- C772:63F7..640C  ; call_C772:63BF
+--- C772:63F7..640C  ; call_C772:640C
   C772:63F7  8B361574       mov si,[0x7415]
   C772:63FB  8B166674       mov dx,[0x7466]
   C772:63FF  2BF2           sub si,dx
@@ -24482,7 +24472,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:6475  C3             ret
   ; end: ret
 
---- C772:6476..64C1  ; call_C772:2A6A  branches:C772:6495,C772:6495,C772:6495,C772:64BC
+--- C772:6476..64C1  ; call_C772:6507  branches:C772:6495,C772:6495,C772:6495,C772:64BC
   C772:6476  8B1E0D71       mov bx,[0x710d]
   C772:647A  803E767D00     cmp byte [0x7d76],0x0
   C772:647F  7414           jz 0x6495
@@ -24514,7 +24504,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:64C0  C3             ret
   ; end: ret
 
---- C772:64C1..64EA  ; call_C772:6435  calls:C772:64EA,C772:3C2D,C772:64F4  branches:C772:64E2,C772:64D4
+--- C772:64C1..64EA  ; call_C772:6011  calls:C772:64EA,C772:3C2D,C772:64F4  branches:C772:64E2,C772:64D4
   C772:64C1  51             push cx
   C772:64C2  E82500         call 0x64ea
   C772:64C5  BA4B7B         mov dx,0x7b4b
@@ -24537,14 +24527,14 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:64E9  C3             ret
   ; end: ret
 
---- C772:64EA..64F4  ; call_C772:5F30  calls:C772:45A7,C772:4556
+--- C772:64EA..64F4  ; vm_op_3C  calls:C772:45A7,C772:4556
   C772:64EA  E8BAE0         call 0x45a7
   C772:64ED  A0C074         mov al,[0x74c0]
   C772:64F0  E863E0         call 0x4556
   C772:64F3  C3             ret
   ; end: ret
 
---- C772:64F4..64FE  ; call_C772:12F1  calls:C772:45A7,C772:4556
+--- C772:64F4..64FE  ; vm_op_3A  calls:C772:45A7,C772:4556
   C772:64F4  E8B0E0         call 0x45a7
   C772:64F7  A0BE74         mov al,[0x74be]
   C772:64FA  E859E0         call 0x4556
@@ -24558,7 +24548,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:6506  C3             ret
   ; end: ret
 
---- C772:6507..6510  ; call_C772:4DD5  calls:C772:6515,C772:6476
+--- C772:6507..6510  ; call_C772:5F30  calls:C772:6515,C772:6476
   C772:6507  B5EC           mov ch,0xec
   C772:6509  E80900         call 0x6515
   C772:650C  E867FF         call 0x6476
@@ -24591,7 +24581,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:6535  C3             ret
   ; end: ret
 
---- C772:6536..655A  ; call_C772:62B1  branches:C772:6557
+--- C772:6536..655A  ; call_C772:22BE  branches:C772:6557
   C772:6536  87061171       xchg [0x7111],ax
   C772:653A  A05D74         mov al,[0x745d]
   C772:653D  8AF0           mov dh,al
@@ -24836,7 +24826,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:685E  EB18           jmp short 0x6878
   ; end: jmp
 
---- C772:6860..6878  ; from_C772:664C  branches:C772:686E,C772:6878,C772:687B
+--- C772:6860..687B  ; from_C772:664C  branches:C772:686E,C772:6878,C772:687B,C772:62D8
   C772:6860  BE0774         mov si,0x7407
   C772:6863  3CED           cmp al,0xed
   C772:6865  7407           jz 0x686e
@@ -24847,13 +24837,10 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:6871  7408           jz 0x687b
   C772:6873  A0E674         mov al,[0x74e6]
   C772:6876  8804           mov [si],al
-  ; end: already_covered
-
---- C772:6878..687B  ; from_C772:68CA  branches:C772:62D8
   C772:6878  E95DFA         jmp 0x62d8
   ; end: jmp
 
---- C772:687B..68CA  ; from_C772:6860  calls:C772:3BD8,C772:3BD8,C772:3C2D,C772:3C2D  branches:C772:68C3,C772:6899,C772:68C0,C772:68C0,C772:68C0
+--- C772:687B..68D3  ; from_C772:6860  calls:C772:3BD8,C772:3BD8,C772:3C2D,C772:3C2D,C772:6476  branches:C772:68C3,C772:6899,C772:68C0,C772:68C0,C772:68C0,C772:68D3,C772:6878
   C772:687B  A0E774         mov al,[0x74e7]
   C772:687E  F6C110         test cl,0x10
   C772:6881  7540           jnz 0x68c3
@@ -24888,16 +24875,13 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:68C3  8AF0           mov dh,al
   C772:68C5  A0B574         mov al,[0x74b5]
   C772:68C8  3CED           cmp al,0xed
-  ; end: already_covered
-
---- C772:68CA..68D3  ; from_C772:E9AF  calls:C772:6476  branches:C772:68D3,C772:6878
   C772:68CA  8AC6           mov al,dh
   C772:68CC  7405           jz 0x68d3
   C772:68CE  E8A5FB         call 0x6476
   C772:68D1  EBA5           jmp short 0x6878
   ; end: jmp
 
---- C772:68D3..68D8  ; from_C772:68CA  branches:C772:6878
+--- C772:68D3..68D8  ; from_C772:687B  branches:C772:6878
   C772:68D3  A20774         mov [0x7407],al
   C772:68D6  EBA0           jmp short 0x6878
   ; end: jmp
@@ -25016,7 +25000,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:69C3  EBA7           jmp short 0x696c
   ; end: jmp
 
---- C772:69C5..69D8  ; call_C772:5647  branches:C772:69D3
+--- C772:69C5..69D8  ; call_C772:2241  branches:C772:69D3
   C772:69C5  8B1E0D71       mov bx,[0x710d]
   C772:69C9  8A870400       mov al,[bx+0x4]
   C772:69CD  0AC0           or al,al
@@ -25092,7 +25076,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:6BE3  EB59           jmp short 0x6c3e
   ; end: jmp
 
---- C772:6C3E..6C42  ; from_C772:6B6D
+--- C772:6C3E..6C42  ; from_C772:6BE3
   C772:6C3E  58             pop ax
   C772:6C3F  5A             pop dx
   C772:6C40  5E             pop si
@@ -25144,7 +25128,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:6CE2  EB02           jmp short 0x6ce6
   ; end: jmp
 
---- C772:6CE4..6D07  ; call_C772:3DAC  calls:C772:0DC0,C772:6D09,C772:6C90
+--- C772:6CE4..6D07  ; vm_op_0E  calls:C772:0DC0,C772:6D09,C772:6C90
   C772:6CE4  32C0           xor al,al
   C772:6CE6  BE2F74         mov si,0x742f
   C772:6CE9  E8D4A0         call 0xdc0
@@ -25374,7 +25358,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:6E61  C3             ret
   ; end: ret
 
---- C772:6E62..6E70  ; call_C772:8552  branches:C772:6E70
+--- C772:6E62..6E70  ; call_C772:29A2  branches:C772:6E70
   C772:6E62  8B360475       mov si,[0x7504]
   C772:6E66  BA4A7A         mov dx,0x7a4a
   C772:6E69  32C0           xor al,al
@@ -25383,12 +25367,15 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:6E6F  C3             ret
   ; end: ret
 
---- C772:6E70..6E91  ; from_C772:6E62  calls:C772:970F
+--- C772:6E70..6E80  ; from_C772:6E62
   C772:6E70  89364972       mov [0x7249],si
   C772:6E74  B00A           mov al,0xa
   C772:6E76  A23F72         mov [0x723f],al
   C772:6E79  BE4172         mov si,0x7241
   C772:6E7C  89363D72       mov [0x723d],si
+  ; end: already_covered
+
+--- C772:6E80..6E91  ; call_C772:3D6A  calls:C772:970F
   C772:6E80  BE3B72         mov si,0x723b
   C772:6E83  C7060F719B72   mov word [0x710f],0x729b
   C772:6E89  8CDB           mov bx,ds
@@ -25741,7 +25728,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:7112  E8208F         call 0x35
   ; end: already_covered
 
---- C772:7115..7181  ; call_C772:E81A  calls:C772:9530,C772:73F6,C772:85D2,C772:779B,C772:778C,C772:8976,C772:51E0,C772:45A7,C772:EB49,C772:84F2,C772:7197  branches:C772:7111,C772:7112,C772:7111,C772:710D,C772:710D,C772:7154,C772:7115,C772:7111,C772:7112,C772:7189,C772:7111,C772:7115,C772:7181,C772:7163,C772:7189
+--- C772:7115..7181  ; call_C772:E81F  calls:C772:9530,C772:73F6,C772:85D2,C772:779B,C772:778C,C772:8976,C772:51E0,C772:45A7,C772:EB49,C772:84F2,C772:7197  branches:C772:7111,C772:7112,C772:7111,C772:710D,C772:710D,C772:7154,C772:7115,C772:7111,C772:7112,C772:7189,C772:7111,C772:7115,C772:7181,C772:7163,C772:7189
   C772:7115  BE6400         mov si,0x64
   C772:7118  B90100         mov cx,0x1
   C772:711B  E81224         call 0x9530
@@ -25930,86 +25917,9 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:7326  C3             ret
   ; end: ret
 
---- C772:7327..7363  ; from_C772:710D  calls:C772:968D,C772:002E  branches:C772:7339,C772:733D,C772:73B5,C772:7354,C772:7358,C772:735D,C772:7367,C772:73AE
+--- C772:7327..732A  ; from_C772:710D  calls:C772:968D
   C772:7327  E86323         call 0x968d
-  C772:732A  017C73         add [si+0x73],di
-  C772:732D  038B7304       add cx,[bp+di+0x473]
-  C772:7331  90             nop
-  C772:7332  7305           jnc 0x7339
-  C772:7334  95             xchg ax,bp
-  C772:7335  7306           jnc 0x733d
-  C772:7337  9A7307A473     call 0x73a4:0x773
-  C772:733C  089F730B       or [bx+0xb73],bl
-  C772:7340  7773           ja 0x73b5
-  C772:7342  0C7C           or al,0x7c
-  C772:7344  730E           jnc 0x7354
-  C772:7346  5B             pop bx
-  C772:7347  730F           jnc 0x7358
-  C772:7349  ED             in ax,dx
-  C772:734A  7311           jnc 0x735d
-  C772:734C  F27310         bnd jnc 0x735f
-  C772:734F  63730D         arpl [bp+di+0xd],si
-  C772:7352  ED             in ax,dx
-  C772:7353  7312           jnc 0x7367
-  C772:7355  68730A         push word 0xa73
-  C772:7358  A97300         test ax,0x73
-  C772:735B  E8D08C         call 0x2e
-  C772:735E  BE9000         mov si,0x90
-  C772:7361  EB4B           jmp short 0x73ae
-  ; end: jmp
-
---- C772:7367..7377  ; from_C772:7327  branches:C772:73AE,C772:73AE
-  C772:7367  46             inc si
-  C772:7368  BE9200         mov si,0x92
-  C772:736B  A0FF6F         mov al,[0x6fff]
-  C772:736E  0AC0           or al,al
-  C772:7370  743C           jz 0x73ae
-  C772:7372  BE9400         mov si,0x94
-  C772:7375  EB37           jmp short 0x73ae
-  ; end: jmp
-
---- C772:73AE..73B5  ; from_C772:7327  calls:C772:8415
-  C772:73AE  56             push si
-  C772:73AF  BE3100         mov si,0x31
-  C772:73B2  E86010         call 0x8415
-  ; end: already_covered
-
---- C772:73B5..73ED  ; from_C772:7327  calls:C772:8415,C000:1915,C772:98EC,C772:7EE2  branches:C772:73D8,C772:73ED,C772:73F2,C772:73DE
-  C772:73B5  5E             pop si
-  C772:73B6  56             push si
-  C772:73B7  E85B10         call 0x8415
-  C772:73BA  5E             pop si
-  C772:73BB  53             push bx
-  C772:73BC  8BDE           mov bx,si
-  C772:73BE  80FB94         cmp bl,0x94
-  C772:73C1  7515           jnz 0x73d8
-  C772:73C3  C706CBA90300   mov word [0xa9cb],0x3
-  C772:73C9  C706C9A90A00   mov word [0xa9c9],0xa
-  C772:73CF  8A1EFF6F       mov bl,[0x6fff]
-  C772:73D3  9A151900C0     call 0xc000:0x1915
-  C772:73D8  5B             pop bx
-  C772:73D9  B005           mov al,0x5
-  C772:73DB  E80E25         call 0x98ec
-  C772:73DE  B101           mov cl,0x1
-  C772:73E0  E8FF0A         call 0x7ee2
-  C772:73E3  3C03           cmp al,0x3
-  C772:73E5  7406           jz 0x73ed
-  C772:73E7  3C09           cmp al,0x9
-  C772:73E9  7407           jz 0x73f2
-  C772:73EB  EBF1           jmp short 0x73de
-  ; end: jmp
-
---- C772:73ED..73F2  ; from_C772:73B5  calls:C772:9A8C
-  C772:73ED  E89C26         call 0x9a8c
-  C772:73F0  F9             stc
-  C772:73F1  C3             ret
-  ; end: ret
-
---- C772:73F2..73F6  ; from_C772:73B5
-  C772:73F2  B009           mov al,0x9
-  C772:73F4  F8             clc
-  C772:73F5  C3             ret
-  ; end: ret
+  ; end: blacklisted
 
 --- C772:73F6..7403  ; call_C772:7115
   C772:73F6  56             push si
@@ -26474,7 +26384,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:78EF  C3             ret
   ; end: ret
 
---- C772:78F0..78F7  ; call_C772:8545  calls:C772:2DE9,C772:4985
+--- C772:78F0..78F7  ; call_C772:72D2  calls:C772:2DE9,C772:4985
   C772:78F0  E8F6B4         call 0x2de9
   C772:78F3  E88FD0         call 0x4985
   C772:78F6  C3             ret
@@ -27216,7 +27126,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:8414  CB             retf
   ; end: retf
 
---- C772:8415..844B  ; call_C772:8411  calls:C772:5202,C772:8526,C772:98EC,C772:2DBD,C772:45A7,C772:8526  branches:C772:8431
+--- C772:8415..844B  ; call_C772:7189  calls:C772:5202,C772:8526,C772:98EC,C772:2DBD,C772:45A7,C772:8526  branches:C772:8431
   C772:8415  51             push cx
   C772:8416  52             push dx
   C772:8417  56             push si
@@ -27316,7 +27226,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:84EF  E90F63         jmp 0xe801
   ; end: jmp
 
---- C772:84F2..8526  ; call_C772:E963  calls:C772:92A3,C772:98EC,C772:5C37,C772:45A7,C772:8534,C772:8534,C772:8534,C772:8534,C772:8534,C772:8534
+--- C772:84F2..8534  ; call_C772:7115  calls:C772:92A3,C772:98EC,C772:5C37,C772:45A7,C772:8534,C772:8534,C772:8534,C772:8534,C772:8534,C772:8534,C772:8534,C772:8534,C772:9A8C
   C772:84F2  B00A           mov al,0xa
   C772:84F4  E8AC0D         call 0x92a3
   C772:84F7  BE0300         mov si,0x3
@@ -27336,9 +27246,6 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:851E  E81300         call 0x8534
   C772:8521  B003           mov al,0x3
   C772:8523  E80E00         call 0x8534
-  ; end: already_covered
-
---- C772:8526..8534  ; call_C772:8415  calls:C772:8534,C772:8534,C772:9A8C
   C772:8526  B005           mov al,0x5
   C772:8528  E80900         call 0x8534
   C772:852B  B000           mov al,0x0
@@ -27347,7 +27254,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:8533  C3             ret
   ; end: ret
 
---- C772:8534..853B  ; call_C772:8526  calls:C772:4556,C772:0D20
+--- C772:8534..853B  ; call_C772:84F2  calls:C772:4556,C772:0D20
   C772:8534  E81FC0         call 0x4556
   C772:8537  E8E687         call 0xd20
   C772:853A  C3             ret
@@ -27945,8 +27852,11 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:8EDB  EB9B           jmp short 0x8e78
   ; end: jmp
 
---- C772:92A0..92AA  ; call_C772:E98B
+--- C772:92A0..92A3  ; call_C772:E98B
   C772:92A0  A06A74         mov al,[0x746a]
+  ; end: already_covered
+
+--- C772:92A3..92AA  ; call_C772:84F2
   C772:92A3  A26A74         mov [0x746a],al
   C772:92A6  A2BE74         mov [0x74be],al
   C772:92A9  C3             ret
@@ -28345,32 +28255,26 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:9622  C3             ret
   ; end: ret
 
---- C772:9638..9652  ; from_C772:71EB  calls:C772:968A  branches:C772:967E
+--- C772:9638..963B  ; from_C772:71EB  calls:C772:968A
   C772:9638  E84F00         call 0x968a
-  C772:963B  136B96         adc bp,[bp+di-0x6a]
-  C772:963E  127796         adc dh,[bx-0x6a]
-  C772:9641  DA7796         fidiv dword [bx-0x6a]
-  C772:9644  0B5296         or dx,[bp+si-0x6a]
-  C772:9647  035296         add dx,[bp+si-0x6a]
-  C772:964A  008B1E0F       add [bp+di+0xf1e],cl
-  C772:964E  712E           jno 0x967e
-  C772:9650  FF27           jmp [bx]
+  ; end: blacklisted
+
+--- C772:964B..9652  ; from_C772:966B
+  C772:964B  8B1E0F71       mov bx,[0x710f]
+  C772:964F  2EFF27         jmp [cs:bx]
   ; end: jmp_indirect
 
 --- C772:9652..9653  ; search_96_0B
   C772:9652  C3             ret
   ; end: ret
 
---- C772:9653..965A  ; call_C772:967E  branches:C772:965F
+--- C772:9653..965A  ; call_C772:9677  branches:C772:965F
   C772:9653  83060F7102     add word [0x710f],byte +0x2
   C772:9658  EB05           jmp short 0x965f
   ; end: jmp
 
---- C772:965A..965F  ; call_C772:966B
+--- C772:965A..966B  ; call_C772:966B
   C772:965A  832E0F7102     sub word [0x710f],byte +0x2
-  ; end: already_covered
-
---- C772:965F..966B  ; from_C772:9653
   C772:965F  8B1E0F71       mov bx,[0x710f]
   C772:9663  2E8A07         mov al,[cs:bx]
   C772:9666  2E0A4701       or al,[cs:bx+0x1]
@@ -28389,15 +28293,18 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:967C  EBCD           jmp short 0x964b
   ; end: jmp
 
---- C772:967E..968A  ; from_C772:9638  calls:C772:9653  branches:C772:967E,C772:964B
+--- C772:967E..968A  ; from_C772:966B  calls:C772:9653  branches:C772:967E,C772:964B
   C772:967E  E8D2FF         call 0x9653
   C772:9681  75FB           jnz 0x967e
   C772:9683  832E0F7102     sub word [0x710f],byte +0x2
   C772:9688  EBC1           jmp short 0x964b
   ; end: jmp
 
---- C772:968A..96A9  ; call_C772:E9AF  calls:C772:EB51  branches:C772:96AC,C772:96A9,C772:96A9,C772:9695
+--- C772:968A..968D  ; call_C772:E9AF  calls:C772:EB51
   C772:968A  E8C454         call 0xeb51
+  ; end: already_covered
+
+--- C772:968D..96A9  ; call_C772:7327  branches:C772:96AC,C772:96A9,C772:96A9,C772:9695
   C772:968D  8BEC           mov bp,sp
   C772:968F  877600         xchg [bp+0x0],si
   C772:9692  52             push dx
@@ -28415,11 +28322,11 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:96A7  EBEC           jmp short 0x9695
   ; end: jmp
 
---- C772:96A9..96AC  ; from_C772:968A
+--- C772:96A9..96AC  ; from_C772:968D
   C772:96A9  2E8B34         mov si,[cs:si]
   ; end: already_covered
 
---- C772:96AC..96B6  ; from_C772:968A
+--- C772:96AC..96B6  ; from_C772:968D
   C772:96AC  5A             pop dx
   C772:96AD  8BEC           mov bp,sp
   C772:96AF  877600         xchg [bp+0x0],si
@@ -28481,7 +28388,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:970A  C3             ret
   ; end: ret
 
---- C772:970F..9715  ; call_C772:2E73  calls:C000:19C3
+--- C772:970F..9715  ; call_C772:6E80  calls:C000:19C3
   C772:970F  9AC31900C0     call 0xc000:0x19c3
   C772:9714  C3             ret
   ; end: ret
@@ -28691,7 +28598,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:9852  E8D869         call 0x22d
   ; end: blacklisted
 
---- C772:98EC..9907  ; call_C772:8415  branches:C772:990C,C772:9907,C772:9907
+--- C772:98EC..9907  ; call_C772:369E  branches:C772:990C,C772:9907,C772:9907
   C772:98EC  3C05           cmp al,0x5
   C772:98EE  751C           jnz 0x990c
   C772:98F0  50             push ax
@@ -28807,14 +28714,14 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:99F6  C3             ret
   ; end: ret
 
---- C772:9A8C..9A95  ; call_C772:8526
+--- C772:9A8C..9A95  ; call_C772:84F2
   C772:9A8C  B0FF           mov al,0xff
   C772:9A8E  A29470         mov [0x7094],al
   C772:9A91  A29570         mov [0x7095],al
   C772:9A94  C3             ret
   ; end: ret
 
---- C772:9A95..9AAD  ; call_C772:E963  calls:C772:8415  branches:C772:9AA1,C772:9A9E
+--- C772:9A95..9AAD  ; call_C772:E978  calls:C772:8415  branches:C772:9AA1,C772:9A9E
   C772:9A95  E87DE9         call 0x8415
   C772:9A98  9F             lahf
   C772:9A99  50             push ax
@@ -29179,7 +29086,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:A1A7  C3             ret
   ; end: ret
 
---- C772:A1A8..A205  ; call_C772:9ED6  branches:C772:A1B6,C772:A1C5,C772:A1E6,C772:A1F6,C772:A200
+--- C772:A1A8..A205  ; call_C772:4C6D  branches:C772:A1B6,C772:A1C5,C772:A1E6,C772:A1F6,C772:A200
   C772:A1A8  8B367675       mov si,[0x7576]
   C772:A1AC  BA0600         mov dx,0x6
   C772:A1AF  2BF2           sub si,dx
@@ -29242,7 +29149,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:A257  C3             ret
   ; end: ret
 
---- C772:A702..A70E  ; call_C772:1E24  branches:C772:A70E
+--- C772:A702..A70E  ; call_C772:1E03  branches:C772:A70E
   C772:A702  8B36C374       mov si,[0x74c3]
   C772:A706  8BDE           mov bx,si
   C772:A708  F6C310         test bl,0x10
@@ -29634,10 +29541,6 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:B0EC  C3             ret
   ; end: ret
 
---- C772:D5C8..D5C9  ; call_C772:E9AF
-  C772:D5C8  C3             ret
-  ; end: ret
-
 --- C772:D69B..D6B5  ; call_C772:6C92  calls:C772:022D  branches:C772:D6DB,C772:D6DB,C772:D6DB,C772:D6DB,C772:D6DB
   C772:D69B  A03473         mov al,[0x7334]
   C772:D69E  0AC0           or al,al
@@ -29689,12 +29592,15 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:E817  E97101         jmp 0xe98b
   ; end: jmp
 
---- C772:E81A..E832  ; call_DEF0:26B4  calls:C772:7115
+--- C772:E81A..E81F  ; call_DEF0:26B4
   C772:E81A  51             push cx
   C772:E81B  52             push dx
   C772:E81C  56             push si
   C772:E81D  57             push di
   C772:E81E  55             push bp
+  ; end: already_covered
+
+--- C772:E81F..E832  ; vm_op_BE  calls:C772:7115
   C772:E81F  BDEF0C         mov bp,0xcef
   C772:E822  8EC5           mov es,bp
   C772:E824  E8EE88         call 0x7115
@@ -29922,7 +29828,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:E962  CB             retf
   ; end: retf
 
---- C772:E963..E98B  ; call_C772:E832  calls:C772:EB49,C772:EC43,C772:84F2,C772:9A95  branches:C772:E98A,C772:E98A,C772:E963
+--- C772:E963..E978  ; call_C772:E832  calls:C772:EB49,C772:EC43  branches:C772:E98A,C772:E98A,C772:E963
   C772:E963  BE0800         mov si,0x8
   C772:E966  E8E001         call 0xeb49
   C772:E969  3C03           cmp al,0x3
@@ -29932,6 +29838,9 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:E971  7417           jz 0xe98a
   C772:E973  E8CD02         call 0xec43
   C772:E976  75EB           jnz 0xe963
+  ; end: already_covered
+
+--- C772:E978..E98B  ; call_C772:7303  calls:C772:84F2,C772:9A95
   C772:E978  E8779B         call 0x84f2
   C772:E97B  32C0           xor al,al
   C772:E97D  BE0900         mov si,0x9
@@ -29958,37 +29867,26 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   C772:E9AC  E99A00         jmp 0xea49
   ; end: jmp
 
---- C772:E9AF..E9C0  ; from_C772:E98B  calls:C772:968A,C772:D5C8  branches:C772:68CA
+--- C772:E9AF..E9B2  ; from_C772:E98B  calls:C772:968A
   C772:E9AF  E8D8AC         call 0x968a
-  C772:E9B2  0193E902       add [bp+di+0x2e9],dx
-  C772:E9B6  03EC           add bp,sp
-  C772:E9B8  E80DEC         call 0xd5c8
-  C772:E9BB  0BE2           or sp,dx
-  C772:E9BD  E90A7F         jmp 0x68ca
-  ; end: jmp
+  ; end: blacklisted
 
---- C772:EA49..EA56  ; from_C772:E98B  calls:C772:968D
+--- C772:EA49..EA4F  ; from_C772:E98B  calls:C772:968D
   C772:EA49  A0C874         mov al,[0x74c8]
   C772:EA4C  E83EAC         call 0x968d
-  C772:EA4F  60             pusha
-  C772:EA50  61             popa
-  C772:EA51  EA62ADEA66     jmp 0x66ea:0xad62
-  ; end: jmp_far
+  ; end: blacklisted
 
---- C772:EB49..EB51  ; call_C772:E963  calls:C772:8415,C772:7EE2
+--- C772:EB49..EB59  ; call_C772:7115  calls:C772:8415,C772:7EE2  branches:C772:EB59
   C772:EB49  E8C998         call 0x8415
   C772:EB4C  B101           mov cl,0x1
   C772:EB4E  E89193         call 0x7ee2
-  ; end: already_covered
-
---- C772:EB51..EB59  ; call_C772:968A  branches:C772:EB59
   C772:EB51  A06C74         mov al,[0x746c]
   C772:EB54  3CFF           cmp al,0xff
   C772:EB56  7401           jz 0xeb59
   C772:EB58  C3             ret
   ; end: ret
 
---- C772:EB59..EB5D  ; from_C772:EB51
+--- C772:EB59..EB5D  ; from_C772:EB49
   C772:EB59  A03473         mov al,[0x7334]
   C772:EB5C  C3             ret
   ; end: ret
@@ -30136,7 +30034,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   DEF0:0042  CB             retf
   ; end: retf
 
---- DEF0:0043..0063  ; call_DEF0:CD8B  calls:DEF0:CD5F  branches:DEF0:005B
+--- DEF0:0043..0063  ; call_ED1B:0E81  calls:DEF0:CD5F  branches:DEF0:005B
   DEF0:0043  55             push bp
   DEF0:0044  57             push di
   DEF0:0045  56             push si
@@ -30159,7 +30057,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   DEF0:0062  CB             retf
   ; end: retf
 
---- DEF0:0063..0074  ; call_DEF0:CD8B
+--- DEF0:0063..0074  ; call_ED1B:0EE9
   DEF0:0063  55             push bp
   DEF0:0064  57             push di
   DEF0:0065  56             push si
@@ -30223,7 +30121,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   DEF0:00B7  C3             ret
   ; end: ret
 
---- DEF0:00B8..00BC  ; call_C000:10DB  calls:DEF0:0098
+--- DEF0:00B8..00BC  ; call_ED1B:0E51  calls:DEF0:0098
   DEF0:00B8  E8DDFF         call 0x98
   DEF0:00BB  CB             retf
   ; end: retf
@@ -30272,7 +30170,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   DEF0:00F8  C3             ret
   ; end: ret
 
---- DEF0:00F9..010D  ; call_DEF0:CDBB  calls:C000:0A45
+--- DEF0:00F9..010D  ; call_ED1B:0EB1  calls:C000:0A45
   DEF0:00F9  55             push bp
   DEF0:00FA  57             push di
   DEF0:00FB  56             push si
@@ -31408,7 +31306,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   DEF0:0D90  CB             retf
   ; end: retf
 
---- DEF0:0D91..0DC9  ; call_DEF0:595A  branches:DEF0:0DD1
+--- DEF0:0D91..0DC9  ; call_ED1B:0D63  branches:DEF0:0DD1
   DEF0:0D91  55             push bp
   DEF0:0D92  8BEC           mov bp,sp
   DEF0:0D94  83EC06         sub sp,byte +0x6
@@ -31455,7 +31353,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   DEF0:0DF4  CB             retf
   ; end: retf
 
---- DEF0:0DF5..0F87  ; call_DEF0:C952  calls:C000:3F35
+--- DEF0:0DF5..0F87  ; call_DEF0:57EF  calls:C000:3F35
   DEF0:0DF5  55             push bp
   DEF0:0DF6  8BEC           mov bp,sp
   DEF0:0DF8  83EC02         sub sp,byte +0x2
@@ -31659,7 +31557,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   DEF0:0FE3  CB             retf
   ; end: retf
 
---- DEF0:0FE4..0FE8  ; call_DEF0:84D2  branches:DEF0:0FF1
+--- DEF0:0FE4..0FE8  ; call_DEF0:5467  branches:DEF0:0FF1
   DEF0:0FE4  8BD8           mov bx,ax
   DEF0:0FE6  EB09           jmp short 0xff1
   ; end: jmp
@@ -54684,7 +54582,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   DEF0:DE8F  CB             retf
   ; end: retf
 
---- DEF0:DFD5..DFE8  ; call_DEF0:E08C  branches:DEF0:DFE8,DEF0:E020
+--- DEF0:DFD5..DFE8  ; call_DEF0:E195  branches:DEF0:DFE8,DEF0:E020
   DEF0:DFD5  51             push cx
   DEF0:DFD6  8BC8           mov cx,ax
   DEF0:DFD8  83F915         cmp cx,byte +0x15
@@ -54894,7 +54792,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   DEF0:E15E  C3             ret
   ; end: ret
 
---- DEF0:E195..E1AE  ; call_DEF0:3E56  calls:DEF0:DFD5  branches:DEF0:E1AF,DEF0:E1B1
+--- DEF0:E195..E1AE  ; call_DEF0:5236  calls:DEF0:DFD5  branches:DEF0:E1AF,DEF0:E1B1
   DEF0:E195  52             push dx
   DEF0:E196  51             push cx
   DEF0:E197  1E             push ds
@@ -55030,71 +54928,6 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   DEF0:E2A8  5A             pop dx
   DEF0:E2A9  CB             retf
   ; end: retf
-
---- DEF0:109AF..109B6  ; call_EE17:1853  branches:DEF0:09BB
-  DEF0:109AF  8BD8           mov bx,ax
-  DEF0:109B1  B82000         mov ax,0x20
-  DEF0:109B4  EB05           jmp short 0x9bb
-  ; end: jmp
-
---- DEF0:109C0..109C9  ; call_EE17:1853  branches:DEF0:09D0
-  DEF0:109C0  51             push cx
-  DEF0:109C1  56             push si
-  DEF0:109C2  8BF0           mov si,ax
-  DEF0:109C4  B92000         mov cx,0x20
-  DEF0:109C7  EB07           jmp short 0x9d0
-  ; end: jmp
-
---- DEF0:109D7..109E2  ; call_EE17:1853  branches:DEF0:09F1
-  DEF0:109D7  51             push cx
-  DEF0:109D8  8BD8           mov bx,ax
-  DEF0:109DA  83C31F         add bx,byte +0x1f
-  DEF0:109DD  B92000         mov cx,0x20
-  DEF0:109E0  EB0F           jmp short 0x9f1
-  ; end: jmp
-
---- DEF0:109F7..10A04  ; call_EE17:1853  branches:DEF0:0A10
-  DEF0:109F7  51             push cx
-  DEF0:109F8  52             push dx
-  DEF0:109F9  56             push si
-  DEF0:109FA  57             push di
-  DEF0:109FB  8BF8           mov di,ax
-  DEF0:109FD  8A05           mov al,[di]
-  DEF0:109FF  BA1F00         mov dx,0x1f
-  DEF0:10A02  EB0C           jmp short 0xa10
-  ; end: jmp
-
---- DEF0:10A1B..10A25  ; call_EE17:18E8  branches:DEF0:0A4C
-  DEF0:10A1B  51             push cx
-  DEF0:10A1C  52             push dx
-  DEF0:10A1D  56             push si
-  DEF0:10A1E  8BF0           mov si,ax
-  DEF0:10A20  BA2000         mov dx,0x20
-  DEF0:10A23  EB27           jmp short 0xa4c
-  ; end: jmp
-
---- DEF0:10A56..10A68  ; call_EE17:1853  branches:DEF0:0A88
-  DEF0:10A56  51             push cx
-  DEF0:10A57  52             push dx
-  DEF0:10A58  56             push si
-  DEF0:10A59  8BF0           mov si,ax
-  DEF0:10A5B  33C0           xor ax,ax
-  DEF0:10A5D  83C61F         add si,byte +0x1f
-  DEF0:10A60  83C31F         add bx,byte +0x1f
-  DEF0:10A63  BA2000         mov dx,0x20
-  DEF0:10A66  EB20           jmp short 0xa88
-  ; end: jmp
-
---- DEF0:10A90..10AA0  ; call_EE17:1411  branches:DEF0:0AA0,DEF0:0C18
-  DEF0:10A90  51             push cx
-  DEF0:10A91  52             push dx
-  DEF0:10A92  56             push si
-  DEF0:10A93  57             push di
-  DEF0:10A94  8BF0           mov si,ax
-  DEF0:10A96  833E42A300     cmp word [0xa342],byte +0x0
-  DEF0:10A9B  7403           jz 0xaa0
-  DEF0:10A9D  E97801         jmp 0xc18
-  ; end: jmp
 
 --- ED1B:0D25..0D63  ; call_DEF0:27B9  calls:AD00:009A
   ED1B:0D25  53             push bx
@@ -55248,7 +55081,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   ED1B:0E80  CB             retf
   ; end: retf
 
---- ED1B:0E81..0EB1  ; call_AD00:0150  calls:DEF0:0043
+--- ED1B:0E81..0EB1  ; call_AD00:0272  calls:DEF0:0043
   ED1B:0E81  57             push di
   ED1B:0E82  56             push si
   ED1B:0E83  1E             push ds
@@ -55303,7 +55136,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   ED1B:0EE8  CB             retf
   ; end: retf
 
---- ED1B:0EE9..0F19  ; call_AD00:0143  calls:DEF0:0063
+--- ED1B:0EE9..0F19  ; call_AD00:0242  calls:DEF0:0063
   ED1B:0EE9  57             push di
   ED1B:0EEA  56             push si
   ED1B:0EEB  1E             push ds
@@ -57954,7 +57787,7 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   EE17:140E  E949FC         jmp 0x105a
   ; end: jmp
 
---- EE17:1411..145D  ; from_EE17:13C8  calls:C000:3F35,DEF0:10A90,EE17:03DE  branches:EE17:1431,EE17:145D,EE17:105A
+--- EE17:1411..145D  ; from_EE17:13C8  calls:C000:3F35,EF8A:00F0,EE17:03DE  branches:EE17:1431,EE17:145D,EE17:105A
   EE17:1411  BB00C0         mov bx,0xc000
   EE17:1414  8EC3           mov es,bx
   EE17:1416  268A1ED73A     mov bl,[es:0x3ad7]
@@ -58307,361 +58140,361 @@ Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, 
   EE17:173E  CB             retf
   ; end: retf
 
---- EE17:173F..1746  ; seed_EE17:173F  branches:EE17:174B
-  EE17:173F  8BD8           mov bx,ax
-  EE17:1741  B82000         mov ax,0x20
-  EE17:1744  EB05           jmp short 0x174b
+--- EF8A:000F..0016  ; call_EF8A:0123  branches:EF8A:001B
+  EF8A:000F  8BD8           mov bx,ax
+  EF8A:0011  B82000         mov ax,0x20
+  EF8A:0014  EB05           jmp short 0x1b
   ; end: jmp
 
---- EE17:1746..174B  ; from_EE17:174B
-  EE17:1746  C60700         mov byte [bx],0x0
-  EE17:1749  43             inc bx
-  EE17:174A  48             dec ax
+--- EF8A:0016..001B  ; from_EF8A:001B
+  EF8A:0016  C60700         mov byte [bx],0x0
+  EF8A:0019  43             inc bx
+  EF8A:001A  48             dec ax
   ; end: already_covered
 
---- EE17:174B..1750  ; from_EE17:173F  branches:EE17:1746
-  EE17:174B  85C0           test ax,ax
-  EE17:174D  75F7           jnz 0x1746
-  EE17:174F  CB             retf
+--- EF8A:001B..0020  ; from_EF8A:000F  branches:EF8A:0016
+  EF8A:001B  85C0           test ax,ax
+  EF8A:001D  75F7           jnz 0x16
+  EF8A:001F  CB             retf
   ; end: retf
 
---- EE17:1750..1759  ; seed_EE17:1750  branches:EE17:1760
-  EE17:1750  51             push cx
-  EE17:1751  56             push si
-  EE17:1752  8BF0           mov si,ax
-  EE17:1754  B92000         mov cx,0x20
-  EE17:1757  EB07           jmp short 0x1760
+--- EF8A:0020..0029  ; call_EF8A:0123  branches:EF8A:0030
+  EF8A:0020  51             push cx
+  EF8A:0021  56             push si
+  EF8A:0022  8BF0           mov si,ax
+  EF8A:0024  B92000         mov cx,0x20
+  EF8A:0027  EB07           jmp short 0x30
   ; end: jmp
 
---- EE17:1759..1760  ; from_EE17:1760
-  EE17:1759  8A07           mov al,[bx]
-  EE17:175B  43             inc bx
-  EE17:175C  8804           mov [si],al
-  EE17:175E  46             inc si
-  EE17:175F  49             dec cx
+--- EF8A:0029..0030  ; from_EF8A:0030
+  EF8A:0029  8A07           mov al,[bx]
+  EF8A:002B  43             inc bx
+  EF8A:002C  8804           mov [si],al
+  EF8A:002E  46             inc si
+  EF8A:002F  49             dec cx
   ; end: already_covered
 
---- EE17:1760..1767  ; from_EE17:1750  branches:EE17:1759
-  EE17:1760  85C9           test cx,cx
-  EE17:1762  75F5           jnz 0x1759
-  EE17:1764  5E             pop si
-  EE17:1765  59             pop cx
-  EE17:1766  CB             retf
+--- EF8A:0030..0037  ; from_EF8A:0020  branches:EF8A:0029
+  EF8A:0030  85C9           test cx,cx
+  EF8A:0032  75F5           jnz 0x29
+  EF8A:0034  5E             pop si
+  EF8A:0035  59             pop cx
+  EF8A:0036  CB             retf
   ; end: retf
 
---- EE17:1767..1772  ; seed_EE17:1767  branches:EE17:1781
-  EE17:1767  51             push cx
-  EE17:1768  8BD8           mov bx,ax
-  EE17:176A  83C31F         add bx,byte +0x1f
-  EE17:176D  B92000         mov cx,0x20
-  EE17:1770  EB0F           jmp short 0x1781
+--- EF8A:0037..0042  ; call_EF8A:0123  branches:EF8A:0051
+  EF8A:0037  51             push cx
+  EF8A:0038  8BD8           mov bx,ax
+  EF8A:003A  83C31F         add bx,byte +0x1f
+  EF8A:003D  B92000         mov cx,0x20
+  EF8A:0040  EB0F           jmp short 0x51
   ; end: jmp
 
---- EE17:1772..1781  ; from_EE17:1781  branches:EE17:1785
-  EE17:1772  FE07           inc byte [bx]
-  EE17:1774  803F09         cmp byte [bx],0x9
-  EE17:1777  760C           jna 0x1785
-  EE17:1779  802F0A         sub byte [bx],0xa
-  EE17:177C  49             dec cx
-  EE17:177D  4B             dec bx
-  EE17:177E  8BC3           mov ax,bx
-  EE17:1780  40             inc ax
+--- EF8A:0042..0051  ; from_EF8A:0051  branches:EF8A:0055
+  EF8A:0042  FE07           inc byte [bx]
+  EF8A:0044  803F09         cmp byte [bx],0x9
+  EF8A:0047  760C           jna 0x55
+  EF8A:0049  802F0A         sub byte [bx],0xa
+  EF8A:004C  49             dec cx
+  EF8A:004D  4B             dec bx
+  EF8A:004E  8BC3           mov ax,bx
+  EF8A:0050  40             inc ax
   ; end: already_covered
 
---- EE17:1781..1787  ; from_EE17:1767  branches:EE17:1772
-  EE17:1781  85C9           test cx,cx
-  EE17:1783  75ED           jnz 0x1772
-  EE17:1785  59             pop cx
-  EE17:1786  CB             retf
+--- EF8A:0051..0057  ; from_EF8A:0037  branches:EF8A:0042
+  EF8A:0051  85C9           test cx,cx
+  EF8A:0053  75ED           jnz 0x42
+  EF8A:0055  59             pop cx
+  EF8A:0056  CB             retf
   ; end: retf
 
---- EE17:1787..1794  ; seed_EE17:1787  branches:EE17:17A0
-  EE17:1787  51             push cx
-  EE17:1788  52             push dx
-  EE17:1789  56             push si
-  EE17:178A  57             push di
-  EE17:178B  8BF8           mov di,ax
-  EE17:178D  8A05           mov al,[di]
-  EE17:178F  BA1F00         mov dx,0x1f
-  EE17:1792  EB0C           jmp short 0x17a0
+--- EF8A:0057..0064  ; call_EF8A:0123  branches:EF8A:0070
+  EF8A:0057  51             push cx
+  EF8A:0058  52             push dx
+  EF8A:0059  56             push si
+  EF8A:005A  57             push di
+  EF8A:005B  8BF8           mov di,ax
+  EF8A:005D  8A05           mov al,[di]
+  EF8A:005F  BA1F00         mov dx,0x1f
+  EF8A:0062  EB0C           jmp short 0x70
   ; end: jmp
 
---- EE17:1794..17A0  ; from_EE17:17A0
-  EE17:1794  8BF7           mov si,di
-  EE17:1796  8A4C01         mov cl,[si+0x1]
-  EE17:1799  880D           mov [di],cl
-  EE17:179B  4A             dec dx
-  EE17:179C  47             inc di
-  EE17:179D  8BCF           mov cx,di
-  EE17:179F  49             dec cx
+--- EF8A:0064..0070  ; from_EF8A:0070
+  EF8A:0064  8BF7           mov si,di
+  EF8A:0066  8A4C01         mov cl,[si+0x1]
+  EF8A:0069  880D           mov [di],cl
+  EF8A:006B  4A             dec dx
+  EF8A:006C  47             inc di
+  EF8A:006D  8BCF           mov cx,di
+  EF8A:006F  49             dec cx
   ; end: already_covered
 
---- EE17:17A0..17AB  ; from_EE17:1787  branches:EE17:1794
-  EE17:17A0  85D2           test dx,dx
-  EE17:17A2  75F0           jnz 0x1794
-  EE17:17A4  881D           mov [di],bl
-  EE17:17A6  5F             pop di
-  EE17:17A7  5E             pop si
-  EE17:17A8  5A             pop dx
-  EE17:17A9  59             pop cx
-  EE17:17AA  CB             retf
+--- EF8A:0070..007B  ; from_EF8A:0057  branches:EF8A:0064
+  EF8A:0070  85D2           test dx,dx
+  EF8A:0072  75F0           jnz 0x64
+  EF8A:0074  881D           mov [di],bl
+  EF8A:0076  5F             pop di
+  EF8A:0077  5E             pop si
+  EF8A:0078  5A             pop dx
+  EF8A:0079  59             pop cx
+  EF8A:007A  CB             retf
   ; end: retf
 
---- EE17:17AB..17B5  ; seed_EE17:17AB  branches:EE17:17DC
-  EE17:17AB  51             push cx
-  EE17:17AC  52             push dx
-  EE17:17AD  56             push si
-  EE17:17AE  8BF0           mov si,ax
-  EE17:17B0  BA2000         mov dx,0x20
-  EE17:17B3  EB27           jmp short 0x17dc
+--- EF8A:007B..0085  ; call_EF8A:01B8  branches:EF8A:00AC
+  EF8A:007B  51             push cx
+  EF8A:007C  52             push dx
+  EF8A:007D  56             push si
+  EF8A:007E  8BF0           mov si,ax
+  EF8A:0080  BA2000         mov dx,0x20
+  EF8A:0083  EB27           jmp short 0xac
   ; end: jmp
 
---- EE17:17B5..17C9  ; from_EE17:17DC  branches:EE17:17C9,EE17:17E2
-  EE17:17B5  8A0C           mov cl,[si]
-  EE17:17B7  32ED           xor ch,ch
-  EE17:17B9  8A07           mov al,[bx]
-  EE17:17BB  32E4           xor ah,ah
-  EE17:17BD  2BC8           sub cx,ax
-  EE17:17BF  83F900         cmp cx,byte +0x0
-  EE17:17C2  7D05           jnl 0x17c9
-  EE17:17C4  B8FFFF         mov ax,0xffff
-  EE17:17C7  EB19           jmp short 0x17e2
+--- EF8A:0085..0099  ; from_EF8A:00AC  branches:EF8A:0099,EF8A:00B2
+  EF8A:0085  8A0C           mov cl,[si]
+  EF8A:0087  32ED           xor ch,ch
+  EF8A:0089  8A07           mov al,[bx]
+  EF8A:008B  32E4           xor ah,ah
+  EF8A:008D  2BC8           sub cx,ax
+  EF8A:008F  83F900         cmp cx,byte +0x0
+  EF8A:0092  7D05           jnl 0x99
+  EF8A:0094  B8FFFF         mov ax,0xffff
+  EF8A:0097  EB19           jmp short 0xb2
   ; end: jmp
 
---- EE17:17C9..17D3  ; from_EE17:17B5  branches:EE17:17D3,EE17:17E2
-  EE17:17C9  83F900         cmp cx,byte +0x0
-  EE17:17CC  7E05           jng 0x17d3
-  EE17:17CE  B80100         mov ax,0x1
-  EE17:17D1  EB0F           jmp short 0x17e2
+--- EF8A:0099..00A3  ; from_EF8A:0085  branches:EF8A:00A3,EF8A:00B2
+  EF8A:0099  83F900         cmp cx,byte +0x0
+  EF8A:009C  7E05           jng 0xa3
+  EF8A:009E  B80100         mov ax,0x1
+  EF8A:00A1  EB0F           jmp short 0xb2
   ; end: jmp
 
---- EE17:17D3..17DC  ; from_EE17:17C9
-  EE17:17D3  4A             dec dx
-  EE17:17D4  46             inc si
-  EE17:17D5  8BC6           mov ax,si
-  EE17:17D7  48             dec ax
-  EE17:17D8  43             inc bx
-  EE17:17D9  8BC3           mov ax,bx
-  EE17:17DB  48             dec ax
+--- EF8A:00A3..00AC  ; from_EF8A:0099
+  EF8A:00A3  4A             dec dx
+  EF8A:00A4  46             inc si
+  EF8A:00A5  8BC6           mov ax,si
+  EF8A:00A7  48             dec ax
+  EF8A:00A8  43             inc bx
+  EF8A:00A9  8BC3           mov ax,bx
+  EF8A:00AB  48             dec ax
   ; end: already_covered
 
---- EE17:17DC..17E6  ; from_EE17:17AB  branches:EE17:17B5
-  EE17:17DC  85D2           test dx,dx
-  EE17:17DE  75D5           jnz 0x17b5
-  EE17:17E0  33C0           xor ax,ax
-  EE17:17E2  5E             pop si
-  EE17:17E3  5A             pop dx
-  EE17:17E4  59             pop cx
-  EE17:17E5  CB             retf
+--- EF8A:00AC..00B6  ; from_EF8A:007B  branches:EF8A:0085
+  EF8A:00AC  85D2           test dx,dx
+  EF8A:00AE  75D5           jnz 0x85
+  EF8A:00B0  33C0           xor ax,ax
+  EF8A:00B2  5E             pop si
+  EF8A:00B3  5A             pop dx
+  EF8A:00B4  59             pop cx
+  EF8A:00B5  CB             retf
   ; end: retf
 
---- EE17:17E6..17F8  ; seed_EE17:17E6  branches:EE17:1818
-  EE17:17E6  51             push cx
-  EE17:17E7  52             push dx
-  EE17:17E8  56             push si
-  EE17:17E9  8BF0           mov si,ax
-  EE17:17EB  33C0           xor ax,ax
-  EE17:17ED  83C61F         add si,byte +0x1f
-  EE17:17F0  83C31F         add bx,byte +0x1f
-  EE17:17F3  BA2000         mov dx,0x20
-  EE17:17F6  EB20           jmp short 0x1818
+--- EF8A:00B6..00C8  ; call_EF8A:0123  branches:EF8A:00E8
+  EF8A:00B6  51             push cx
+  EF8A:00B7  52             push dx
+  EF8A:00B8  56             push si
+  EF8A:00B9  8BF0           mov si,ax
+  EF8A:00BB  33C0           xor ax,ax
+  EF8A:00BD  83C61F         add si,byte +0x1f
+  EF8A:00C0  83C31F         add bx,byte +0x1f
+  EF8A:00C3  BA2000         mov dx,0x20
+  EF8A:00C6  EB20           jmp short 0xe8
   ; end: jmp
 
---- EE17:17F8..180D  ; from_EE17:1818  branches:EE17:180D,EE17:180F
-  EE17:17F8  8A0F           mov cl,[bx]
-  EE17:17FA  32ED           xor ch,ch
-  EE17:17FC  03C8           add cx,ax
-  EE17:17FE  000C           add [si],cl
-  EE17:1800  803C09         cmp byte [si],0x9
-  EE17:1803  7608           jna 0x180d
-  EE17:1805  802C0A         sub byte [si],0xa
-  EE17:1808  B80100         mov ax,0x1
-  EE17:180B  EB02           jmp short 0x180f
+--- EF8A:00C8..00DD  ; from_EF8A:00E8  branches:EF8A:00DD,EF8A:00DF
+  EF8A:00C8  8A0F           mov cl,[bx]
+  EF8A:00CA  32ED           xor ch,ch
+  EF8A:00CC  03C8           add cx,ax
+  EF8A:00CE  000C           add [si],cl
+  EF8A:00D0  803C09         cmp byte [si],0x9
+  EF8A:00D3  7608           jna 0xdd
+  EF8A:00D5  802C0A         sub byte [si],0xa
+  EF8A:00D8  B80100         mov ax,0x1
+  EF8A:00DB  EB02           jmp short 0xdf
   ; end: jmp
 
---- EE17:180D..1818  ; from_EE17:17F8
-  EE17:180D  33C0           xor ax,ax
-  EE17:180F  4A             dec dx
-  EE17:1810  4E             dec si
-  EE17:1811  8BCE           mov cx,si
-  EE17:1813  41             inc cx
-  EE17:1814  4B             dec bx
-  EE17:1815  8BCB           mov cx,bx
-  EE17:1817  41             inc cx
+--- EF8A:00DD..00E8  ; from_EF8A:00C8
+  EF8A:00DD  33C0           xor ax,ax
+  EF8A:00DF  4A             dec dx
+  EF8A:00E0  4E             dec si
+  EF8A:00E1  8BCE           mov cx,si
+  EF8A:00E3  41             inc cx
+  EF8A:00E4  4B             dec bx
+  EF8A:00E5  8BCB           mov cx,bx
+  EF8A:00E7  41             inc cx
   ; end: already_covered
 
---- EE17:1818..1820  ; from_EE17:17E6  branches:EE17:17F8
-  EE17:1818  85D2           test dx,dx
-  EE17:181A  75DC           jnz 0x17f8
-  EE17:181C  5E             pop si
-  EE17:181D  5A             pop dx
-  EE17:181E  59             pop cx
-  EE17:181F  CB             retf
+--- EF8A:00E8..00F0  ; from_EF8A:00B6  branches:EF8A:00C8
+  EF8A:00E8  85D2           test dx,dx
+  EF8A:00EA  75DC           jnz 0xc8
+  EF8A:00EC  5E             pop si
+  EF8A:00ED  5A             pop dx
+  EF8A:00EE  59             pop cx
+  EF8A:00EF  CB             retf
   ; end: retf
 
---- EE17:1820..1830  ; seed_EE17:1820  branches:EE17:1830,EE17:19A8
-  EE17:1820  51             push cx
-  EE17:1821  52             push dx
-  EE17:1822  56             push si
-  EE17:1823  57             push di
-  EE17:1824  8BF0           mov si,ax
-  EE17:1826  833E42A300     cmp word [0xa342],byte +0x0
-  EE17:182B  7403           jz 0x1830
-  EE17:182D  E97801         jmp 0x19a8
+--- EF8A:00F0..0100  ; call_EE17:1411  branches:EF8A:0100,EF8A:0278
+  EF8A:00F0  51             push cx
+  EF8A:00F1  52             push dx
+  EF8A:00F2  56             push si
+  EF8A:00F3  57             push di
+  EF8A:00F4  8BF0           mov si,ax
+  EF8A:00F6  833E42A300     cmp word [0xa342],byte +0x0
+  EF8A:00FB  7403           jz 0x100
+  EF8A:00FD  E97801         jmp 0x278
   ; end: jmp
 
---- EE17:1830..183E  ; from_EE17:1820  branches:EE17:183E,EE17:19A8
-  EE17:1830  803C01         cmp byte [si],0x1
-  EE17:1833  7509           jnz 0x183e
-  EE17:1835  C70642A30300   mov word [0xa342],0x3
-  EE17:183B  E96A01         jmp 0x19a8
+--- EF8A:0100..010E  ; from_EF8A:00F0  branches:EF8A:010E,EF8A:0278
+  EF8A:0100  803C01         cmp byte [si],0x1
+  EF8A:0103  7509           jnz 0x10e
+  EF8A:0105  C70642A30300   mov word [0xa342],0x3
+  EF8A:010B  E96A01         jmp 0x278
   ; end: jmp
 
---- EE17:183E..1853  ; from_EE17:1830  calls:EE17:0A4D,EE17:0047  branches:EE17:1853,EE17:19A8
-  EE17:183E  8BC6           mov ax,si
-  EE17:1840  9A4D0A17EE     call 0xee17:0xa4d
-  EE17:1845  85C0           test ax,ax
-  EE17:1847  740A           jz 0x1853
-  EE17:1849  8BC6           mov ax,si
-  EE17:184B  9A470017EE     call 0xee17:0x47
-  EE17:1850  E95501         jmp 0x19a8
+--- EF8A:010E..0123  ; from_EF8A:0100  calls:EE17:0A4D,EE17:0047  branches:EF8A:0123,EF8A:0278
+  EF8A:010E  8BC6           mov ax,si
+  EF8A:0110  9A4D0A17EE     call 0xee17:0xa4d
+  EF8A:0115  85C0           test ax,ax
+  EF8A:0117  740A           jz 0x123
+  EF8A:0119  8BC6           mov ax,si
+  EF8A:011B  9A470017EE     call 0xee17:0x47
+  EF8A:0120  E95501         jmp 0x278
   ; end: jmp
 
---- EE17:1853..18E8  ; from_EE17:183E  calls:DEF0:109AF,DEF0:109AF,DEF0:109AF,DEF0:109AF,DEF0:109AF,EE17:0817,DEF0:109F7,DEF0:109C0,DEF0:10A56,DEF0:109F7,DEF0:109D7,DEF0:109C0  branches:EE17:18B1,EE17:191F
-  EE17:1853  B8A4A3         mov ax,0xa3a4
-  EE17:1856  9A0F008AEF     call 0xef8a:0xf
-  EE17:185B  B8C4A3         mov ax,0xa3c4
-  EE17:185E  9A0F008AEF     call 0xef8a:0xf
-  EE17:1863  B8E4A3         mov ax,0xa3e4
-  EE17:1866  9A0F008AEF     call 0xef8a:0xf
-  EE17:186B  B804A4         mov ax,0xa404
-  EE17:186E  9A0F008AEF     call 0xef8a:0xf
-  EE17:1873  B824A4         mov ax,0xa424
-  EE17:1876  9A0F008AEF     call 0xef8a:0xf
-  EE17:187B  BB0E00         mov bx,0xe
-  EE17:187E  8A4411         mov al,[si+0x11]
-  EE17:1881  98             cbw
-  EE17:1882  2BD8           sub bx,ax
-  EE17:1884  F7DB           neg bx
-  EE17:1886  8BC3           mov ax,bx
-  EE17:1888  BB0200         mov bx,0x2
-  EE17:188B  99             cwd
-  EE17:188C  F7FB           idiv bx
-  EE17:188E  8BD0           mov dx,ax
-  EE17:1890  8A4411         mov al,[si+0x11]
-  EE17:1893  B302           mov bl,0x2
-  EE17:1895  98             cbw
-  EE17:1896  F6FB           idiv bl
-  EE17:1898  8AC4           mov al,ah
-  EE17:189A  84C0           test al,al
-  EE17:189C  7413           jz 0x18b1
-  EE17:189E  8BC6           mov ax,si
-  EE17:18A0  32DB           xor bl,bl
-  EE17:18A2  9A170817EE     call 0xee17:0x817
-  EE17:18A7  8AD8           mov bl,al
-  EE17:18A9  B8A4A3         mov ax,0xa3a4
-  EE17:18AC  9A57008AEF     call 0xef8a:0x57
-  EE17:18B1  B824A4         mov ax,0xa424
-  EE17:18B4  BBC4A3         mov bx,0xa3c4
-  EE17:18B7  9A20008AEF     call 0xef8a:0x20
-  EE17:18BC  B824A4         mov ax,0xa424
-  EE17:18BF  BB24A4         mov bx,0xa424
-  EE17:18C2  9AB6008AEF     call 0xef8a:0xb6
-  EE17:18C7  B824A4         mov ax,0xa424
-  EE17:18CA  32DB           xor bl,bl
-  EE17:18CC  9A57008AEF     call 0xef8a:0x57
-  EE17:18D1  B824A4         mov ax,0xa424
-  EE17:18D4  9A37008AEF     call 0xef8a:0x37
-  EE17:18D9  B804A4         mov ax,0xa404
-  EE17:18DC  BBE4A3         mov bx,0xa3e4
-  EE17:18DF  9A20008AEF     call 0xef8a:0x20
-  EE17:18E4  33C9           xor cx,cx
-  EE17:18E6  EB37           jmp short 0x191f
+--- EF8A:0123..01B8  ; from_EF8A:010E  calls:EF8A:000F,EF8A:000F,EF8A:000F,EF8A:000F,EF8A:000F,EE17:0817,EF8A:0057,EF8A:0020,EF8A:00B6,EF8A:0057,EF8A:0037,EF8A:0020  branches:EF8A:0181,EF8A:01EF
+  EF8A:0123  B8A4A3         mov ax,0xa3a4
+  EF8A:0126  9A0F008AEF     call 0xef8a:0xf
+  EF8A:012B  B8C4A3         mov ax,0xa3c4
+  EF8A:012E  9A0F008AEF     call 0xef8a:0xf
+  EF8A:0133  B8E4A3         mov ax,0xa3e4
+  EF8A:0136  9A0F008AEF     call 0xef8a:0xf
+  EF8A:013B  B804A4         mov ax,0xa404
+  EF8A:013E  9A0F008AEF     call 0xef8a:0xf
+  EF8A:0143  B824A4         mov ax,0xa424
+  EF8A:0146  9A0F008AEF     call 0xef8a:0xf
+  EF8A:014B  BB0E00         mov bx,0xe
+  EF8A:014E  8A4411         mov al,[si+0x11]
+  EF8A:0151  98             cbw
+  EF8A:0152  2BD8           sub bx,ax
+  EF8A:0154  F7DB           neg bx
+  EF8A:0156  8BC3           mov ax,bx
+  EF8A:0158  BB0200         mov bx,0x2
+  EF8A:015B  99             cwd
+  EF8A:015C  F7FB           idiv bx
+  EF8A:015E  8BD0           mov dx,ax
+  EF8A:0160  8A4411         mov al,[si+0x11]
+  EF8A:0163  B302           mov bl,0x2
+  EF8A:0165  98             cbw
+  EF8A:0166  F6FB           idiv bl
+  EF8A:0168  8AC4           mov al,ah
+  EF8A:016A  84C0           test al,al
+  EF8A:016C  7413           jz 0x181
+  EF8A:016E  8BC6           mov ax,si
+  EF8A:0170  32DB           xor bl,bl
+  EF8A:0172  9A170817EE     call 0xee17:0x817
+  EF8A:0177  8AD8           mov bl,al
+  EF8A:0179  B8A4A3         mov ax,0xa3a4
+  EF8A:017C  9A57008AEF     call 0xef8a:0x57
+  EF8A:0181  B824A4         mov ax,0xa424
+  EF8A:0184  BBC4A3         mov bx,0xa3c4
+  EF8A:0187  9A20008AEF     call 0xef8a:0x20
+  EF8A:018C  B824A4         mov ax,0xa424
+  EF8A:018F  BB24A4         mov bx,0xa424
+  EF8A:0192  9AB6008AEF     call 0xef8a:0xb6
+  EF8A:0197  B824A4         mov ax,0xa424
+  EF8A:019A  32DB           xor bl,bl
+  EF8A:019C  9A57008AEF     call 0xef8a:0x57
+  EF8A:01A1  B824A4         mov ax,0xa424
+  EF8A:01A4  9A37008AEF     call 0xef8a:0x37
+  EF8A:01A9  B804A4         mov ax,0xa404
+  EF8A:01AC  BBE4A3         mov bx,0xa3e4
+  EF8A:01AF  9A20008AEF     call 0xef8a:0x20
+  EF8A:01B4  33C9           xor cx,cx
+  EF8A:01B6  EB37           jmp short 0x1ef
   ; end: jmp
 
---- EE17:18E8..191F  ; from_EE17:191F  calls:DEF0:10A56,DEF0:109D7,DEF0:109D7,DEF0:10A1B,DEF0:109C0  branches:EE17:1924
-  EE17:18E8  B804A4         mov ax,0xa404
-  EE17:18EB  BB24A4         mov bx,0xa424
-  EE17:18EE  9AB6008AEF     call 0xef8a:0xb6
-  EE17:18F3  B824A4         mov ax,0xa424
-  EE17:18F6  9A37008AEF     call 0xef8a:0x37
-  EE17:18FB  B824A4         mov ax,0xa424
-  EE17:18FE  9A37008AEF     call 0xef8a:0x37
-  EE17:1903  B8A4A3         mov ax,0xa3a4
-  EE17:1906  BB04A4         mov bx,0xa404
-  EE17:1909  9A7B008AEF     call 0xef8a:0x7b
-  EE17:190E  3D0000         cmp ax,0x0
-  EE17:1911  7C11           jl 0x1924
-  EE17:1913  B8E4A3         mov ax,0xa3e4
-  EE17:1916  BB04A4         mov bx,0xa404
-  EE17:1919  9A20008AEF     call 0xef8a:0x20
-  EE17:191E  41             inc cx
+--- EF8A:01B8..01EF  ; from_EF8A:01EF  calls:EF8A:00B6,EF8A:0037,EF8A:0037,EF8A:007B,EF8A:0020  branches:EF8A:01F4
+  EF8A:01B8  B804A4         mov ax,0xa404
+  EF8A:01BB  BB24A4         mov bx,0xa424
+  EF8A:01BE  9AB6008AEF     call 0xef8a:0xb6
+  EF8A:01C3  B824A4         mov ax,0xa424
+  EF8A:01C6  9A37008AEF     call 0xef8a:0x37
+  EF8A:01CB  B824A4         mov ax,0xa424
+  EF8A:01CE  9A37008AEF     call 0xef8a:0x37
+  EF8A:01D3  B8A4A3         mov ax,0xa3a4
+  EF8A:01D6  BB04A4         mov bx,0xa404
+  EF8A:01D9  9A7B008AEF     call 0xef8a:0x7b
+  EF8A:01DE  3D0000         cmp ax,0x0
+  EF8A:01E1  7C11           jl 0x1f4
+  EF8A:01E3  B8E4A3         mov ax,0xa3e4
+  EF8A:01E6  BB04A4         mov bx,0xa404
+  EF8A:01E9  9A20008AEF     call 0xef8a:0x20
+  EF8A:01EE  41             inc cx
   ; end: already_covered
 
---- EE17:191F..1973  ; from_EE17:1853  calls:DEF0:109F7,DEF0:109F7,DEF0:109F7,EE17:0817,DEF0:109F7,EE17:0817,DEF0:109F7  branches:EE17:18E8,EE17:1973,EE17:18B1
-  EE17:191F  83F909         cmp cx,byte +0x9
-  EE17:1922  7CC4           jl 0x18e8
-  EE17:1924  B8C4A3         mov ax,0xa3c4
-  EE17:1927  8AD9           mov bl,cl
-  EE17:1929  9A57008AEF     call 0xef8a:0x57
-  EE17:192E  B8E4A3         mov ax,0xa3e4
-  EE17:1931  32DB           xor bl,bl
-  EE17:1933  9A57008AEF     call 0xef8a:0x57
-  EE17:1938  B8E4A3         mov ax,0xa3e4
-  EE17:193B  32DB           xor bl,bl
-  EE17:193D  9A57008AEF     call 0xef8a:0x57
-  EE17:1942  8BC6           mov ax,si
-  EE17:1944  32DB           xor bl,bl
-  EE17:1946  9A170817EE     call 0xee17:0x817
-  EE17:194B  8AD8           mov bl,al
-  EE17:194D  B8A4A3         mov ax,0xa3a4
-  EE17:1950  9A57008AEF     call 0xef8a:0x57
-  EE17:1955  8BC6           mov ax,si
-  EE17:1957  32DB           xor bl,bl
-  EE17:1959  9A170817EE     call 0xee17:0x817
-  EE17:195E  8AD8           mov bl,al
-  EE17:1960  B8A4A3         mov ax,0xa3a4
-  EE17:1963  9A57008AEF     call 0xef8a:0x57
-  EE17:1968  42             inc dx
-  EE17:1969  803ED4A300     cmp byte [0xa3d4],0x0
-  EE17:196E  7503           jnz 0x1973
-  EE17:1970  E93EFF         jmp 0x18b1
+--- EF8A:01EF..0243  ; from_EF8A:0123  calls:EF8A:0057,EF8A:0057,EF8A:0057,EE17:0817,EF8A:0057,EE17:0817,EF8A:0057  branches:EF8A:01B8,EF8A:0243,EF8A:0181
+  EF8A:01EF  83F909         cmp cx,byte +0x9
+  EF8A:01F2  7CC4           jl 0x1b8
+  EF8A:01F4  B8C4A3         mov ax,0xa3c4
+  EF8A:01F7  8AD9           mov bl,cl
+  EF8A:01F9  9A57008AEF     call 0xef8a:0x57
+  EF8A:01FE  B8E4A3         mov ax,0xa3e4
+  EF8A:0201  32DB           xor bl,bl
+  EF8A:0203  9A57008AEF     call 0xef8a:0x57
+  EF8A:0208  B8E4A3         mov ax,0xa3e4
+  EF8A:020B  32DB           xor bl,bl
+  EF8A:020D  9A57008AEF     call 0xef8a:0x57
+  EF8A:0212  8BC6           mov ax,si
+  EF8A:0214  32DB           xor bl,bl
+  EF8A:0216  9A170817EE     call 0xee17:0x817
+  EF8A:021B  8AD8           mov bl,al
+  EF8A:021D  B8A4A3         mov ax,0xa3a4
+  EF8A:0220  9A57008AEF     call 0xef8a:0x57
+  EF8A:0225  8BC6           mov ax,si
+  EF8A:0227  32DB           xor bl,bl
+  EF8A:0229  9A170817EE     call 0xee17:0x817
+  EF8A:022E  8AD8           mov bl,al
+  EF8A:0230  B8A4A3         mov ax,0xa3a4
+  EF8A:0233  9A57008AEF     call 0xef8a:0x57
+  EF8A:0238  42             inc dx
+  EF8A:0239  803ED4A300     cmp byte [0xa3d4],0x0
+  EF8A:023E  7503           jnz 0x243
+  EF8A:0240  E93EFF         jmp 0x181
   ; end: jmp
 
---- EE17:1973..197E  ; from_EE17:191F  calls:EE17:0047  branches:EE17:198F
-  EE17:1973  8BC6           mov ax,si
-  EE17:1975  9A470017EE     call 0xee17:0x47
-  EE17:197A  33C9           xor cx,cx
-  EE17:197C  EB11           jmp short 0x198f
+--- EF8A:0243..024E  ; from_EF8A:01EF  calls:EE17:0047  branches:EF8A:025F
+  EF8A:0243  8BC6           mov ax,si
+  EF8A:0245  9A470017EE     call 0xee17:0x47
+  EF8A:024A  33C9           xor cx,cx
+  EF8A:024C  EB11           jmp short 0x25f
   ; end: jmp
 
---- EE17:197E..198F  ; from_EE17:198F
-  EE17:197E  8BFE           mov di,si
-  EE17:1980  47             inc di
-  EE17:1981  03F9           add di,cx
-  EE17:1983  BB1000         mov bx,0x10
-  EE17:1986  03D9           add bx,cx
-  EE17:1988  8A87C4A3       mov al,[bx-0x5c3c]
-  EE17:198C  8805           mov [di],al
-  EE17:198E  41             inc cx
+--- EF8A:024E..025F  ; from_EF8A:025F
+  EF8A:024E  8BFE           mov di,si
+  EF8A:0250  47             inc di
+  EF8A:0251  03F9           add di,cx
+  EF8A:0253  BB1000         mov bx,0x10
+  EF8A:0256  03D9           add bx,cx
+  EF8A:0258  8A87C4A3       mov al,[bx-0x5c3c]
+  EF8A:025C  8805           mov [di],al
+  EF8A:025E  41             inc cx
   ; end: already_covered
 
---- EE17:198F..19A8  ; from_EE17:1973  calls:EE17:0AF4,EE17:0A78  branches:EE17:197E
-  EE17:198F  83F910         cmp cx,byte +0x10
-  EE17:1992  7CEA           jl 0x197e
-  EE17:1994  83EA03         sub dx,byte +0x3
-  EE17:1997  885411         mov [si+0x11],dl
-  EE17:199A  8BC6           mov ax,si
-  EE17:199C  9AF40A17EE     call 0xee17:0xaf4
-  EE17:19A1  8BC6           mov ax,si
-  EE17:19A3  9A780A17EE     call 0xee17:0xa78
+--- EF8A:025F..0278  ; from_EF8A:0243  calls:EE17:0AF4,EE17:0A78  branches:EF8A:024E
+  EF8A:025F  83F910         cmp cx,byte +0x10
+  EF8A:0262  7CEA           jl 0x24e
+  EF8A:0264  83EA03         sub dx,byte +0x3
+  EF8A:0267  885411         mov [si+0x11],dl
+  EF8A:026A  8BC6           mov ax,si
+  EF8A:026C  9AF40A17EE     call 0xee17:0xaf4
+  EF8A:0271  8BC6           mov ax,si
+  EF8A:0273  9A780A17EE     call 0xee17:0xa78
   ; end: already_covered
 
---- EE17:19A8..19AD  ; from_EE17:1820
-  EE17:19A8  5F             pop di
-  EE17:19A9  5E             pop si
-  EE17:19AA  5A             pop dx
-  EE17:19AB  59             pop cx
-  EE17:19AC  CB             retf
+--- EF8A:0278..027D  ; from_EF8A:00F0
+  EF8A:0278  5F             pop di
+  EF8A:0279  5E             pop si
+  EF8A:027A  5A             pop dx
+  EF8A:027B  59             pop cx
+  EF8A:027C  CB             retf
   ; end: retf
 

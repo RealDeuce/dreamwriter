@@ -60,16 +60,34 @@ def add_segment(name: str, seg_value: int, max_offset: int):
 
 
 def find_segment_for_far(seg_value: int, offset: int) -> tuple[str, int] | None:
-    """Resolve a far seg:off by matching the segment value first."""
+    """Resolve a far seg:off using the transfer's segment value.
+
+    If the segment value matches a registered segment, use it directly.
+    Otherwise auto-register a new segment from the call's segment value
+    so the trace reflects what CS the CPU actually has.
+    """
     for seg in SEGMENTS.values():
         if seg.seg_value == seg_value:
             if 0 <= offset < seg.max_offset:
                 return seg.name, offset
     phys = (seg_value << 4) + offset
+    if phys >= len(ROM):
+        return None
+    # Check if another segment covers this physical address
     for seg in SEGMENTS.values():
         if seg.file_base <= phys < seg.file_base + seg.max_offset:
-            return seg.name, phys - seg.file_base
-    return None
+            other_off = phys - seg.file_base
+            print(f"warning: far {seg_value:04X}:{offset:04X} (phys {phys:05X}) "
+                  f"has no segment; overlaps {seg.name}:{other_off:04X}. "
+                  f"Auto-creating segment {seg_value:04X}.",
+                  file=sys.stderr)
+            break
+    name = f"{seg_value:04X}"
+    max_off = len(ROM) - (seg_value << 4)
+    if max_off <= 0:
+        return None
+    add_segment(name, seg_value, min(max_off, 0x10000))
+    return name, offset
 
 
 @dataclass
@@ -238,6 +256,18 @@ def trace(seeds: list[tuple[str, int, str]], max_blocks: int = 5000):
             continue
         if offset < 0 or offset >= seg.max_offset:
             continue
+
+        # Warn if this physical address is already traced under a different segment
+        phys = seg.file_offset(offset)
+        for other_name, other_seg in SEGMENTS.items():
+            if other_name == seg_name:
+                continue
+            other_off = phys - other_seg.file_base
+            if 0 <= other_off < other_seg.max_offset and other_off in other_seg.covered:
+                print(f"warning: {seg_name}:{offset:04X} (phys {phys:05X}) already "
+                      f"traced as {other_name}:{other_off:04X}",
+                      file=sys.stderr)
+                break
 
         block = disasm_block(seg_name, offset)
         if not block.insns:
@@ -560,7 +590,7 @@ def main():
     # Callers do "CALL 022D" followed by inline parameter bytes, not code.
     # The handler reads the data from the return address on the stack.
     # Auto-blacklist every address following a "CALL 022D" in the C772 segment.
-    INLINE_DATA_CALLS = {("C772", 0x022D)}
+    INLINE_DATA_CALLS = {("C772", 0x022D), ("C772", 0x968A), ("C772", 0x968D)}
     for seg_name, call_target in INLINE_DATA_CALLS:
         seg = SEGMENTS.get(seg_name)
         if seg is None:
