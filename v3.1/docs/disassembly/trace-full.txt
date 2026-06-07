@@ -1,5 +1,5 @@
-Loaded 3647 blocks from v3.1/docs/disassembly/trace-full.txt
-Traced 4145 blocks (498 new), 45818 instructions (AD00:458, C000:972, C772:1003, DEF0:1488, ED1B:12, EE17:212)
+Loaded 4161 blocks from /tmp/trace-ee17.txt
+Traced 4182 blocks (21 new), 46119 instructions (AD00:458, C000:972, C772:1003, DEF0:1494, ED1B:12, EE17:243)
 --- AD00:003C..0058  ; call_AD00:1408
   AD00:003C  55             push bp
   AD00:003D  8BEC           mov bp,sp
@@ -55031,6 +55031,60 @@ Traced 4145 blocks (498 new), 45818 instructions (AD00:458, C000:972, C772:1003,
   DEF0:E2A9  CB             retf
   ; end: retf
 
+--- DEF0:109AF..109B6  ; call_EE17:1853  branches:DEF0:09BB
+  DEF0:109AF  8BD8           mov bx,ax
+  DEF0:109B1  B82000         mov ax,0x20
+  DEF0:109B4  EB05           jmp short 0x9bb
+  ; end: jmp
+
+--- DEF0:109C0..109C9  ; call_EE17:1853  branches:DEF0:09D0
+  DEF0:109C0  51             push cx
+  DEF0:109C1  56             push si
+  DEF0:109C2  8BF0           mov si,ax
+  DEF0:109C4  B92000         mov cx,0x20
+  DEF0:109C7  EB07           jmp short 0x9d0
+  ; end: jmp
+
+--- DEF0:109D7..109E2  ; call_EE17:1853  branches:DEF0:09F1
+  DEF0:109D7  51             push cx
+  DEF0:109D8  8BD8           mov bx,ax
+  DEF0:109DA  83C31F         add bx,byte +0x1f
+  DEF0:109DD  B92000         mov cx,0x20
+  DEF0:109E0  EB0F           jmp short 0x9f1
+  ; end: jmp
+
+--- DEF0:109F7..10A04  ; call_EE17:1853  branches:DEF0:0A10
+  DEF0:109F7  51             push cx
+  DEF0:109F8  52             push dx
+  DEF0:109F9  56             push si
+  DEF0:109FA  57             push di
+  DEF0:109FB  8BF8           mov di,ax
+  DEF0:109FD  8A05           mov al,[di]
+  DEF0:109FF  BA1F00         mov dx,0x1f
+  DEF0:10A02  EB0C           jmp short 0xa10
+  ; end: jmp
+
+--- DEF0:10A1B..10A25  ; call_EE17:18E8  branches:DEF0:0A4C
+  DEF0:10A1B  51             push cx
+  DEF0:10A1C  52             push dx
+  DEF0:10A1D  56             push si
+  DEF0:10A1E  8BF0           mov si,ax
+  DEF0:10A20  BA2000         mov dx,0x20
+  DEF0:10A23  EB27           jmp short 0xa4c
+  ; end: jmp
+
+--- DEF0:10A56..10A68  ; call_EE17:1853  branches:DEF0:0A88
+  DEF0:10A56  51             push cx
+  DEF0:10A57  52             push dx
+  DEF0:10A58  56             push si
+  DEF0:10A59  8BF0           mov si,ax
+  DEF0:10A5B  33C0           xor ax,ax
+  DEF0:10A5D  83C61F         add si,byte +0x1f
+  DEF0:10A60  83C31F         add bx,byte +0x1f
+  DEF0:10A63  BA2000         mov dx,0x20
+  DEF0:10A66  EB20           jmp short 0xa88
+  ; end: jmp
+
 --- DEF0:10A90..10AA0  ; call_EE17:1411  branches:DEF0:0AA0,DEF0:0C18
   DEF0:10A90  51             push cx
   DEF0:10A91  52             push dx
@@ -58251,5 +58305,363 @@ Traced 4145 blocks (498 new), 45818 instructions (AD00:458, C000:972, C772:1003,
   EE17:173C  5A             pop dx
   EE17:173D  59             pop cx
   EE17:173E  CB             retf
+  ; end: retf
+
+--- EE17:173F..1746  ; seed_EE17:173F  branches:EE17:174B
+  EE17:173F  8BD8           mov bx,ax
+  EE17:1741  B82000         mov ax,0x20
+  EE17:1744  EB05           jmp short 0x174b
+  ; end: jmp
+
+--- EE17:1746..174B  ; from_EE17:174B
+  EE17:1746  C60700         mov byte [bx],0x0
+  EE17:1749  43             inc bx
+  EE17:174A  48             dec ax
+  ; end: already_covered
+
+--- EE17:174B..1750  ; from_EE17:173F  branches:EE17:1746
+  EE17:174B  85C0           test ax,ax
+  EE17:174D  75F7           jnz 0x1746
+  EE17:174F  CB             retf
+  ; end: retf
+
+--- EE17:1750..1759  ; seed_EE17:1750  branches:EE17:1760
+  EE17:1750  51             push cx
+  EE17:1751  56             push si
+  EE17:1752  8BF0           mov si,ax
+  EE17:1754  B92000         mov cx,0x20
+  EE17:1757  EB07           jmp short 0x1760
+  ; end: jmp
+
+--- EE17:1759..1760  ; from_EE17:1760
+  EE17:1759  8A07           mov al,[bx]
+  EE17:175B  43             inc bx
+  EE17:175C  8804           mov [si],al
+  EE17:175E  46             inc si
+  EE17:175F  49             dec cx
+  ; end: already_covered
+
+--- EE17:1760..1767  ; from_EE17:1750  branches:EE17:1759
+  EE17:1760  85C9           test cx,cx
+  EE17:1762  75F5           jnz 0x1759
+  EE17:1764  5E             pop si
+  EE17:1765  59             pop cx
+  EE17:1766  CB             retf
+  ; end: retf
+
+--- EE17:1767..1772  ; seed_EE17:1767  branches:EE17:1781
+  EE17:1767  51             push cx
+  EE17:1768  8BD8           mov bx,ax
+  EE17:176A  83C31F         add bx,byte +0x1f
+  EE17:176D  B92000         mov cx,0x20
+  EE17:1770  EB0F           jmp short 0x1781
+  ; end: jmp
+
+--- EE17:1772..1781  ; from_EE17:1781  branches:EE17:1785
+  EE17:1772  FE07           inc byte [bx]
+  EE17:1774  803F09         cmp byte [bx],0x9
+  EE17:1777  760C           jna 0x1785
+  EE17:1779  802F0A         sub byte [bx],0xa
+  EE17:177C  49             dec cx
+  EE17:177D  4B             dec bx
+  EE17:177E  8BC3           mov ax,bx
+  EE17:1780  40             inc ax
+  ; end: already_covered
+
+--- EE17:1781..1787  ; from_EE17:1767  branches:EE17:1772
+  EE17:1781  85C9           test cx,cx
+  EE17:1783  75ED           jnz 0x1772
+  EE17:1785  59             pop cx
+  EE17:1786  CB             retf
+  ; end: retf
+
+--- EE17:1787..1794  ; seed_EE17:1787  branches:EE17:17A0
+  EE17:1787  51             push cx
+  EE17:1788  52             push dx
+  EE17:1789  56             push si
+  EE17:178A  57             push di
+  EE17:178B  8BF8           mov di,ax
+  EE17:178D  8A05           mov al,[di]
+  EE17:178F  BA1F00         mov dx,0x1f
+  EE17:1792  EB0C           jmp short 0x17a0
+  ; end: jmp
+
+--- EE17:1794..17A0  ; from_EE17:17A0
+  EE17:1794  8BF7           mov si,di
+  EE17:1796  8A4C01         mov cl,[si+0x1]
+  EE17:1799  880D           mov [di],cl
+  EE17:179B  4A             dec dx
+  EE17:179C  47             inc di
+  EE17:179D  8BCF           mov cx,di
+  EE17:179F  49             dec cx
+  ; end: already_covered
+
+--- EE17:17A0..17AB  ; from_EE17:1787  branches:EE17:1794
+  EE17:17A0  85D2           test dx,dx
+  EE17:17A2  75F0           jnz 0x1794
+  EE17:17A4  881D           mov [di],bl
+  EE17:17A6  5F             pop di
+  EE17:17A7  5E             pop si
+  EE17:17A8  5A             pop dx
+  EE17:17A9  59             pop cx
+  EE17:17AA  CB             retf
+  ; end: retf
+
+--- EE17:17AB..17B5  ; seed_EE17:17AB  branches:EE17:17DC
+  EE17:17AB  51             push cx
+  EE17:17AC  52             push dx
+  EE17:17AD  56             push si
+  EE17:17AE  8BF0           mov si,ax
+  EE17:17B0  BA2000         mov dx,0x20
+  EE17:17B3  EB27           jmp short 0x17dc
+  ; end: jmp
+
+--- EE17:17B5..17C9  ; from_EE17:17DC  branches:EE17:17C9,EE17:17E2
+  EE17:17B5  8A0C           mov cl,[si]
+  EE17:17B7  32ED           xor ch,ch
+  EE17:17B9  8A07           mov al,[bx]
+  EE17:17BB  32E4           xor ah,ah
+  EE17:17BD  2BC8           sub cx,ax
+  EE17:17BF  83F900         cmp cx,byte +0x0
+  EE17:17C2  7D05           jnl 0x17c9
+  EE17:17C4  B8FFFF         mov ax,0xffff
+  EE17:17C7  EB19           jmp short 0x17e2
+  ; end: jmp
+
+--- EE17:17C9..17D3  ; from_EE17:17B5  branches:EE17:17D3,EE17:17E2
+  EE17:17C9  83F900         cmp cx,byte +0x0
+  EE17:17CC  7E05           jng 0x17d3
+  EE17:17CE  B80100         mov ax,0x1
+  EE17:17D1  EB0F           jmp short 0x17e2
+  ; end: jmp
+
+--- EE17:17D3..17DC  ; from_EE17:17C9
+  EE17:17D3  4A             dec dx
+  EE17:17D4  46             inc si
+  EE17:17D5  8BC6           mov ax,si
+  EE17:17D7  48             dec ax
+  EE17:17D8  43             inc bx
+  EE17:17D9  8BC3           mov ax,bx
+  EE17:17DB  48             dec ax
+  ; end: already_covered
+
+--- EE17:17DC..17E6  ; from_EE17:17AB  branches:EE17:17B5
+  EE17:17DC  85D2           test dx,dx
+  EE17:17DE  75D5           jnz 0x17b5
+  EE17:17E0  33C0           xor ax,ax
+  EE17:17E2  5E             pop si
+  EE17:17E3  5A             pop dx
+  EE17:17E4  59             pop cx
+  EE17:17E5  CB             retf
+  ; end: retf
+
+--- EE17:17E6..17F8  ; seed_EE17:17E6  branches:EE17:1818
+  EE17:17E6  51             push cx
+  EE17:17E7  52             push dx
+  EE17:17E8  56             push si
+  EE17:17E9  8BF0           mov si,ax
+  EE17:17EB  33C0           xor ax,ax
+  EE17:17ED  83C61F         add si,byte +0x1f
+  EE17:17F0  83C31F         add bx,byte +0x1f
+  EE17:17F3  BA2000         mov dx,0x20
+  EE17:17F6  EB20           jmp short 0x1818
+  ; end: jmp
+
+--- EE17:17F8..180D  ; from_EE17:1818  branches:EE17:180D,EE17:180F
+  EE17:17F8  8A0F           mov cl,[bx]
+  EE17:17FA  32ED           xor ch,ch
+  EE17:17FC  03C8           add cx,ax
+  EE17:17FE  000C           add [si],cl
+  EE17:1800  803C09         cmp byte [si],0x9
+  EE17:1803  7608           jna 0x180d
+  EE17:1805  802C0A         sub byte [si],0xa
+  EE17:1808  B80100         mov ax,0x1
+  EE17:180B  EB02           jmp short 0x180f
+  ; end: jmp
+
+--- EE17:180D..1818  ; from_EE17:17F8
+  EE17:180D  33C0           xor ax,ax
+  EE17:180F  4A             dec dx
+  EE17:1810  4E             dec si
+  EE17:1811  8BCE           mov cx,si
+  EE17:1813  41             inc cx
+  EE17:1814  4B             dec bx
+  EE17:1815  8BCB           mov cx,bx
+  EE17:1817  41             inc cx
+  ; end: already_covered
+
+--- EE17:1818..1820  ; from_EE17:17E6  branches:EE17:17F8
+  EE17:1818  85D2           test dx,dx
+  EE17:181A  75DC           jnz 0x17f8
+  EE17:181C  5E             pop si
+  EE17:181D  5A             pop dx
+  EE17:181E  59             pop cx
+  EE17:181F  CB             retf
+  ; end: retf
+
+--- EE17:1820..1830  ; seed_EE17:1820  branches:EE17:1830,EE17:19A8
+  EE17:1820  51             push cx
+  EE17:1821  52             push dx
+  EE17:1822  56             push si
+  EE17:1823  57             push di
+  EE17:1824  8BF0           mov si,ax
+  EE17:1826  833E42A300     cmp word [0xa342],byte +0x0
+  EE17:182B  7403           jz 0x1830
+  EE17:182D  E97801         jmp 0x19a8
+  ; end: jmp
+
+--- EE17:1830..183E  ; from_EE17:1820  branches:EE17:183E,EE17:19A8
+  EE17:1830  803C01         cmp byte [si],0x1
+  EE17:1833  7509           jnz 0x183e
+  EE17:1835  C70642A30300   mov word [0xa342],0x3
+  EE17:183B  E96A01         jmp 0x19a8
+  ; end: jmp
+
+--- EE17:183E..1853  ; from_EE17:1830  calls:EE17:0A4D,EE17:0047  branches:EE17:1853,EE17:19A8
+  EE17:183E  8BC6           mov ax,si
+  EE17:1840  9A4D0A17EE     call 0xee17:0xa4d
+  EE17:1845  85C0           test ax,ax
+  EE17:1847  740A           jz 0x1853
+  EE17:1849  8BC6           mov ax,si
+  EE17:184B  9A470017EE     call 0xee17:0x47
+  EE17:1850  E95501         jmp 0x19a8
+  ; end: jmp
+
+--- EE17:1853..18E8  ; from_EE17:183E  calls:DEF0:109AF,DEF0:109AF,DEF0:109AF,DEF0:109AF,DEF0:109AF,EE17:0817,DEF0:109F7,DEF0:109C0,DEF0:10A56,DEF0:109F7,DEF0:109D7,DEF0:109C0  branches:EE17:18B1,EE17:191F
+  EE17:1853  B8A4A3         mov ax,0xa3a4
+  EE17:1856  9A0F008AEF     call 0xef8a:0xf
+  EE17:185B  B8C4A3         mov ax,0xa3c4
+  EE17:185E  9A0F008AEF     call 0xef8a:0xf
+  EE17:1863  B8E4A3         mov ax,0xa3e4
+  EE17:1866  9A0F008AEF     call 0xef8a:0xf
+  EE17:186B  B804A4         mov ax,0xa404
+  EE17:186E  9A0F008AEF     call 0xef8a:0xf
+  EE17:1873  B824A4         mov ax,0xa424
+  EE17:1876  9A0F008AEF     call 0xef8a:0xf
+  EE17:187B  BB0E00         mov bx,0xe
+  EE17:187E  8A4411         mov al,[si+0x11]
+  EE17:1881  98             cbw
+  EE17:1882  2BD8           sub bx,ax
+  EE17:1884  F7DB           neg bx
+  EE17:1886  8BC3           mov ax,bx
+  EE17:1888  BB0200         mov bx,0x2
+  EE17:188B  99             cwd
+  EE17:188C  F7FB           idiv bx
+  EE17:188E  8BD0           mov dx,ax
+  EE17:1890  8A4411         mov al,[si+0x11]
+  EE17:1893  B302           mov bl,0x2
+  EE17:1895  98             cbw
+  EE17:1896  F6FB           idiv bl
+  EE17:1898  8AC4           mov al,ah
+  EE17:189A  84C0           test al,al
+  EE17:189C  7413           jz 0x18b1
+  EE17:189E  8BC6           mov ax,si
+  EE17:18A0  32DB           xor bl,bl
+  EE17:18A2  9A170817EE     call 0xee17:0x817
+  EE17:18A7  8AD8           mov bl,al
+  EE17:18A9  B8A4A3         mov ax,0xa3a4
+  EE17:18AC  9A57008AEF     call 0xef8a:0x57
+  EE17:18B1  B824A4         mov ax,0xa424
+  EE17:18B4  BBC4A3         mov bx,0xa3c4
+  EE17:18B7  9A20008AEF     call 0xef8a:0x20
+  EE17:18BC  B824A4         mov ax,0xa424
+  EE17:18BF  BB24A4         mov bx,0xa424
+  EE17:18C2  9AB6008AEF     call 0xef8a:0xb6
+  EE17:18C7  B824A4         mov ax,0xa424
+  EE17:18CA  32DB           xor bl,bl
+  EE17:18CC  9A57008AEF     call 0xef8a:0x57
+  EE17:18D1  B824A4         mov ax,0xa424
+  EE17:18D4  9A37008AEF     call 0xef8a:0x37
+  EE17:18D9  B804A4         mov ax,0xa404
+  EE17:18DC  BBE4A3         mov bx,0xa3e4
+  EE17:18DF  9A20008AEF     call 0xef8a:0x20
+  EE17:18E4  33C9           xor cx,cx
+  EE17:18E6  EB37           jmp short 0x191f
+  ; end: jmp
+
+--- EE17:18E8..191F  ; from_EE17:191F  calls:DEF0:10A56,DEF0:109D7,DEF0:109D7,DEF0:10A1B,DEF0:109C0  branches:EE17:1924
+  EE17:18E8  B804A4         mov ax,0xa404
+  EE17:18EB  BB24A4         mov bx,0xa424
+  EE17:18EE  9AB6008AEF     call 0xef8a:0xb6
+  EE17:18F3  B824A4         mov ax,0xa424
+  EE17:18F6  9A37008AEF     call 0xef8a:0x37
+  EE17:18FB  B824A4         mov ax,0xa424
+  EE17:18FE  9A37008AEF     call 0xef8a:0x37
+  EE17:1903  B8A4A3         mov ax,0xa3a4
+  EE17:1906  BB04A4         mov bx,0xa404
+  EE17:1909  9A7B008AEF     call 0xef8a:0x7b
+  EE17:190E  3D0000         cmp ax,0x0
+  EE17:1911  7C11           jl 0x1924
+  EE17:1913  B8E4A3         mov ax,0xa3e4
+  EE17:1916  BB04A4         mov bx,0xa404
+  EE17:1919  9A20008AEF     call 0xef8a:0x20
+  EE17:191E  41             inc cx
+  ; end: already_covered
+
+--- EE17:191F..1973  ; from_EE17:1853  calls:DEF0:109F7,DEF0:109F7,DEF0:109F7,EE17:0817,DEF0:109F7,EE17:0817,DEF0:109F7  branches:EE17:18E8,EE17:1973,EE17:18B1
+  EE17:191F  83F909         cmp cx,byte +0x9
+  EE17:1922  7CC4           jl 0x18e8
+  EE17:1924  B8C4A3         mov ax,0xa3c4
+  EE17:1927  8AD9           mov bl,cl
+  EE17:1929  9A57008AEF     call 0xef8a:0x57
+  EE17:192E  B8E4A3         mov ax,0xa3e4
+  EE17:1931  32DB           xor bl,bl
+  EE17:1933  9A57008AEF     call 0xef8a:0x57
+  EE17:1938  B8E4A3         mov ax,0xa3e4
+  EE17:193B  32DB           xor bl,bl
+  EE17:193D  9A57008AEF     call 0xef8a:0x57
+  EE17:1942  8BC6           mov ax,si
+  EE17:1944  32DB           xor bl,bl
+  EE17:1946  9A170817EE     call 0xee17:0x817
+  EE17:194B  8AD8           mov bl,al
+  EE17:194D  B8A4A3         mov ax,0xa3a4
+  EE17:1950  9A57008AEF     call 0xef8a:0x57
+  EE17:1955  8BC6           mov ax,si
+  EE17:1957  32DB           xor bl,bl
+  EE17:1959  9A170817EE     call 0xee17:0x817
+  EE17:195E  8AD8           mov bl,al
+  EE17:1960  B8A4A3         mov ax,0xa3a4
+  EE17:1963  9A57008AEF     call 0xef8a:0x57
+  EE17:1968  42             inc dx
+  EE17:1969  803ED4A300     cmp byte [0xa3d4],0x0
+  EE17:196E  7503           jnz 0x1973
+  EE17:1970  E93EFF         jmp 0x18b1
+  ; end: jmp
+
+--- EE17:1973..197E  ; from_EE17:191F  calls:EE17:0047  branches:EE17:198F
+  EE17:1973  8BC6           mov ax,si
+  EE17:1975  9A470017EE     call 0xee17:0x47
+  EE17:197A  33C9           xor cx,cx
+  EE17:197C  EB11           jmp short 0x198f
+  ; end: jmp
+
+--- EE17:197E..198F  ; from_EE17:198F
+  EE17:197E  8BFE           mov di,si
+  EE17:1980  47             inc di
+  EE17:1981  03F9           add di,cx
+  EE17:1983  BB1000         mov bx,0x10
+  EE17:1986  03D9           add bx,cx
+  EE17:1988  8A87C4A3       mov al,[bx-0x5c3c]
+  EE17:198C  8805           mov [di],al
+  EE17:198E  41             inc cx
+  ; end: already_covered
+
+--- EE17:198F..19A8  ; from_EE17:1973  calls:EE17:0AF4,EE17:0A78  branches:EE17:197E
+  EE17:198F  83F910         cmp cx,byte +0x10
+  EE17:1992  7CEA           jl 0x197e
+  EE17:1994  83EA03         sub dx,byte +0x3
+  EE17:1997  885411         mov [si+0x11],dl
+  EE17:199A  8BC6           mov ax,si
+  EE17:199C  9AF40A17EE     call 0xee17:0xaf4
+  EE17:19A1  8BC6           mov ax,si
+  EE17:19A3  9A780A17EE     call 0xee17:0xa78
+  ; end: already_covered
+
+--- EE17:19A8..19AD  ; from_EE17:1820
+  EE17:19A8  5F             pop di
+  EE17:19A9  5E             pop si
+  EE17:19AA  5A             pop dx
+  EE17:19AB  59             pop cx
+  EE17:19AC  CB             retf
   ; end: retf
 
