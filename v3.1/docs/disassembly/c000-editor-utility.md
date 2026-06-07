@@ -8,6 +8,15 @@ helpers used by the WP editor.
 See [`banked-thunk-dispatch.md`](banked-thunk-dispatch.md) for the
 thunk B dispatch table.
 
+## C000:B064 — Duplicate VM Interpreter
+
+The block at `C000:B064..B08A` is a second copy of the C772 menu
+interpreter loop (identical logic to `C772:3944`). It uses the same
+dispatch table at `C772:396F` and the same return address `0x3944`.
+Reached from `C000:794D` (thunk B slot 11). This allows the editor
+utility to yield back to the bytecode interpreter without returning
+to C772 segment code.
+
 ## C000:98E9 — Thunk B Slot 10 Entry
 
 Dispatches editor operations. Saves BP, checks flags, then calls

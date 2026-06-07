@@ -1,6 +1,6 @@
 # C772 Native Helpers
 
-The C772 segment native code (898 blocks) called by the menu
+The C772 segment native code (1003 blocks) called by the menu
 interpreter opcode handlers and by DEF0 service callbacks. The
 segment splits into the bytecode VM (documented in
 [`menu-interpreter.md`](menu-interpreter.md)) and native x86
@@ -13,10 +13,11 @@ See [`app-entry.md`](app-entry.md) for the cold/warm entry points.
 | Address range | Blocks | Purpose |
 | --- | --- | --- |
 | `C772:0004..022D` | 14 | Entry points + far-call wrappers |
+| `C772:0300..0BEF` | 20 | VM outlier handlers + helpers |
 | `C772:0D20..2FFF` | 234 | Display update + text processing |
-| `C772:3600..39FF` | 2 | VM core (interpreter + dispatch) |
+| `C772:3600..39FF` | 86 | VM core (interpreter + dispatch + handlers) |
 | `C772:3A00..45FF` | 74 | Text buffer operations + state |
-| `C772:4600..5FFF` | 122 | Document editing |
+| `C772:4600..5FFF` | 130 | Document editing + format dispatch |
 | `C772:6000..7FFF` | 212 | Page layout + cursor management |
 | `C772:8000..8FFF` | 88 | Application service dispatcher |
 | `C772:9000..9FFF` | 71 | Print / file / preview services |

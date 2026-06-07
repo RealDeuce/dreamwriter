@@ -84,16 +84,17 @@ Routine `C000:0327` seeds the default bank mirrors:
 
 ## Code Segment Map
 
-Confirmed from a full recursive disassembly trace (3523 blocks, 44326
-instructions) starting at `C000:0029` with IRQ and banked-thunk seeds.
+Confirmed from a full recursive disassembly trace (4145 blocks, 45818
+instructions) starting at `C000:0029` with IRQ, thunk, INT 21h,
+menu VM, and dispatch table seeds.
 
 ### Window 6 — Port 0x16=0x01, Bank 14, File 0xC0000 (Fixed)
 
 | Segment | File base | Instructions | Role |
 | --- | ---: | ---: | --- |
-| `C000` | `0xC0000` | 6294 | Low-level firmware: boot, IRQs, banking, I/O ports, diagnostics. |
-| `C772` | `0xC7720` | 13337 | Application runtime: word processor, organizer, menus. |
-| `DEF0` | `0xDEF00` | 20500 | Service/wrapper layer between C000 and C772. Far-call table targets. |
+| `C000` | `0xC0000` | 9829 | Low-level firmware: boot, IRQs, banking, I/O ports, diagnostics. |
+| `C772` | `0xC7720` | 9928 | Application runtime: word processor, organizer, menus. |
+| `DEF0` | `0xDEF00` | 20502 | Service/wrapper layer between C000 and C772. Far-call table targets. |
 
 All three segments share window 6. `DEF0` is the v3.1 equivalent of
 v2.1's `DC98`. The high instruction count in `DEF0` reflects its role as
@@ -104,13 +105,13 @@ the crossroads — both `C000` and `C772` call into it heavily.
 | Segment | File base | Instructions | Role |
 | --- | ---: | ---: | --- |
 | `EE17` | `0xEE170` | 2261 | Utility library. Calls `C000:3F35` repeatedly. Zero data gaps. |
-| `ED1B` | `0xED1B0` | 1934 | Sparse code. Calls banked `AD00:009A`. Contains `JMP FAR C000:0000` (full reset). |
+| `ED1B` | `0xED1B0` | 278 | Bank-switch wrappers. Callbacks from AD00 to DEF0 services. |
 
 ### Window 5 — Port 0x15=0x02 (Banked During Call)
 
 | Segment | File base | Instructions | Role |
 | --- | ---: | ---: | --- |
-| `AD00` | `0xAD000` | — | Banked ROM code called from `ED1B:0D42`. Port 0x15 remapped to bank 13 (`0x02`) before the call. |
+| `AD00` | `0xAD000` | 3020 | ROM CARD subsystem. 21-opcode dispatch table at `AD00:0202`. |
 
 ### Banked (Dynamic Port Remap)
 
