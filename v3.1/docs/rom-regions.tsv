@@ -1,5 +1,11 @@
 start	end	type	confidence	segment	label	notes
-0xC0000	0xC8000	code	confirmed		startup-code	Reset/startup code, interrupt stubs, bank setup, cold/warm boot paths, hardware init. C000 segment at file 0xC0000 via port 0x16=0x01.
+0xC0000	0xC1228	code	confirmed		startup-code	Reset/startup code, interrupt stubs, bank setup, cold/warm boot paths, hardware init, IVT installer. C000 segment at file 0xC0000 via port 0x16=0x01.
+0xC1228	0xC12CC	data	confirmed		far-call-table-source	41 far-pointer entries copied to RAM [0200..029C] during vector install. Mostly DEF0:xxxx targets.
+0xC61DF	0xC623F	data	confirmed		int21-validity-table	Byte map from AH (00..5F) to dispatch slot index. 0xFF = unsupported.
+0xC623F	0xC6277	data	confirmed		int21-dispatch-table	Word table of C000:xxxx handler offsets, indexed by validity slot.
+0xC6277	0xC62F6	code	confirmed		int21-dispatch	INT 21h entry: register save, validity check, dispatch, flag propagation, IRET.
+0xDEF00	0xDEF0A	data	confirmed	DEF0	def0-header	Display-resource header or padding before first wrapper.
+0xDEF0A	0xDF000	code	confirmed	DEF0	def0-wrappers	Thin far-call wrappers: register save, inner call or INT 21h, restore, RETF.
 0xC7789	0xC77C9	text	confirmed		diagnostic-banner	"Diagnostic 31BAB218" banner and keyboard check prompt.
 0xC7799	0xC779D	data	confirmed		warm-ram-signature	4-byte warm-RAM signature "218 " checked at boot against RAM [1000].
 0xE0000	0xFFFFF	mixed	rough		high-rom	High ROM bank (port 0x17=0x00). Contains reset trampoline at 0xF6E30, reset vector at 0xFFFF0, and other resources TBD.

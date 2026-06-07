@@ -56,6 +56,27 @@ banking model described in [`map.md`](map.md).
 | `C000:6277` | `0xC6277` | INT 21h dispatch target. |
 | `C000:6523` | `0xC6523` | INT 21h services init. |
 
+## Interrupt Handlers
+
+| Address | File offset | Meaning |
+| --- | --- | --- |
+| `C000:1161` | `0xC1161` | Install interrupt vectors (IVT fill + far-call table copy). |
+| `C000:1832` | `0xC1832` | INT 01h: diagnostic/single-step hook (v2.1: `C000:157D`). |
+| `C000:04D0` | `0xC04D0` | INT 02h (NMI): save context and reset. New in v3.1. |
+| `C000:6277` | `0xC6277` | INT 21h dispatch (v2.1: `C000:5098`). |
+| `C000:141F` | `0xC141F` | Default interrupt target (IRET). |
+
+## DEF0 Segment (Wrappers)
+
+| Address | File offset | Meaning |
+| --- | --- | --- |
+| `DEF0:0000` | `0xDEF00` | Segment base (data header + wrapper functions). |
+| `DEF0:0043` | `0xDEF43` | INT 21h AH=08h wrapper (keyboard input). |
+| `DEF0:0063` | `0xDEF63` | INT 21h AH=0Bh wrapper (input status). |
+| `DEF0:0074` | `0xDEF74` | INT 21h AH=2Ah wrapper (get date). |
+| `DEF0:0098` | `0xDEF98` | INT 21h AH=2Ch wrapper (get time). |
+| `DEF0:00F9` | `0xDEFF9` | INT 21h AH=2Bh wrapper (set date). |
+
 ## Far Call Targets
 
 | Address | Meaning |
