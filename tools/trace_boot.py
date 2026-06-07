@@ -307,6 +307,9 @@ def main():
     add_segment("C772", 0xC772, 0x188E0)     # C772:0000 to end of window
     add_segment("DEF0", 0xDEF0, 0x10F00)     # DEF0:0000 to end of window
 
+    # Window 5 (port 0x15=0x02 during banked call, bank 13, file 0xA0000)
+    add_segment("AD00", 0xAD00, 0x13000)     # AD00:0000 to end of window
+
     # Window 7 (port 0x17=0x00, bank 15, file 0xE0000) — fixed, not banked
     add_segment("ED1B", 0xED1B, 0x12E50)     # ED1B:0000 to end of window
     add_segment("EE17", 0xEE17, 0x11E90)     # EE17:0000 to end of window
