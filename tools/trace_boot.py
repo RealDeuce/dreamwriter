@@ -7,7 +7,7 @@ at the instruction level so no address is disassembled twice.
 
 Usage:
     python3 tools/trace_boot.py [--rom PATH] [--seed SEG:OFF ...] [--irqs] [--thunks]
-        [--int21] [--menu-vm] [--load FILE]
+        [--int21] [--menu-vm] [--dispatch] [--load FILE]
 
 Default seeds: C000:0029 (boot entry).
 --irqs adds hardware IRQ entry points (NMI, keyboard, warm/power).
@@ -15,6 +15,8 @@ Default seeds: C000:0029 (boot entry).
 each slot as a seed.
 --menu-vm reads the C772 bytecode interpreter dispatch table at C772:396F
 (96 entries) and adds each handler as a seed.
+--dispatch reads all other known indirect-jump dispatch tables (AD00
+ROM CARD ops, C000 display commands, C772 format/landing pads).
 --load FILE reloads a previous trace output file to avoid re-tracing
 unchanged blocks. Only new seeds are traced incrementally.
 """
@@ -318,6 +320,66 @@ def read_menu_vm_table(table_offset: int = 0x396F, count: int = 96) -> list[tupl
     return seeds
 
 
+def read_word_table(seg_name: str, table_offset: int, count: int,
+                    label_prefix: str) -> list[tuple[str, int, str]]:
+    """Read a word dispatch table from ROM and return seed entries."""
+    seg = SEGMENTS[seg_name]
+    seeds = []
+    seen = set()
+    for i in range(count):
+        file_off = seg.file_base + table_offset + i * 2
+        if file_off + 2 > len(ROM):
+            break
+        target = struct.unpack_from("<H", ROM, file_off)[0]
+        if 0 < target < seg.max_offset and target not in seen:
+            seen.add(target)
+            seeds.append((seg_name, target, f"{label_prefix}_{i}"))
+    return seeds
+
+
+def read_dispatch_tables() -> list[tuple[str, int, str]]:
+    """Read all known indirect-jump dispatch tables not covered by other flags."""
+    seeds = []
+
+    # AD00:0202 — ROM CARD operation dispatch (21 word entries)
+    # Reached via AD00:01FD  jmp [cs:bx+0x202]
+    seeds.extend(read_word_table("AD00", 0x0202, 21, "ad00_op"))
+
+    # C000:6865 — display stream FF-command dispatch (32 word entries)
+    # Reached via C000:6860  jmp [cs:si+0x6865]
+    seeds.extend(read_word_table("C000", 0x6865, 32, "disp_cmd"))
+
+    # C772:40ED — format sub-dispatch (7 word entries)
+    # Reached via C772:3FA6  jmp dx  where dx = [cs:si], si = 0x40ED + (al-1)*2
+    seeds.extend(read_word_table("C772", 0x40ED, 7, "fmt_op"))
+
+    # C772:215F — computed-jump landing pad (JMP SHORT fan-out)
+    # Reached via C772:215D  jmp si  where si = byte_index + 0x215F
+    seeds.append(("C772", 0x215F, "landing_215F"))
+
+    # C772:6BE3 — character class landing pad (JMP SHORT fan-out)
+    # Reached via C772:6BE1  jmp si  where si = nibble*2 + 0x6BE3
+    seeds.append(("C772", 0x6BE3, "landing_6BE3"))
+
+    # C772:968A inline search table targets (CALL 968A pattern at 9638)
+    # Table at 963B: match_byte, target_word triples
+    seg = SEGMENTS["C772"]
+    table_off = seg.file_base + 0x963B
+    seen = set()
+    i = 0
+    while i < 30:
+        match_byte = ROM[table_off + i]
+        if match_byte == 0:
+            break
+        target = struct.unpack_from("<H", ROM, table_off + i + 1)[0]
+        if 0 < target < seg.max_offset and target not in seen:
+            seen.add(target)
+            seeds.append(("C772", target, f"search_96_{match_byte:02X}"))
+        i += 3
+
+    return seeds
+
+
 def load_trace(path: str) -> int:
     """Load a previous trace output file, reconstructing BLOCKS and covered sets."""
     header_re = re.compile(
@@ -437,6 +499,8 @@ def main():
                         help="Add INT 21h handler dispatch table entries as seeds")
     parser.add_argument("--menu-vm", action="store_true",
                         help="Add C772 menu VM bytecode handler dispatch table entries as seeds")
+    parser.add_argument("--dispatch", action="store_true",
+                        help="Add all other known indirect-jump dispatch table entries as seeds")
     parser.add_argument("--load", type=str, metavar="FILE",
                         help="Load previous trace output to resume from")
     parser.add_argument("--max-blocks", type=int, default=5000)
@@ -582,6 +646,9 @@ def main():
 
     if args.menu_vm:
         seeds.extend(read_menu_vm_table())
+
+    if args.dispatch:
+        seeds.extend(read_dispatch_tables())
 
     loaded = 0
     if args.load:
