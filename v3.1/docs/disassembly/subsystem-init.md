@@ -270,10 +270,215 @@ C000:2EA4  E8 0100           call C000:2EA8
 C000:2EA7  C3                ret
 ```
 
-`C000:2EA8` (the last call) sets `[1112]=0x723A` and continues with
-further init. `C000:2FD5` sets `[1333]=3`, `[1334]=0` (sound slot
-selector, see [`sound-lowlevel.md`](sound-lowlevel.md)), and calls
-`C000:2F44` which initializes the RTC check sentinels via `C000:0CA7`.
+### C000:2E72 Init Chain Subroutines
+
+Each subroutine called from `C000:2E72`, in call order:
+
+**`C000:3EBB` — Copy keyboard translation table to RAM.** Copies 0x50
+bytes from `CS:3927` to `[1643..1692]`.
+
+```asm
+; file 0xC3EBB
+C000:3EBB  1E                push ds
+C000:3EBC  06                push es
+C000:3EBD  8C D9             mov cx,ds
+C000:3EBF  8E C1             mov es,cx
+C000:3EC1  8C C9             mov cx,cs
+C000:3EC3  8E D9             mov ds,cx       ; DS = CS (ROM)
+C000:3EC5  B9 5000           mov cx,50       ; 80 bytes
+C000:3EC8  BE 2739           mov si,3927     ; source: CS:3927
+C000:3ECB  BF 4316           mov di,1643     ; dest: [1643]
+C000:3ECE  FC                cld
+C000:3ECF  F3 A4             rep movsb
+C000:3ED1  07                pop es
+C000:3ED2  1F                pop ds
+C000:3ED3  C3                ret
+```
+
+**`C000:3ED4` — Copy keyboard handler pointer table to RAM.** Copies
+0x1E0 bytes from `CS:3887` to `[1126..1305]`, then builds a 6-entry
+pointer table at `[1114..111F]` with 0x50-byte spacing starting at
+`0x1126`.
+
+```asm
+; file 0xC3ED4
+C000:3ED4  1E                push ds
+C000:3ED5  06                push es
+C000:3ED6  8C D9             mov cx,ds
+C000:3ED8  8E C1             mov es,cx
+C000:3EDA  8C C9             mov cx,cs
+C000:3EDC  8E D9             mov ds,cx       ; DS = CS
+C000:3EDE  B9 E001           mov cx,1E0      ; 480 bytes
+C000:3EE1  BE 8738           mov si,3887     ; source: CS:3887
+C000:3EE4  BF 2611           mov di,1126     ; dest: [1126]
+C000:3EE7  FC                cld
+C000:3EE8  F3 A4             rep movsb
+C000:3EEA  B9 0600           mov cx,6        ; 6 pointers
+C000:3EED  B8 2611           mov ax,1126     ; first entry
+C000:3EF0  BF 1411           mov di,1114
+C000:3EF3  AB                stosw           ; store pointer
+C000:3EF4  05 5000           add ax,50       ; next entry += 0x50
+C000:3EF7  E2 FA             loop C000:3EF3
+C000:3EF9  07                pop es
+C000:3EFA  1F                pop ds
+C000:3EFB  C3                ret
+```
+
+**`C000:2B86` — Set DTA address.** Calls INT 21h AH=1Ah to set the
+Disk Transfer Area to `[1008]`.
+
+```asm
+; file 0xC2B86
+C000:2B86  BA 0810           mov dx,1008     ; DTA address
+C000:2B89  1E                push ds
+C000:2B8A  B4 1A             mov ah,1A       ; INT 21h: set DTA
+C000:2B8C  CD 21             int 21h
+C000:2B8E  1F                pop ds
+C000:2B8F  C3                ret
+```
+
+**`C000:2F32` — Init RTC date and clear time.** Sets date to
+year=0x7CE (1998), month=1, day=1 via INT 21h AH=2Bh, clears time via
+INT 21h AH=2Dh, then calls `C000:0CA7` to init the RTC check sentinels
+and sets `[1337]=0x7CE`, `[1335]=0x1770`.
+
+```asm
+; file 0xC2F32
+C000:2F32  B9 CE07           mov cx,7CE      ; year 1998 (BCD)
+C000:2F35  BA 0101           mov dx,101      ; month=1, day=1
+C000:2F38  B4 2B             mov ah,2B       ; INT 21h: set date
+C000:2F3A  CD 21             int 21h
+C000:2F3C  33 C9             xor cx,cx       ; hour=0, minute=0
+C000:2F3E  33 D2             xor dx,dx       ; second=0, centisec=0
+C000:2F40  B4 2D             mov ah,2D       ; INT 21h: set time
+C000:2F42  CD 21             int 21h
+C000:2F44  E8 60DD           call C000:0CA7  ; init RTC check sentinels
+C000:2F47  C7 06 3713 CE07   mov word [1337],7CE
+C000:2F4D  C7 06 3513 7017   mov word [1335],1770
+C000:2F53  C3                ret
+```
+
+**`C000:2F7C` — Init keyboard scan parameters.** Sets `[132E..1332]`
+to defaults: `[132E]=6, [132F]=1, [1330..1332]=0`.
+
+```asm
+; file 0xC2F7C
+C000:2F7C  B0 06             mov al,6
+C000:2F7E  A2 2E13           mov [132E],al
+C000:2F81  B0 01             mov al,1
+C000:2F83  A2 2F13           mov [132F],al
+C000:2F86  B0 00             mov al,0
+C000:2F88  A2 3013           mov [1330],al
+C000:2F8B  B0 00             mov al,0
+C000:2F8D  A2 3113           mov [1331],al
+C000:2F90  B0 00             mov al,0
+C000:2F92  A2 3213           mov [1332],al
+C000:2F95  C3                ret
+```
+
+**`C000:2FB0` — Init auto-save timer parameters.** Sets `[1447]=3`,
+`[1448..1449]=0`.
+
+```asm
+; file 0xC2FB0
+C000:2FB0  B0 03             mov al,3
+C000:2FB2  A2 4714           mov [1447],al
+C000:2FB5  32 C0             xor al,al
+C000:2FB7  A2 4814           mov [1448],al
+C000:2FBA  32 C0             xor al,al
+C000:2FBC  A2 4914           mov [1449],al
+C000:2FBF  C3                ret
+```
+
+**`C000:2FD5` — Init sound slot selector.** Sets `[1333]=3` and
+`[1334]=0` (sound slot 0, used by
+[`sound-lowlevel.md`](sound-lowlevel.md) during normal resume).
+
+```asm
+; file 0xC2FD5
+C000:2FD5  B0 03             mov al,3
+C000:2FD7  A2 3313           mov [1333],al
+C000:2FDA  32 C0             xor al,al
+C000:2FDC  A2 3413           mov [1334],al   ; sound slot = 0
+C000:2FDF  C3                ret
+```
+
+**`C000:2EA8` — Clear boot/resume state variables.** Clears `[146F]`
+(resume state), `[1443]`, `[15A2]` (diagnostic active), `[1439]` (RTC
+flag), `[143C]` (warm-retry), `[143D]`, `[1107]`, `[110D]`, `[1446]`,
+`[1442]`, `[1445]`, `[7195]`, `[7D75..7D79]`. Sets `[1324]=1`,
+`[7D79]=1`, `[1112]=0x723A`.
+
+```asm
+; file 0xC2EA8
+C000:2EA8  C7 06 1211 3A72   mov word [1112],723A
+C000:2EAE  33 C0             xor ax,ax
+C000:2EB0  A3 6F14           mov [146F],ax   ; clear resume state
+C000:2EB3  A3 4314           mov [1443],ax
+C000:2EB6  A2 A215           mov [15A2],al   ; clear diagnostic flag
+C000:2EB9  A2 3914           mov [1439],al   ; clear RTC abnormal flag
+C000:2EBC  A2 3C14           mov [143C],al   ; clear warm-retry
+C000:2EBF  A2 3D14           mov [143D],al
+C000:2EC2  A2 0711           mov [1107],al
+C000:2EC5  A3 0D11           mov [110D],ax
+C000:2EC8  A2 4614           mov [1446],al
+C000:2ECB  A2 4214           mov [1442],al
+C000:2ECE  A2 4514           mov [1445],al
+C000:2ED1  A2 9571           mov [7195],al
+C000:2ED4  A2 767D           mov [7D76],al
+C000:2ED7  A2 757D           mov [7D75],al
+C000:2EDA  A2 787D           mov [7D78],al
+C000:2EDD  FE C0             inc al          ; AL = 1
+C000:2EDF  A2 2413           mov [1324],al
+C000:2EE2  A2 797D           mov [7D79],al
+```
+
+Continues with additional state initialization through `C000:2EF7`
+before returning.
+
+### C000:2E2D Validation Subroutines
+
+Called by `C000:2E2D` to validate stored state for warm resume:
+
+**`C000:2EF8` — Validate RTC date/time.** Reads the RTC via
+`C000:0B74` (which calls `C000:0E13` to scan RTC registers, then
+extracts year, month, day, hour, minute, second from the scan buffer).
+Checks year is `0x7BC..0x832`, month is `1..12`, day is nonzero,
+hour `<24`, minute `<60`, second `<60`. Calls `C000:0BFA` for the time
+portion. Sets `[1441]` fail flag on any range error.
+
+**`C000:2F54` — Validate keyboard scan parameters.** Checks 5 bytes
+at `[132E..1332]` are within valid ranges (3..7, 0..1, 0..1, 0..2,
+0..1). Sets `[1441]` fail flag if out of range.
+
+**`C000:2F96` — Validate auto-save timer parameters.** Checks 3 bytes
+at `[1447..1449]` are within valid ranges (0..6, 0..1, 0..1). Sets
+`[1441]` fail flag if out of range.
+
+**`C000:2FC0` — Validate sound parameters.** Checks 2 bytes at
+`[1333..1334]` are within valid ranges (0..6, 0..3). Sets `[1441]`
+fail flag if out of range.
+
+### C000:6523 Init Subroutines
+
+**`C000:6BF6` — Clear framebuffer.** Fills `[8000..8FFF]` with zero
+(2048 words). Returns AL=1.
+
+```asm
+; file 0xC6BF6
+C000:6BF6  33 C0             xor ax,ax
+C000:6BF8  8A E0             mov ah,al
+C000:6BFA  BF 0080           mov di,8000
+C000:6BFD  B9 0008           mov cx,800
+C000:6C00  FC                cld
+C000:6C01  F3 AB             rep stosw
+C000:6C03  B0 01             mov al,1
+C000:6C05  C3                ret
+```
+
+**`C000:6CA7` — Init display page table.** Computes page table
+entries based on `[1728]` (display page count) and writes them starting
+at `DEF0:D8C6` (via ES).
 
 ## C000:12CC — Clear Keyboard State and IRQ Setup
 
