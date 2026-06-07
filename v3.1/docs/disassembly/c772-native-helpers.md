@@ -1,6 +1,6 @@
 # C772 Native Helpers
 
-The C772 segment native code (1003 blocks) called by the menu
+The C772 segment native code (994 blocks) called by the menu
 interpreter opcode handlers and by DEF0 service callbacks. The
 segment splits into the bytecode VM (documented in
 [`menu-interpreter.md`](menu-interpreter.md)) and native x86

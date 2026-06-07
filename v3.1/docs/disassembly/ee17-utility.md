@@ -6,7 +6,8 @@ data gaps — a solid, contiguous code library.
 
 Called from DEF0 (2 call sites) and internally from itself. All external
 calls go to `C000:3F35` (display script wrapper, 13 calls) or back into
-DEF0.
+DEF0. Some routines in the upper address range are called via segment
+alias `EF8A` — see [`ef8a-utility.md`](ef8a-utility.md).
 
 ## C000:3F35 Dependency
 

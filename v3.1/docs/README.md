@@ -13,8 +13,8 @@ banking, and protocol docs in `../../docs/` apply to both v2.1 and v3.1.
 
 ## Disassembly
 
-Generated from a full recursive trace (4145 blocks, 45818 instructions
-across 6 segments). Raw trace at [`disassembly/trace-full.txt`](disassembly/trace-full.txt).
+Generated from a full recursive trace (4168 blocks, 45996 instructions
+across 7 segments). Raw trace at [`disassembly/trace-full.txt`](disassembly/trace-full.txt).
 Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 
 ### C000 — Low-Level Firmware
@@ -74,7 +74,8 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 
 | File | Scope |
 | --- | --- |
-| [`disassembly/ee17-utility.md`](disassembly/ee17-utility.md) | EE17 utility library: state block management, display page init (212 blocks, 0 gaps). |
+| [`disassembly/ee17-utility.md`](disassembly/ee17-utility.md) | EE17 utility library: state block management, display page init (212 blocks). |
+| [`disassembly/ef8a-utility.md`](disassembly/ef8a-utility.md) | EF8A utility routines (31 blocks). Called from EE17 via segment alias. |
 | [`disassembly/ed1b-ad00-banked.md`](disassembly/ed1b-ad00-banked.md) | ED1B bank-switch wrappers (12 blocks) and AD00 ROM CARD subsystem (458 blocks). |
 
 ## Shared Docs

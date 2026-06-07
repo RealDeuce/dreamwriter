@@ -84,7 +84,7 @@ Routine `C000:0327` seeds the default bank mirrors:
 
 ## Code Segment Map
 
-Confirmed from a full recursive disassembly trace (4145 blocks, 45818
+Confirmed from a full recursive disassembly trace (4168 blocks, 45996
 instructions) starting at `C000:0029` with IRQ, thunk, INT 21h,
 menu VM, and dispatch table seeds.
 
@@ -92,9 +92,9 @@ menu VM, and dispatch table seeds.
 
 | Segment | File base | Instructions | Role |
 | --- | ---: | ---: | --- |
-| `C000` | `0xC0000` | 9829 | Low-level firmware: boot, IRQs, banking, I/O ports, diagnostics. |
-| `C772` | `0xC7720` | 9928 | Application runtime: word processor, organizer, menus. |
-| `DEF0` | `0xDEF00` | 20502 | Service/wrapper layer between C000 and C772. Far-call table targets. |
+| `C000` | `0xC0000` | 9827 | Low-level firmware: boot, IRQs, banking, I/O ports, diagnostics. |
+| `C772` | `0xC7720` | 9851 | Application runtime: word processor, organizer, menus. |
+| `DEF0` | `0xDEF00` | 20494 | Service/wrapper layer between C000 and C772. Far-call table targets. |
 
 All three segments share window 6. `DEF0` is the v3.1 equivalent of
 v2.1's `DC98`. The high instruction count in `DEF0` reflects its role as
@@ -105,6 +105,7 @@ the crossroads — both `C000` and `C772` call into it heavily.
 | Segment | File base | Instructions | Role |
 | --- | ---: | ---: | --- |
 | `EE17` | `0xEE170` | 2261 | Utility library. Calls `C000:3F35` repeatedly. Zero data gaps. |
+| `EF8A` | `0xEF8A0` | 265 | Utility routines called from EE17 via far-call with segment alias. |
 | `ED1B` | `0xED1B0` | 278 | Bank-switch wrappers. Callbacks from AD00 to DEF0 services. |
 
 ### Window 5 — Port 0x15=0x02 (Banked During Call)
