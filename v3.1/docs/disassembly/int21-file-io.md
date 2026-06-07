@@ -99,12 +99,79 @@ C000:63AB  74 2C             jz C000:63D9
 
 ## File Implementation Routines
 
-The actual file operations live in three main clusters:
+The actual file operations live in three main clusters, now fully traced
+via the `--int21` flag:
 
-- **`C000:40B3..4500`** — create, open, close (cluster: 19 blocks)
+- **`C000:40B3..4540`** — create, open, close, storage dispatch
 - **`C000:4984..5100`** — read, write, seek, delete, attributes
-- **`C000:5A0C..5D25`** — find first/next, rename, date/time
+- **`C000:453D..4892`** — find first/next, rename, date/time
 
-All implementations use the DTA at the address set by AH=1Ah, the
-file handle table at `[6F5E..6F61]`, and the storage endpoint dispatch
-at `C000:4396` (see [`subsystem-init.md`](subsystem-init.md)).
+### Shared Helpers
+
+| Address | Callers | Purpose |
+| --- | --- | --- |
+| `C000:528B` | create, open, delete, attrs, find, rename | Filename parser. Takes DS:DX (filename), ES from `[BP+8]`. |
+| `C000:587C` | close, read, write, seek | Handle lookup. Resolves BX (file handle) to internal state. |
+| `C000:5D25` | create | Directory operation. |
+| `C000:5DB7` | delete | Directory removal. |
+| `C000:0D42` | read, write | DreamLink endpoint check. Tests `[6F51]` for endpoint `0x0A`. |
+| `C000:5703` | seek | File pointer helper. |
+| `C000:5497` | seek, attrs | Storage geometry helper. |
+| `C000:569B` | close | Handle release. |
+| `C000:50F5` | attrs | Attribute modifier. |
+
+### Implementation Entry Points (Traced)
+
+**`C000:40B3` — Create file (AH=3Ch).** Saves CX (attributes) to
+`[6F1C]`, parses filename via `C000:528B`, calls directory operations.
+
+```asm
+C000:40B3  89 0E 1C6F        mov [6F1C],cx    ; save attributes
+C000:40B7  8B F2             mov si,dx         ; SI = filename
+C000:40B9  52                push dx
+C000:40BA  06                push es
+C000:40BB  8E 46 08          mov es,[bp+8]     ; ES from caller
+C000:40BE  E8 CA11           call C000:528B    ; parse filename
+```
+
+**`C000:429B` — Open file (AH=3Dh).** Saves access mode from AX to
+`[6F32]`, parses filename, may fall through to create at `C000:40B3`.
+
+**`C000:436C` — Close file (AH=3Eh).** Calls handle lookup (`587C`),
+handle release (`569B`), jumps to common return at `C000:51CA`.
+
+```asm
+C000:436C  E8 0D15           call C000:587C    ; handle lookup
+C000:436F  E8 2913           call C000:569B    ; handle release
+C000:4372  E9 550E           jmp C000:51CA     ; common return
+```
+
+**`C000:4984` — Read file (AH=3Fh).** Calls handle lookup, checks if
+endpoint is DreamLink (`[6F51]==0x0A`), reads data.
+
+**`C000:4AE2` — Write file (AH=40h).** Same structure as read — handle
+lookup, DreamLink check, write data.
+
+**`C000:4DDA` — Seek (AH=42h).** Handle lookup, clears `[6F41..6F44]`,
+saves DX:CX as seek offset to `[6F12..6F15]`, dispatches on seek mode
+from AX.
+
+**`C000:4F9B` — Delete file (AH=41h).** Sets `[6FE2]=1`, parses
+filename, calls directory removal at `C000:5DB7`.
+
+**`C000:5026` — Get/set attributes (AH=43h).** Parses filename,
+dispatches on AL (0=get, 1=set).
+
+### File State Variables
+
+| Address | Purpose |
+| --- | --- |
+| `[6F1C]` | Create attributes (from CX) |
+| `[6F32]` | Open access mode (from AL) |
+| `[6F41..6F44]` | Seek result accumulator |
+| `[6F12..6F15]` | Seek offset (DX:CX from caller) |
+| `[6F51]` | Current storage endpoint |
+| `[6F5A]` | Seek mode (from AL) |
+| `[6F5E..6F61]` | File handle table (4 bytes, cleared to FF) |
+| `[6FE2]` | File operation active flag |
+| `[15AF]` | Error code word |
