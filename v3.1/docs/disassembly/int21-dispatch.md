@@ -61,7 +61,7 @@ C000:62EE  CF                iret
 ```
 
 Invalid function numbers land at `C000:62EF` (`JMP SHORT $` — infinite loop).
-This matches v2.1 behavior.
+Invalid requests halt in a tight loop.
 
 ## Function Table
 
@@ -101,14 +101,4 @@ converts slots to handler offsets.
 | `5Bh` | Create new file | `C000:6415` | |
 | `FFh` | (private) store validate | `C000:4396` | via special case, not table |
 
-The supported function set is identical to v2.1.
-
-## Comparison With v2.1
-
-| Element | v2.1 | v3.1 |
-| --- | --- | --- |
-| Dispatcher | `C000:5098` | `C000:6277` |
-| Validity table | `C000:5000` | `C000:61DF` |
-| Dispatch table | `C000:5060` | `C000:623F` |
-| AH=FF handler | `C000:4811` | `C000:4396` |
-| Supported functions | 28 | 28 (same set) |
+28 supported functions.

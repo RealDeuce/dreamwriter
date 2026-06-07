@@ -26,7 +26,7 @@ FFFF:0001  EA 0000 E3F6      jmp far F6E3:0000
 ; file 0xF6E30
 ;
 ; Sets bank ports 0x16 and 0x17 for the C000 and high ROM windows,
-; then jumps to C000:0000. Port values are identical to v2.1.
+; then jumps to C000:0000.
 
 F6E3:0000  FA                cli
 F6E3:0001  B0 01             mov al,01

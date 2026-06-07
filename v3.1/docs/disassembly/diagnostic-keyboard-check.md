@@ -3,8 +3,7 @@
 The diagnostic mode entry gate. Compares the keyboard matrix at
 `[1306..130F]` (populated by the IRQ FB handler at
 [`keyboard-irq.md`](keyboard-irq.md) from port `0xB0` reads) against a
-ROM pattern at `CS:14FC`. The chord is **F + J + SPACE**, identical to
-v2.1.
+ROM pattern at `CS:14FC`. The chord is **F + J + SPACE**.
 
 This is separate from the RTC state checks in
 [`rtc-alarm-power.md`](rtc-alarm-power.md). Both are called during boot
@@ -89,7 +88,7 @@ file 0xC14FC:  00 08 00 00 80 00 00 00 40 00
 | ROW8 | `40` | bit 6 | J |
 | ROW9 | `00` | — | (no keys) |
 
-The chord is **F + J + SPACE** — identical to v2.1.
+The chord is **F + J + SPACE**.
 
 ## C000:1506 — Render Diagnostic Entry Banner
 

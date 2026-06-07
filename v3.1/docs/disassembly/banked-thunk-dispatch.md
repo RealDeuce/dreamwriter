@@ -94,7 +94,7 @@ C000:1B36  FF E0             jmp ax
 | 7 | `C000:131D` | Diagnostic command monitor. See [`diagnostic-monitor.md`](diagnostic-monitor.md). |
 | 8 | `C000:1DCF` | |
 | 9 | `C000:19E7` | Software error halt. |
-| 10 | `C000:98E9` | Editor/spell utility. Reached from `C000:929B..9D63` block. |
+| 10 | `C000:98E9` | Editor utility. Reached from `C000:929B..9D63` block. |
 | 11 | `C000:BBFE` | |
 
 ## C000:19E7 — Software Error Halt Entry

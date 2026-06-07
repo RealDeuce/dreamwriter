@@ -41,14 +41,14 @@ C000:9441  750B           jnz 944E             ; not at boundary
 ## C000:929C — Editor State Check
 
 Checks `[73F7]` bit 0 (editor active) and `[7239]` bit 0
-(spell check mode). Returns with ZF set if editor is inactive.
+(mode flag). Returns with ZF set if editor is inactive.
 
 ```asm
 C000:929C  A0F773         mov al,[73F7]
 C000:929F  A801           test al,1
 C000:92A1  74F8           jz 929B              ; inactive -> ret
 C000:92A3  A03972         mov al,[7239]
-C000:92A6  A801           test al,1            ; spell check?
+C000:92A6  A801           test al,1            ; mode flag
 C000:92A8  C3             ret
 ```
 
@@ -56,7 +56,7 @@ C000:92A8  C3             ret
 
 | Address | Callers | Purpose |
 | --- | --- | --- |
-| `C000:929C` | `9431` | State check: editor active + spell mode |
+| `C000:929C` | `9431` | State check: editor active + `[7239]` mode flag |
 | `C000:92FC` | `9333` | Buffer scan/search |
 | `C000:9333` | `9C58`, `94AF` | Text block operation (calls BA35, 93C3, 92FC) |
 | `C000:93AA` | `94AF` | Block format operation |

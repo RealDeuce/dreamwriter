@@ -8,8 +8,8 @@ low-RAM far-call table.
 
 `C000:1161` runs during cold/warm startup. It points `ES` at segment `0`,
 then fills IVT vectors manually with `STOSW`, writing each offset/segment
-pair individually. Unlike v2.1 which bulk-fills vectors `00h..F7h` in a
-single loop, v3.1 fills them in groups with the default target interleaved.
+pair individually, filling them in groups with the default target
+interleaved.
 
 ```asm
 install_vectors_C000_1161:
@@ -23,7 +23,7 @@ C000:116B  BA 1F14           mov dx,141F        ; default handler offset
 C000:116E  BF 0000           mov di,0000        ; IVT base
 ```
 
-The default target `C000:141F` is a single `IRET` (v2.1 uses `C000:118B`).
+The default target `C000:141F` is a single `IRET`.
 
 ### Vector Fill Sequence
 
@@ -83,9 +83,9 @@ C000:120E  AB                stosw
 
 | Vector | IVT offset | Target | Meaning |
 | ---: | ---: | --- | --- |
-| `01h` | `0x0004` | `C000:1832` | Diagnostic/single-step hook (v2.1: `C000:157D`). |
-| `02h` | `0x0008` | `C000:04D0` | NMI handler. New in v3.1; v2.1 uses default IRET. |
-| `21h` | `0x0084` | `C000:0006` -> `C000:6277` | DOS-like service dispatcher (v2.1: -> `C000:5098`). |
+| `01h` | `0x0004` | `C000:1832` | Diagnostic/single-step hook. |
+| `02h` | `0x0008` | `C000:04D0` | NMI handler. |
+| `21h` | `0x0084` | `C000:0006` -> `C000:6277` | DOS-like service dispatcher. |
 | `F8h` | `0x03E0` | `C000:0009` -> `C000:04D0` | Save/suspend context. |
 | `F9h` | `0x03E4` | `C000:000C` -> `C000:05C0` | Timer/wake ack. |
 | `FAh` | `0x03E8` | `C000:000F` -> `C000:05D4` | Keyboard scan reset/start. |

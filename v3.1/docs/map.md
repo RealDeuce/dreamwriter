@@ -118,7 +118,7 @@ the crossroads — both `C000` and `C772` call into it heavily.
 
 | Segment | Window | Bank ports | Role |
 | --- | ---: | --- | --- |
-| `3000` | 1 | `0x11=0x02, 0x12=0x17, 0x13=0x03, 0x14=0x02` | Linguistic engine (spell/grammar/thesaurus). Not traced. |
+| `3000` | 1 | `0x11=0x02, 0x12=0x17, 0x13=0x03, 0x14=0x02` | Banked ROM mapped by `C000:18A5`. Content and purpose not determined from trace. |
 
 ### RAM Segments (Not Traceable From ROM)
 
@@ -127,11 +127,10 @@ the crossroads — both `C000` and `C772` call into it heavily.
 | `9820` | 4 | Called from `C772:0E55`. Probably ROM CARD execution entry. |
 | `73A4` | 3 | Called from `C772:7337`. Runtime-populated code. |
 
-### Absent From v3.1
+### Not Found in v3.1
 
-The v2.1 ROM contains a CSiMON debug monitor at file `0x7C000..0x7FF0A`.
-No CSiMON strings or code appear in the v3.1 image; the equivalent high-ROM
-space contains the world-clock city database and other application data.
+No CSiMON debug monitor strings appear in the v3.1 ROM image.
+The equivalent address range contains application data.
 
 ## Reset Chain
 

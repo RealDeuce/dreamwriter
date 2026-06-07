@@ -43,10 +43,5 @@ word pairs terminated by `0x00`.
 | `[15A2]` | Monitor active flag (1 = active) |
 | `[1446]` | Diagnostic mode flags (bit 0, bit 1) |
 
-## Comparison With v2.1
-
-In v2.1, the diagnostic monitor is the CSiMON debug tool with memory
-read/write, register display, and breakpoint support. The v3.1 version
-is substantially simpler — just flag toggling and serial I/O dispatch.
-The space freed by removing CSiMON was used for the world clock city
-database.
+The v3.1 diagnostic monitor is simple — flag toggling and serial I/O
+dispatch. No memory read/write or register display commands.
