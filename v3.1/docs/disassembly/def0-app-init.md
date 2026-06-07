@@ -1,10 +1,44 @@
 # DEF0 Application Init
 
-The two far-call entry points called from the boot path during cold
-init and cold reinit. These bridge from the C000 firmware layer into the
-DEF0 service layer.
+The far-call entry points called from the boot path during cold init
+and cold reinit, plus the display+file composite service and session
+state management. Address range `DEF0:51FD..5FFF` (109 blocks).
 
 See [`boot.md`](boot.md) for where these are called.
+
+## DEF0:57EF — Display + File Composite (Far-Call Table Entry #39)
+
+Called from `C772:9555`. Allocates a 2560-byte (`0xA00`) stack frame,
+renders a display page via `C000:3F35` and `DEF0:0DF5`, then calls
+`DEF0:51FD` (file enumeration) and `DEF0:53C0` (display page builder).
+Handles interactive file selection with `DEF0:0043` (read key).
+
+## DEF0:51FD..53C0 — File Enumeration
+
+Called from `DEF0:57EF`. Searches for files using `DEF0:E195`
+(find first) and `DEF0:E1B4` (find next), compares filenames using
+`DEF0:32B3`, and copies matches using `DEF0:32A4`.
+
+## DEF0:5614 — Display Page Setup (11 callers)
+
+Builds an `FF 44` (page setup) display script. Takes AX (page index),
+computes pixel position (index * 8 + 16), renders via `C000:3F35`.
+
+## DEF0:595A — Session State Reader
+
+Called from `DEF0:5B14` (session init). Renders session status display
+via `DEF0:0D80`, `DEF0:0D91`, and `DEF0:1806` (display callback setup),
+then reads session data.
+
+## DEF0:5A17 — Session Recovery A
+
+Called from `DEF0:5B3E` (session error path). Attempts session recovery
+using display prompts and `DEF0:2097` (user interaction).
+
+## DEF0:5A6C — Session Recovery B
+
+Called from `DEF0:5B3E` (session error path). Alternate recovery using
+`DEF0:593A` (data scan), `DEF0:32B3` (compare), `DEF0:58A8` (validate).
 
 ## DEF0:5C07 — Application Subsystem Init
 

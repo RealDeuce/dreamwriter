@@ -13,7 +13,7 @@ banking, and protocol docs in `../../docs/` apply to both v2.1 and v3.1.
 
 ## Disassembly
 
-Generated from a full recursive trace (3222 blocks, 38621 instructions
+Generated from a full recursive trace (3563 blocks, 41987 instructions
 across 6 segments). Raw trace at [`disassembly/trace-full.txt`](disassembly/trace-full.txt).
 Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 
@@ -37,6 +37,8 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 | [`disassembly/subsystem-init.md`](disassembly/subsystem-init.md) | Bank mirrors, RAM clear, file/drive/storage init, state validation, full 2E72 init chain. |
 | [`disassembly/int21-dispatch.md`](disassembly/int21-dispatch.md) | INT 21h DOS-like service dispatcher and function table. |
 | [`disassembly/int21-file-io.md`](disassembly/int21-file-io.md) | INT 21h file operation handlers: create, open, close, read, write, seek, delete, find, rename. |
+| [`disassembly/c000-serial-io.md`](disassembly/c000-serial-io.md) | Serial I/O and DreamLink: serial buffers, endpoint transport. |
+| [`disassembly/c000-editor-utility.md`](disassembly/c000-editor-utility.md) | Editor/spell utility (C000:929B..9D63): text buffer management, cursor, formatting. |
 
 ### C772 — Application Runtime
 
@@ -44,19 +46,36 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 | --- | --- |
 | [`disassembly/app-entry.md`](disassembly/app-entry.md) | C772:0004 (cold) and C772:0008 (warm) entry points, cold init chain, storage endpoint cycling. |
 | [`disassembly/menu-interpreter.md`](disassembly/menu-interpreter.md) | Menu scripting engine: bytecode interpreter loop, dispatch table (96 opcodes), handler classification. |
+| [`disassembly/c772-native-helpers.md`](disassembly/c772-native-helpers.md) | Native helpers: state management (45A7/4556), text buffer ops (3BB6-3C2D), service dispatcher (8415), DEF0 callbacks (E800-E946). |
 
 ### DEF0 — Service/Wrapper Layer
 
 | File | Scope |
 | --- | --- |
 | [`disassembly/def0-wrappers.md`](disassembly/def0-wrappers.md) | DEF0 segment thin wrappers (display, keyboard, file, date/time). |
-| [`disassembly/def0-app-init.md`](disassembly/def0-app-init.md) | DEF0:5C07 (cold subsystem init) and DEF0:5B03 (session init), all subroutine details. |
+| [`disassembly/def0-app-init.md`](disassembly/def0-app-init.md) | DEF0:5C07 (cold init), DEF0:5B03 (session init), DEF0:57EF (entry #39), session management. |
+| [`disassembly/def0-display-services.md`](disassembly/def0-display-services.md) | Far-call table display entries #0-#15, display script builder API. |
+| [`disassembly/def0-display-rendering.md`](disassembly/def0-display-rendering.md) | Display rendering pipeline (DEF0:01BA..0D80), glyph/bitmap data references. |
+| [`disassembly/def0-display-subsystem.md`](disassembly/def0-display-subsystem.md) | Display configuration (DEF0:A000..BFFF), LCD geometry, display page management. |
+| [`disassembly/def0-cursor-state.md`](disassembly/def0-cursor-state.md) | Cursor state, wrapper inner routines (CE03/CE36/CE6A/CE92), date/time, CFDE display refresh. |
+| [`disassembly/def0-menu-display.md`](disassembly/def0-menu-display.md) | Menu display system (DEF0:2000..29DB), interactive menus, C772 callbacks. |
+| [`disassembly/def0-file-dialogs.md`](disassembly/def0-file-dialogs.md) | File management UI (DEF0:29DC..4AA9), directory listing, file open/save/delete dialogs. |
+| [`disassembly/def0-file-services.md`](disassembly/def0-file-services.md) | Far-call table file entries #16-#39, DEF0:DFD5 file service core. |
+| [`disassembly/def0-keyboard-subsystem.md`](disassembly/def0-keyboard-subsystem.md) | Keyboard/input processing (DEF0:6278..6FFF), input fields, character handling. |
+| [`disassembly/def0-storage-subsystem.md`](disassembly/def0-storage-subsystem.md) | Internal storage management (DEF0:7000..9FFF), file handle table, document format. |
+
+### Dispatch and Thunks
+
+| File | Scope |
+| --- | --- |
+| [`disassembly/banked-thunk-dispatch.md`](disassembly/banked-thunk-dispatch.md) | Banked call mechanism: thunk A/B tables (C000:0021/0025), 12 slots each. |
 
 ### Window 7 and Banked Segments
 
 | File | Scope |
 | --- | --- |
 | [`disassembly/ee17-utility.md`](disassembly/ee17-utility.md) | EE17 utility library: state block management, display page init (212 blocks, 0 gaps). |
+| [`disassembly/ed1b-ad00-banked.md`](disassembly/ed1b-ad00-banked.md) | ED1B bank-switch wrappers (3 blocks) and AD00 external storage / ROM CARD (18 blocks). |
 
 ## Shared Docs
 

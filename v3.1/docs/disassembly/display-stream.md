@@ -3,6 +3,8 @@
 The display script rendering pipeline. `C000:6557` is the core renderer
 that processes bytecoded display scripts from ROM. `C000:3F35` is a thin
 far-call wrapper around it used by DEF0 and EE17 (136 callers).
+`C000:6523` initializes the renderer state (called from the cold boot
+path).
 
 Display scripts are binary streams containing positioning commands,
 text, and resource references. They are NOT x86 instructions — the
