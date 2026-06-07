@@ -82,6 +82,55 @@ Routine `C000:0327` seeds the default bank mirrors:
 [147F] = 1C    ; port 0x15
 ```
 
+## Code Segment Map
+
+Confirmed from a full recursive disassembly trace (3523 blocks, 44326
+instructions) starting at `C000:0029` with IRQ and banked-thunk seeds.
+
+### Window 6 — Port 0x16=0x01, Bank 14, File 0xC0000 (Fixed)
+
+| Segment | File base | Instructions | Role |
+| --- | ---: | ---: | --- |
+| `C000` | `0xC0000` | 6294 | Low-level firmware: boot, IRQs, banking, I/O ports, diagnostics. |
+| `C772` | `0xC7720` | 13337 | Application runtime: word processor, organizer, menus. |
+| `DEF0` | `0xDEF00` | 20500 | Service/wrapper layer between C000 and C772. Far-call table targets. |
+
+All three segments share window 6. `DEF0` is the v3.1 equivalent of
+v2.1's `DC98`. The high instruction count in `DEF0` reflects its role as
+the crossroads — both `C000` and `C772` call into it heavily.
+
+### Window 7 — Port 0x17=0x00, Bank 15, File 0xE0000 (Fixed)
+
+| Segment | File base | Instructions | Role |
+| --- | ---: | ---: | --- |
+| `EE17` | `0xEE170` | 2261 | Utility library. Calls `C000:3F35` repeatedly. Zero data gaps. |
+| `ED1B` | `0xED1B0` | 1934 | Sparse code. Calls banked `AD00:009A`. Contains `JMP FAR C000:0000` (full reset). |
+
+### Window 5 — Port 0x15=0x02 (Banked During Call)
+
+| Segment | File base | Instructions | Role |
+| --- | ---: | ---: | --- |
+| `AD00` | `0xAD000` | — | Banked ROM code called from `ED1B:0D42`. Port 0x15 remapped to bank 13 (`0x02`) before the call. |
+
+### Banked (Dynamic Port Remap)
+
+| Segment | Window | Bank ports | Role |
+| --- | ---: | --- | --- |
+| `3000` | 1 | `0x11=0x02, 0x12=0x17, 0x13=0x03, 0x14=0x02` | Linguistic engine (spell/grammar/thesaurus). Not traced. |
+
+### RAM Segments (Not Traceable From ROM)
+
+| Segment | Window | Notes |
+| --- | ---: | --- |
+| `9820` | 4 | Called from `C772:0E55`. Probably ROM CARD execution entry. |
+| `73A4` | 3 | Called from `C772:7337`. Runtime-populated code. |
+
+### Absent From v3.1
+
+The v2.1 ROM contains a CSiMON debug monitor at file `0x7C000..0x7FF0A`.
+No CSiMON strings or code appear in the v3.1 image; the equivalent high-ROM
+space contains the world-clock city database and other application data.
+
 ## Reset Chain
 
 The CPU reset vector is at physical `0xFFFF0`, file `0xFFFF0`:
