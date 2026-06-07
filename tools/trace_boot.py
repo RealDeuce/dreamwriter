@@ -80,6 +80,11 @@ class Block:
 ROM: bytes = b""
 BLOCKS: OrderedDict[tuple[str, int], Block] = OrderedDict()
 
+# Addresses where the tracer should stop disassembling. Used to prevent
+# fall-through past calls that never return, which otherwise causes the
+# tracer to decode data as instructions.
+STOP_ADDRS: set[tuple[str, int]] = set()
+
 COND_OPS = frozenset({
     "jz", "jnz", "jc", "jnc", "jb", "jnb", "ja", "jna",
     "jbe", "jnbe", "jae", "jnae", "jl", "jnl", "jg", "jng",
@@ -130,6 +135,9 @@ def disasm_block(seg_name: str, offset: int, max_bytes: int = 0x400) -> Block:
             break
         if addr in seg.covered:
             end_type = "already_covered"
+            break
+        if (seg_name, addr) in STOP_ADDRS:
+            end_type = "blacklisted"
             break
 
         bytehex = parts[1]
@@ -298,6 +306,8 @@ def main():
     parser.add_argument("--thunks", action="store_true",
                         help="Add banked thunk dispatch table entries as seeds")
     parser.add_argument("--max-blocks", type=int, default=5000)
+    parser.add_argument("--stop", action="append", default=[], metavar="SEG:OFF",
+                        help="Blacklist address: stop tracing if reached (e.g. C772:40C1)")
     args = parser.parse_args()
 
     ROM = open(args.rom, "rb").read()
@@ -336,6 +346,20 @@ def main():
             seeds.append((seg_name, off, f"seed_{s}"))
         else:
             print(f"warning: ignoring unparseable seed '{s}'", file=sys.stderr)
+
+    # Parse --stop arguments
+    for s in args.stop:
+        m = re.match(r"([0-9A-Fa-f]+):([0-9A-Fa-f]+)$", s)
+        if m:
+            seg_str = m.group(1).upper()
+            off = int(m.group(2), 16)
+            for name, seg in SEGMENTS.items():
+                if seg.seg_value == int(seg_str, 16):
+                    STOP_ADDRS.add((name, off))
+                    break
+
+    # Known-bad fall-through addresses (calls that never return)
+    STOP_ADDRS.add(("C772", 0x40C1))  # after call to C772:022D which is JMP 3944
 
     if args.irqs:
         irq_seeds = [
