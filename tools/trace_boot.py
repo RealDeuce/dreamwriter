@@ -100,6 +100,7 @@ class Block:
     branches: list      # [(seg, off)]
     end_type: str
     label: str = ""
+    aliases: list = field(default_factory=list)  # ["SEG:OFF", ...]
 
 
 ROM: bytes = b""
@@ -111,6 +112,10 @@ STOP_ADDRS: set[tuple[str, int]] = set()
 # Call targets known to never return (JMP to event loop, etc.).
 # Any CALL to one of these terminates the block.
 NORETURN_CALLS: set[tuple[str, int]] = set()
+
+# Verified physical addresses accessed via multiple segments.
+# Maps physical address -> set of (seg_name, offset) pairs.
+KNOWN_ALIASES: dict[int, set[tuple[str, int]]] = {}
 
 COND_OPS = frozenset({
     "jz", "jnz", "jc", "jnc", "jb", "jnb", "ja", "jna",
@@ -257,16 +262,24 @@ def trace(seeds: list[tuple[str, int, str]], max_blocks: int = 5000):
         if offset < 0 or offset >= seg.max_offset:
             continue
 
-        # Warn if this physical address is already traced under a different segment
+        # Check if this physical address is already traced under a different segment
         phys = seg.file_offset(offset)
         for other_name, other_seg in SEGMENTS.items():
             if other_name == seg_name:
                 continue
             other_off = phys - other_seg.file_base
             if 0 <= other_off < other_seg.max_offset and other_off in other_seg.covered:
-                print(f"warning: {seg_name}:{offset:04X} (phys {phys:05X}) already "
-                      f"traced as {other_name}:{other_off:04X}",
-                      file=sys.stderr)
+                if phys in KNOWN_ALIASES:
+                    # Verified alias — annotate the existing block instead of warning
+                    existing = BLOCKS.get((other_name, other_off))
+                    if existing is not None:
+                        alias_str = f"{seg_name}:{offset:04X}"
+                        if alias_str not in existing.aliases:
+                            existing.aliases.append(alias_str)
+                else:
+                    print(f"warning: {seg_name}:{offset:04X} (phys {phys:05X}) already "
+                          f"traced as {other_name}:{other_off:04X}",
+                          file=sys.stderr)
                 break
 
         block = disasm_block(seg_name, offset)
@@ -302,6 +315,8 @@ def output():
         parts = [f"--- {seg_name}:{start:04X}..{block.end:04X}"]
         if block.label:
             parts.append(f"  ; {block.label}")
+        if block.aliases:
+            parts.append(f"  also:{','.join(block.aliases)}")
 
         call_strs = []
         for cs, co in block.calls:
@@ -424,6 +439,7 @@ def load_trace(path: str) -> int:
     cur_label = ""
     cur_calls = []
     cur_branches = []
+    cur_aliases = []
     cur_insns = []
     cur_end_type = ""
     in_block = False
@@ -453,7 +469,8 @@ def load_trace(path: str) -> int:
             in_block = False
             return
         block = Block(cur_seg, cur_start, cur_end, list(cur_insns),
-                      list(cur_calls), list(cur_branches), cur_end_type, cur_label)
+                      list(cur_calls), list(cur_branches), cur_end_type, cur_label,
+                      list(cur_aliases))
         BLOCKS[(cur_seg, cur_start)] = block
         for addr, _, _, insn_len in cur_insns:
             for a in range(addr, addr + insn_len):
@@ -476,6 +493,7 @@ def load_trace(path: str) -> int:
                 cur_label = ""
                 cur_calls = []
                 cur_branches = []
+                cur_aliases = []
                 cur_insns = []
                 cur_end_type = ""
                 in_block = True
@@ -483,6 +501,9 @@ def load_trace(path: str) -> int:
                 lm = re.search(r";\s+(\S+)", remainder)
                 if lm:
                     cur_label = lm.group(1)
+                am = re.search(r"also:(\S+)", remainder)
+                if am:
+                    cur_aliases = [x.strip() for x in am.group(1).split(",")]
                 cm = re.search(r"calls:(\S+)", remainder)
                 if cm:
                     cur_calls = parse_targets(cm.group(1))
@@ -533,6 +554,10 @@ def main():
                         help="Add all other known indirect-jump dispatch table entries as seeds")
     parser.add_argument("--load", type=str, metavar="FILE",
                         help="Load previous trace output to resume from")
+    parser.add_argument("--alias", action="append", default=[], metavar="SEG1:OFF1=SEG2:OFF2",
+                        help="Declare verified dual-segment alias (suppresses overlap warning)")
+    parser.add_argument("--alias-file", type=str, metavar="FILE",
+                        help="File of aliases, one SEG1:OFF1=SEG2:OFF2 per line")
     parser.add_argument("--max-blocks", type=int, default=5000)
     parser.add_argument("--stop", action="append", default=[], metavar="SEG:OFF",
                         help="Blacklist address: stop tracing if reached (e.g. C772:40C1)")
@@ -585,6 +610,33 @@ def main():
                 if seg.seg_value == int(seg_str, 16):
                     STOP_ADDRS.add((name, off))
                     break
+
+    # Parse --alias and --alias-file arguments
+    all_aliases = list(args.alias)
+    if args.alias_file:
+        with open(args.alias_file) as af:
+            for line in af:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    all_aliases.append(line)
+    for a in all_aliases:
+        m = re.match(r"([0-9A-Fa-f]+):([0-9A-Fa-f]+)=([0-9A-Fa-f]+):([0-9A-Fa-f]+)$", a)
+        if m:
+            seg1 = int(m.group(1), 16)
+            off1 = int(m.group(2), 16)
+            seg2 = int(m.group(3), 16)
+            off2 = int(m.group(4), 16)
+            phys1 = (seg1 << 4) + off1
+            phys2 = (seg2 << 4) + off2
+            if phys1 != phys2:
+                print(f"warning: alias {a} has mismatched physical addresses "
+                      f"({phys1:05X} != {phys2:05X}), ignoring", file=sys.stderr)
+            else:
+                aliases = KNOWN_ALIASES.setdefault(phys1, set())
+                aliases.add((m.group(1).upper(), off1))
+                aliases.add((m.group(3).upper(), off2))
+        else:
+            print(f"warning: ignoring unparseable alias '{a}'", file=sys.stderr)
 
     # C772:022D is a dispatch entry (JMP 3944) used as an inline-data call.
     # Callers do "CALL 022D" followed by inline parameter bytes, not code.
