@@ -302,10 +302,14 @@ def main():
 
     ROM = open(args.rom, "rb").read()
 
-    # Set up segments for window 6
+    # Set up segments for window 6 (port 0x16=0x01, bank 14, file 0xC0000)
     add_segment("C000", 0xC000, 0x10000)     # C000:0000..FFFF
     add_segment("C772", 0xC772, 0x188E0)     # C772:0000 to end of window
     add_segment("DEF0", 0xDEF0, 0x10F00)     # DEF0:0000 to end of window
+
+    # Window 7 (port 0x17=0x00, bank 15, file 0xE0000) — fixed, not banked
+    add_segment("ED1B", 0xED1B, 0x12E50)     # ED1B:0000 to end of window
+    add_segment("EE17", 0xEE17, 0x11E90)     # EE17:0000 to end of window
 
     # Default seeds
     seeds: list[tuple[str, int, str]] = [("C000", 0x0029, "boot_entry")]
