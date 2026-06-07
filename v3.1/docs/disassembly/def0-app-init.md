@@ -30,15 +30,61 @@ DEF0:5C2D  CB                retf
 The signature `4F 39 32` (ASCII `"O92"`) is checked by `DEF0:5C2E`
 (the warm-start variant) to detect whether `5C07` has already run.
 
-### Subroutine targets
+### Subroutine details
 
-| Call target | Segment | Purpose |
-| --- | --- | --- |
-| `EE17:16C1` | Window 7 | Utility library init (called into EE17 segment). |
-| `DEF0:A718` | DEF0 | Display subsystem init. |
-| `DEF0:6278` | DEF0 | Keyboard/input subsystem init. |
-| `DEF0:88E2` | DEF0 | File subsystem init. |
-| `DEF0:C11C` | DEF0 | Application subsystem init. |
+**`EE17:16C1` — Utility library init.** Calls `EE17:0047` with
+AX=`0xA37E`. Single-instruction wrapper.
+
+```asm
+EE17:16C1  B8 7EA3           mov ax,A37E
+EE17:16C4  9A 4700 17EE      call far EE17:0047
+EE17:16C9  CB                retf
+```
+
+**`DEF0:6278` — Keyboard/input subsystem init.** Clears the keyboard
+state word at `[A7A8]`.
+
+```asm
+DEF0:6278  C7 06 A8A7 0000   mov word [A7A8],0
+DEF0:627E  C3                ret
+```
+
+**`DEF0:88E2` — File handle table init.** Clears 200 4-byte file
+handle entries at `[A022..A342]`. Each entry gets its first word and
+third word zeroed.
+
+```asm
+DEF0:88E2  33 C0             xor ax,ax       ; AX = 0
+DEF0:88E4  EB 1C             jmp short DEF0:8902
+DEF0:88E6  8B D8             mov bx,ax       ; loop body:
+DEF0:88E8  D1 E3             shl bx,1
+DEF0:88EA  D1 E3             shl bx,1        ; BX = AX * 4
+DEF0:88EC  C7 87 22A0 0000   mov word [bx+A022],0
+DEF0:88F2  8B D8             mov bx,ax
+DEF0:88F4  D1 E3             shl bx,1
+DEF0:88F6  D1 E3             shl bx,1
+DEF0:88F8  81 C3 22A0        add bx,A022
+DEF0:88FC  C7 47 02 0000     mov word [bx+2],0
+DEF0:8901  40                inc ax
+DEF0:8902  3D C800           cmp ax,C8       ; 200 entries
+DEF0:8905  7C DF             jl DEF0:88E6
+DEF0:8907  C3                ret
+```
+
+**`DEF0:C11C` — Application state init.** Clears the application
+state byte at `[A00E]`.
+
+```asm
+DEF0:C11C  C6 06 0EA0 00     mov byte [A00E],0
+DEF0:C121  C3                ret
+```
+
+**`DEF0:A718` — Display subsystem init.** The only substantial init
+routine. Sets display dimensions `[A444]=0x6D` (109 columns),
+`[A448]=0x8F` (143 rows), then reads display parameter tables from
+segments `F68C` and `F382` to configure the LCD geometry. See
+[`def0-display-services.md`](def0-display-services.md) for the display
+service layer this initializes.
 
 ## DEF0:5C2E — Warm-Start Subsystem Reinit
 
