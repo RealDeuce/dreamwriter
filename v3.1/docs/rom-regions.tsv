@@ -1,0 +1,10 @@
+start	end	type	confidence	segment	label	notes
+0xC0000	0xC8000	code	confirmed		startup-code	Reset/startup code, interrupt stubs, bank setup, cold/warm boot paths, hardware init. C000 segment at file 0xC0000 via port 0x16=0x01.
+0xC7789	0xC77C9	text	confirmed		diagnostic-banner	"Diagnostic 31BAB218" banner and keyboard check prompt.
+0xC7799	0xC779D	data	confirmed		warm-ram-signature	4-byte warm-RAM signature "218 " checked at boot against RAM [1000].
+0xE0000	0xFFFFF	mixed	rough		high-rom	High ROM bank (port 0x17=0x00). Contains reset trampoline at 0xF6E30, reset vector at 0xFFFF0, and other resources TBD.
+0xF6E30	0xF6E3E	code	confirmed		reset-trampoline	CLI, port 0x16/0x17 writes, JMP FAR C000:0000.
+0xFFFF0	0x100000	code	confirmed		reset-vector	CLI; JMP FAR F6E3:0000.
+0x73B5D	0x73BA0	text	confirmed		infsoft-copyright	"Copyright (C) 1994 InfoSoft International, Inc."
+0xB2B31	0xB2BA0	text	confirmed		typin-time-copyright	"Version 1.0 for DreamWriter" and Almena copyright.
+0xD65A2	0xD65F0	text	confirmed		inso-copyright	"Copyright 1995 by Inso Corporation. All Rights Reserved."
