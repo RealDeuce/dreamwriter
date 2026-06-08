@@ -247,7 +247,8 @@ start	end	type	confidence	segment	label	notes
 0xF2DE0	0xF2E17	resource	confirmed	DEF0	wc-disp-form	DISPLAY FORM legend (F2DE:0000, 0x37 bytes).
 0xF2E70	0xF2EB8	resource	confirmed	DEF0	wc-alarm-legend	DAILY ALARM legend: [↵] EDIT, [BACK] DELETE, [CAN] EXIT (F2E7:0000, 0x48 bytes).
 0xF2EB0	0xF2EC7	resource	confirmed	DEF0	wc-time-header	TIME column header for alarm list (F2EB:0000, 0x17 bytes).
-0xF2F00	0xF2F30	resource	confirmed	DEF0	wc-clock-icons	Clock icon bitmaps and time digit segments (F2F0/F2F1).
+0xF2F00	0xF2F30	resource	confirmed	DEF0	wc-clock-icons	Clock icon bitmaps and city indicator segments (F2F0/F2F1).
+0xF2F52	0xF3252	resource	confirmed	DEF0	wc-world-map	World map bitmap: 96×64 pixels, 768 bytes (F2F5:0002).
 0xF382E	0xF68BE	data	confirmed	DEF0	tz-database	Timezone database: 222 records × 56 bytes (city name, UTC offset, country name).
 0xF68BE	0xF68C0	data	confirmed	DEF0	tz-count	Timezone record count: 0x00DE (222).
 0xF68C0	0xF6A78	data	confirmed	DEF0	tz-index	Timezone index table: 222 word-sized entries mapping display position to record number.
