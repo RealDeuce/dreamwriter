@@ -312,7 +312,7 @@ See [`display-stream.md`](disassembly/display-stream.md).
 | --- | ---: | --- |
 | `C000:3F0C` | `0xC3F0C` | Display wrapper called from `DEF0:2BFC`. |
 | `C000:3F35` | `0xC3F35` | Display script renderer (far-call target): called from `DEF0:0D80` and far-call table `[0200]`. Calls `C000:6557`. |
-| `C000:3F47` | `0xC3F47` | Display script renderer (alternate far wrapper, far-call table `[023C]`). |
+| `C000:3F47` | `0xC3F47` | Serial input wrapper: calls `C000:316D`, returns AH=0 (far-call table `[023C]`). |
 
 ## 14. INT 21h File Ops (C000:3F5F-6276)
 
@@ -734,7 +734,7 @@ application layer with indirect access to services.
 | 9 | `[0224]` | `DEF0:0F87` | `0xDFE87` | Display mode dispatch (CX=1..4). |
 | 10 | `[0228]` | `DEF0:0FE4` | `0xDFEE4` | Character filter (0x30 -> 0x20). |
 | 11 | `[022C]` | `DEF0:1775` | `0xE0675` | Set display callback pointers. |
-| 15 | `[023C]` | `C000:3F47` | `0xC3F47` | Display script render (alternate). |
+| 15 | `[023C]` | `C000:3F47` | `0xC3F47` | Serial input wrapper: calls `C000:316D`, returns AH=0. |
 
 ### Keyboard/Input Services (#12-#14)
 
