@@ -110,8 +110,8 @@ bytes). The renderer advances `[18A1]` by AL after each handler.
 
 The most-called routine in the entire ROM (136 callers, all from DEF0
 and EE17). Pushes registers, calls the core renderer, pops, returns via
-RETF. Arguments: AX = display page/mode, BX = script source offset,
-CX = script length. DX is set by the caller but typically unused here.
+RETF. Arguments: AX = script source offset, BX = script source segment,
+CX = script byte count.
 
 ```asm
 ; file 0xC3F35
@@ -120,8 +120,8 @@ C000:3F36  57                push di
 C000:3F37  56                push si
 C000:3F38  52                push dx
 C000:3F39  51                push cx
-C000:3F3A  8B D3             mov dx,bx       ; DX = source offset
-C000:3F3C  8B F0             mov si,ax       ; SI = page/mode
+C000:3F3A  8B D3             mov dx,bx       ; DX = source segment
+C000:3F3C  8B F0             mov si,ax       ; SI = source offset
 C000:3F3E  E8 1626           call C000:6557  ; core renderer
 C000:3F41  59                pop cx
 C000:3F42  5A                pop dx
@@ -158,8 +158,8 @@ C000:3F5A  CB                retf
 ## C000:6557 — Display Script Core Renderer
 
 The actual renderer. Called with:
-- SI = display page/mode value
-- DX = segment of display script source
+- SI = source offset within segment
+- DX = source segment
 - CX = byte count
 
 Copies CX bytes from `DX:SI` to a work buffer at `[1798]`, then
@@ -230,12 +230,12 @@ table at `C000:6865`.
 The far-call wrapper is called with consistent argument patterns:
 
 ```text
-MOV AX, page       ; display page number
-MOV BX, offset     ; script source offset within segment
+MOV AX, offset     ; script source offset
+MOV BX, segment    ; script source segment
 MOV CX, length     ; script byte count
 CALL FAR C000:3F35
 ```
 
-The BX values typically point into ROM data regions within the caller's
-segment (C772 for app scripts, DEF0 for service scripts, EE17 for
+The BX values are segment addresses pointing into ROM data regions
+(C772 for app scripts, DEF0 for service scripts, EE17 for
 utility scripts). The display script data is NOT x86 code.
