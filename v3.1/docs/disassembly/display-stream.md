@@ -17,8 +17,62 @@ The renderer at `C000:6557` reads one byte at a time and classifies:
 | --- | --- |
 | `0x00..0x1F` | Control — skipped (advance script pointer). |
 | `0x20..0xDF` | Character — rendered as a glyph via the character pipeline at `C000:65AA`. |
-| `0xE0..0xFE` | Single-byte command — dispatched through the main table at `C000:6865` (slots 0..30). Byte `0xE0` = slot 0, `0xE2` = slot 1, ..., `0xFE` = slot 30. |
+| `0xE0..0xFE` | Single-byte command — dispatched through the main table at `C000:6865` (slots 0..30). Byte `0xE0` = slot 0, `0xE2` = slot 1, ..., `0xFE` = slot 30. These are NOT aliases for `FF xx` — they have a separate handler set. |
 | `0xFF` | Extended prefix — slot 31 (`C000:6BAA`), reads the **next byte** as a sub-opcode. |
+
+### Single-Byte Command Table (0xE0..0xFE)
+
+Dispatched through the main table at `C000:6865` (32 word entries).
+AL = byte − 0xE0 when the handler is entered. Index = AL, table
+lookup via `SI = AL * 2; JMP [CS:SI+6865]`. All 32 bytes
+0xE0..0xFF have entries. All except slot 30 consume no additional
+bytes from the script.
+
+| Byte | Slot | Handler | Purpose |
+| ---: | ---: | --- | --- |
+| `0xE0` | 0 | `C000:68A7` | Glyph render: AL=0 → CH=1. Sets glyph source from `[16E3]`, marks `[1729]` bit 5, enters character blit pipeline. |
+| `0xE1` | 1 | `C000:68A7` | Glyph render: AL=1 → CH=2. |
+| `0xE2` | 2 | `C000:68A7` | Glyph render: AL=2 → CH=3. |
+| `0xE3` | 3 | `C000:68A7` | Glyph render: AL=3 → CH=4. |
+| `0xE4` | 4 | `C000:68A7` | Glyph render: AL=4 → CH=5. |
+| `0xE5` | 5 | `C000:68A5` | Glyph render reset: AL=0 (xor al,al → CH=1). |
+| `0xE6` | 6 | `C000:68A5` | Same as slot 5. |
+| `0xE7` | 7 | `C000:68D5` | Sequence end. Returns to `C000:6557` (restarts renderer with fresh state from `[172A]`). |
+| `0xE8` | 8 | `C000:68D5` | Same as slot 7. |
+| `0xE9` | 9 | `C000:68D5` | Same as slot 7. |
+| `0xEA` | 10 | `C000:68D5` | Same as slot 7. |
+| `0xEB` | 11 | `C000:68D5` | Same as slot 7. |
+| `0xEC` | 12 | `C000:68D5` | Same as slot 7. |
+| `0xED` | 13 | `C000:68D5` | Same as slot 7. |
+| `0xEE` | 14 | `C000:68D5` | Same as slot 7. |
+| `0xEF` | 15 | `C000:68D5` | Same as slot 7. |
+| `0xF0` | 16 | `C000:68D8` | Set `[1729]` bit 2 — underline on. |
+| `0xF1` | 17 | `C000:68DF` | Clear `[1729]` bit 2 — underline off. |
+| `0xF2` | 18 | `C000:68E6` | Set `[1729]` bit 3 — bold on. |
+| `0xF3` | 19 | `C000:68ED` | Clear `[1729]` bit 3 — bold off. |
+| `0xF4` | 20 | `C000:68F4` | Set `[1729]` bit 1, clear `[16E7]` — inverse on. |
+| `0xF5` | 21 | `C000:6900` | Clear `[1729]` bit 1, flush glyph buffer — inverse off. |
+| `0xF6` | 22 | `C000:6924` | Set `[1729]` bit 4 — strikethrough on. |
+| `0xF7` | 23 | `C000:692B` | Clear `[1729]` bit 4 — strikethrough off. |
+| `0xF8` | 24 | `C000:6933` | Set `[1728]` bit 0 — superscript on. Reloads glyph source via `C000:6CA7`. |
+| `0xF9` | 25 | `C000:693A` | Clear `[1728]` bit 0 — superscript off. Reloads glyph source. |
+| `0xFA` | 26 | `C000:6948` | Set `[1729]` bit 0 + `[1728]` bit 1 — subscript on. Reloads glyph source. |
+| `0xFB` | 27 | `C000:6954` | Clear `[1729]` bit 0 + `[1728]` bit 1 — subscript off. Reloads glyph source. |
+| `0xFC` | 28 | `C000:6960` | Clear `[1729]` bit 0, set `[1728]` bit 1 — alternate sub/super mode. Reloads glyph source. |
+| `0xFD` | 29 | `C000:6954` | Same as slot 27 (subscript off). |
+| `0xFE` | 30 | `C000:6967` | Spacing: reads 1 extra byte from script → `[1734]` (character spacing value). |
+| `0xFF` | 31 | `C000:6BAA` | Extended prefix — reads next byte as sub-opcode (see below). |
+
+### Text Attribute Flags (`[1729]`)
+
+| Bit | Set by | Cleared by | Purpose |
+| ---: | --- | --- | --- |
+| 0 | `0xF4` (slot 26) | `0xF6`/`0xF8` (slot 27/28) | Subscript. |
+| 1 | `0xE8` (slot 20) | `0xEA` (slot 21) | Inverse video. |
+| 2 | `0xE0` (slot 16) | `0xE2` (slot 17) | Underline. |
+| 3 | `0xE4` (slot 18) | `0xE6` (slot 19) | Bold. |
+| 4 | `0xEC` (slot 22) | `0xEE` (slot 23) | Strikethrough. |
+| 5 | slots 0-4 | — | Glyph render active. |
 
 ### Sub-Opcode Dispatch (after 0xFF)
 
@@ -33,21 +87,24 @@ Slot 31 reads the next byte from `[18A1]` and dispatches:
 
 ### Two-Byte Command Summary
 
-| Command | Sub-opcode | Handler | Params | Purpose |
-| --- | ---: | --- | ---: | --- |
-| `FF 00` | `0x00` | `C000:6BF6` | 0 | Screen clear. |
-| `FF 02` | `0x02` | `C000:6C06` | 4 | Text cursor position (X:u16, Y:u16). |
-| `FF 04` | `0x04` | `C000:6C91` | 2 | Font select (style:u16). |
-| `FF 06` | `0x06` | `C000:6CD7` | 6 | Attribute set (6 bytes). |
-| `FF 08` | `0x08` | `C000:6D79` | — | (shared handler with 0E/10). |
-| `FF 0A` | `0x0A` | `C000:6C27` | — | Attribute modifier. |
-| `FF 0C` | `0x0C` | `C000:6D29` | — | Display mode. |
-| `FF 0E` | `0x0E` | `C000:6D79` | — | (shared handler). |
-| `FF 10` | `0x10` | `C000:6D79` | — | (shared handler). |
-| `FF 12` | `0x12` | `C000:6D4F` | — | State update. |
-| `FF 40` | `0x40` | `C000:7427` | 4 | Position set (X:u16, Y:u16) + clear attribute state. Returns AL=5. |
-| `FF 42` | `0x42` | `C000:7448` | 8 | Bitmap blit: height:u16, width_bits:u16, source_offset:u16, source_segment:u16. Returns AL=9. |
-| `FF 44` | `0x44` | `C000:755D` | 13 | Rectangle draw: X:u16, Y:u16, width:u16, height:u16, fill:u16, pattern:u16, border:u8. Returns AL=14. |
+AL return value = total bytes consumed (sub-opcode byte + parameter
+bytes). The renderer advances `[18A1]` by AL after each handler.
+
+| Command | Handler | AL | Parameters | Purpose |
+| --- | --- | ---: | --- | --- |
+| `FF 00` | `C000:6BF6` | 1 | (none) | Screen clear. Zeroes framebuffer at `[8000]` (2048 words). |
+| `FF 02` | `C000:6C06` | 5 | X:u16, Y:u16 | Text cursor position. Sets `[189F]` (pixel column) and `[189E]` (bit offset) from X; sets `[18A3]` (row base) from Y × `[16DD]` (row height). |
+| `FF 04` | `C000:6C91` | 3 | style:u16 | Font/glyph source select. Sets glyph segment `[16E3]` and glyph parameters `[16E5]`/`[16E6]` based on style value. |
+| `FF 06` | `C000:6CD7` | 7 | width:u8, height:u8, seg:u16, flags:u16 | Attribute set. Configures character cell dimensions `[16E1]`×`[16DF]`, glyph source segment `[16E3]`, and rendering flags `[172A]`. |
+| `FF 08` | `C000:6D79` | 3 | offset:u16 | Horizontal scroll left. Subtracts offset from `[1733]` (pixel X position). If underflow, fills gap with `C000:7324` (rectangle clear), adjusting `[189F]`/`[189E]`. |
+| `FF 0A` | `C000:6C27` | 8 | column:u8, X:u16, Y:u16, vscroll:u8, hscroll:u8 | Rendering window setup. Sets column width `[1733]`, calls `C000:6E5A` to compute framebuffer position from X/Y, sets vertical scroll `[1737]` and horizontal scroll `[1739]` from params × row height. |
+| `FF 0C` | `C000:6D29` | 10 | X:u16, Y:u16, voffset:u8, width:u16, height:u8, border:u8 | Rectangle with offset. Calls `C000:6E5A` for position, adds voffset × 64 to `[189F]`, draws rectangle via `C000:7324`. |
+| `FF 0E` | `C000:6D79` | 3 | offset:u16 | Horizontal scroll left (same handler as `FF 08`). |
+| `FF 10` | `C000:6D79` | 3 | offset:u16 | Horizontal scroll left (same handler as `FF 08`). |
+| `FF 12` | `C000:6D4F` | 7 | mode:u8 | Display mode select. Sets `[16DF]` (row height: 7 or 8 depending on mode), `[16DD]` (row stride), and `[173B]` (half-width flag). Mode 2 clears `[173C]`. |
+| `FF 40` | `C000:7427` | 5 | X:u16, Y:u16 | Position set. Calls `C000:6E55` to compute framebuffer address from X/Y. Clears `[173C]`, `[1733]`, `[1737]`, `[1739]`, `[172C]`. |
+| `FF 42` | `C000:7448` | 9 | height:u16, width_bits:u16, offset:u16, segment:u16 | Bitmap blit. Copies `height` rows of `ceil(width_bits/8)` bytes from source `segment:offset` to framebuffer at `ES:DI` with 64-byte row stride, shifting by bit offset `[189E]`. |
+| `FF 44` | `C000:755D` | 14 | X:u16, Y:u16, width:u16, height:u16, fill:u16, pattern:u16, border:u8 | Rectangle draw. Calls `C000:6E55` for position. If fill, pattern, and border are all zero, calls `C000:7324` (solid fill). Otherwise dispatches to `C000:71C6` (bordered) or `C000:724D` (patterned). |
 
 ## C000:3F35 — Display Script Far Wrapper
 
@@ -136,132 +193,32 @@ that reads commands from the work buffer. When it encounters an
 `FF` prefix byte, the next byte selects a command via the dispatch
 table at `C000:6865`.
 
-## Display Command Dispatch Table (C000:6865, 32 entries)
+### Display Attribute Bytes
 
-The `FF xx` byte pair dispatches through a 32-entry word table.
-The second byte (`xx`) is doubled as an index. All handlers return
-to the renderer loop at `C000:6585` (or restart the renderer at
-`C000:6557`).
-
-### Glyph Setup (slots 0–6)
-
-| Slot | `FF xx` | Handler | Behavior |
-| ---: | --- | --- | --- |
-| 0–4 | `FF 00`–`FF 08` | `C000:68A7` | Load glyph source from `[16E3]`, set segment `[18A3]=D8C6`, set render flag `[1729]\|=0x20`. If `[16E6]==0x0C`: clear glyph buffer `[16E8]` (32 bytes), enter glyph render at `6A7B`. Otherwise enter text render at `65EF`. |
-| 5–6 | `FF 0A`–`FF 0C` | `C000:68A5` | Same as slot 0 but with AL=0 (null glyph). Falls through to `68A7`. |
-
-### Renderer Restart (slots 7–15)
-
-| Slot | `FF xx` | Handler | Behavior |
-| ---: | --- | --- | --- |
-| 7–15 | `FF 0E`–`FF 1E` | `C000:68D5` | Restart the renderer: `JMP C000:6557`. Effectively reloads the display page configuration. |
-
-### Attribute Flags (slots 16–29)
-
-These handlers set or clear individual bits in the display attribute
-bytes `[1729]` and `[1728]`, then return to the renderer loop.
-
-| Slot | `FF xx` | Handler | Effect |
-| ---: | --- | --- | --- |
-| 16 | `FF 20` | `C000:68D8` | Set `[1729] \|= 0x04` (underline on) |
-| 17 | `FF 22` | `C000:68DF` | Clear `[1729] &= ~0x04` (underline off) |
-| 18 | `FF 24` | `C000:68E6` | Set `[1729] \|= 0x08` (inverse on) |
-| 19 | `FF 26` | `C000:68ED` | Clear `[1729] &= ~0x08` (inverse off) |
-| 20 | `FF 28` | `C000:68F4` | Set `[1729] \|= 0x02` (bold on), clear `[16E7]` |
-| 21 | `FF 2A` | `C000:6900` | Clear `[1729] &= ~0x02` (bold off), restore glyph source from `[16E7]`, enter render path |
-| 22 | `FF 2C` | `C000:6924` | Set `[1729] \|= 0x10` (wide on) |
-| 23 | `FF 2E` | `C000:692B` | Clear `[1729] &= ~0x10` (wide off) |
-| 24 | `FF 30` | `C000:6933` | Set `[1728] \|= 0x01` (alternate font) |
-| 25 | `FF 32` | `C000:693A` | Clear `[1728] &= ~0x01` (default font), reconfigure via `C000:6CA7` |
-| 26 | `FF 34` | `C000:6948` | Set `[1729] \|= 0x01`, `[1728] \|= 0x02` (double-strike on) |
-| 27 | `FF 36` | `C000:6954` | Clear `[1729] &= ~0x01`, `[1728] &= ~0x02` (double-strike off), reconfigure |
-| 28 | `FF 38` | `C000:6960` | Clear `[1729] &= ~0x01`, set `[1728] \|= 0x02` (partial double-strike) |
-| 29 | `FF 3A` | `C000:6954` | Same as slot 27 (double-strike off) |
-
-### Data Commands (slots 30–31)
-
-| Slot | `FF xx` | Handler | Behavior |
-| ---: | --- | --- | --- |
-| 30 | `FF 3C` | `C000:6967` | Read pixel shift value. Decrements `[16E1]` (byte count), reads next byte from `[18A1]` (script pointer), stores to `[1734]`. If `[173B]!=0`, shifts right by 2. If nonzero, sets `[172C]\|=0x08`. |
-| 31 | `FF 3E` | `C000:6BAA` | Bitmap blit. Reads next byte from `[18A1]`, dispatches on value: if `>=0x40` enters the extended blit path at `C000:7409`, otherwise processes as a glyph index with direct pixel blitting to the display buffer via `[189F]` (pixel column) and `[189E]` (bit offset). |
-
-### Extended Blit Dispatch (C000:7409)
-
-When `disp_cmd_31` receives a byte `>= 0x40`, it subtracts `0x40`
-and dispatches through a 5-entry word table at `C000:7421`:
-
-```asm
-C000:7409  sub bx,0x40
-C000:740C  cmp bl,0x05
-C000:740F  jc  7414           ; 0..4 valid
-C000:7411  jmp 6585           ; out of range -> return to renderer
-C000:7414  mov si,[cs:bx+7421] ; load handler
-C000:7419  mov al,0
-C000:741B  mov cx,6BE3        ; push return to character class landing
-C000:741E  push cx
-C000:741F  jmp si
-```
-
-| Index | Byte | Handler | Behavior |
-| ---: | --- | --- | --- |
-| 0 | `0x40` | `C000:7427` | String blit: reads DX (segment) and CX (length) from `[18A1]`, calls `C000:6E55` (string renderer), clears display state `[173C]`, `[1733]`, `[1737]`, `[1739]`, `[172C]`. Returns AL=5. |
-| 1 | `0x41` | `C000:7448` | Bitmap blit: reads CX (height), DX (bit-width), SI (source offset), `[BP+7]` (source segment) from `[18A1]`. Computes byte-width, builds pixel mask from bit offset `[189E]`, shifts source data, ORs into framebuffer at `ES:DI` with 64-byte row stride. Returns AL=9. |
-| 2 | `0x42` | `C000:755D` | Positioned blit: reads DX/CX (string segment/length) via `C000:6E55`, then reads position and source parameters. Dispatches to `C000:7324` (simple blit), `C000:71C6` (shifted blit), or `C000:724D` (multi-row blit). Returns AL=14. |
-| 3 | `0x43` | `C000:1E8B` | Indirect blit: calls `C000:2036` (resolved from editor utility context). |
-| 4 | `0x44` | `C000:18A1` | Banked display: context-dependent, reached from thunk dispatch area. |
-
-The bitmap blit (index 1) is the core pixel renderer. It handles
-arbitrary bit-aligned source data with a shift-and-mask pipeline:
-
-- Source segment from `[7004]`, source pointer in SI
-- Destination in framebuffer via `ES:DI`, row stride 0x40 (64 bytes)
-- Bit offset from `[7008]` (0-7), determines shift amount
-- Byte width from `[7002]`, mask in `[7006]`
-- Special case for width=1 uses a narrower mask path at `C000:752B`
-
-### Display Renderer Sub-Dispatch (C000:6BCF, 10 entries)
-
-When the main renderer loop needs to perform a display operation
-beyond simple text, it dispatches through a second table at
-`C000:6BCF` via `C000:6BC2  jmp [cs:bx+0x6BCF]`.
-
-| Index | Handler | Behavior |
-| ---: | --- | --- |
-| 0 | `C000:6BF6` | Clear framebuffer: `REP STOSW` fills `[8000..8FFF]` with zero. |
-| 1 | `C000:6C06` | String output: reads segment:length from script, calls `C000:6E5A`, clears display state. Same as blit_ext_0. |
-| 2 | `C000:6C91` | Display mode set: reads mode byte and drive byte from script, stores to `[16E6]` and `[16E5]`. |
-| 3 | `C000:6CD7` | Positioned string + blit: reads segment:length via `C000:6E5A`, position via `C000:6E81`, then calls `C000:7324` (simple blit) or enters multi-parameter path. |
-| 4 | `C000:6D79` | Column adjust: reads delta from script, subtracts from `[1733]` (column counter). |
-| 5 | `C000:6C27` | String output with position: reads segment:length via `C000:6E5A`, dispatches on mode flags for centering/alignment. |
-| 6 | `C000:6D29` | Row-positioned blit: reads segment:length, adds row offset (`[BX+7] * 64`) to `[189F]`, calls `C000:7324`. |
-| 7 | `C000:6D79` | Same as index 4 (column adjust). |
-| 8 | `C000:6D79` | Same as index 4 (column adjust). |
-| 9 | `C000:6D4F` | Display geometry set: reads pixel width from script, stores to `[16DF]`/`[16DD]`. Width 2 clears `[173C]`, width 8 sets row height to 7, others to 8. |
+| Address | Bit | Set by | Cleared by | Meaning |
+| --- | ---: | --- | --- | --- |
+| `[1728]` | 0 | `0xF8` (superscript on) | `0xF9` | Superscript. |
+| `[1728]` | 1 | `0xFA`/`0xFC` (subscript on) | `0xFB` | Subscript/overtype component. |
+| `[1729]` | 0 | `0xFA` (subscript on) | `0xFB`/`0xFC` | Subscript stroke. |
+| `[1729]` | 1 | `0xF4` (inverse on) | `0xF5` | Inverse video. |
+| `[1729]` | 2 | `0xF0` (underline on) | `0xF1` | Underline. |
+| `[1729]` | 3 | `0xF2` (bold on) | `0xF3` | Bold. |
+| `[1729]` | 4 | `0xF6` (strikethrough on) | `0xF7` | Strikethrough / double-width. |
+| `[1729]` | 5 | slots 0–4 (`0xE0`–`0xE4`) | — | Glyph render active. |
 
 ### Blit Helpers
 
 | Address | Purpose |
 | --- | --- |
-| `C000:6E5A` | String setup: calls `C000:6E81` to compute pixel position from DX:CX. |
-| `C000:6E81` | Pixel position calculator: computes `[189F]` (byte column) and `[189E]` (bit offset) from row/column parameters. |
-| `C000:7324` | Simple blit: copies AL (height) rows of CH-byte width from source to framebuffer at `ES:DI` with 64-byte stride. |
-| `C000:71C6` | Shifted blit: bit-aligned source-to-framebuffer copy with shift pipeline via `C000:72EF`/`72F3`. |
-| `C000:724D` | Multi-row blit: similar to `71C6` but with different row stride calculation. |
+| `C000:6E55` | Position setup from X:u16, Y:u16. Computes `[189F]` and `[189E]`. |
+| `C000:6E5A` | Position setup from DX:CX. Calls `C000:6E81`. |
+| `C000:6CA7` | Glyph source reconfigure from `[16E5]`. |
+| `C000:7324` | Rectangle fill: AL (height) rows of CH-byte width at `ES:DI` with 64-byte stride. |
+| `C000:71C6` | Bordered rectangle: bit-aligned fill with border byte. |
+| `C000:724D` | Patterned rectangle: fill with pattern data. |
 
-### Display Attribute Bytes
+### Callers
 
-| Address | Bit | Meaning |
-| --- | --- | --- |
-| `[1728]` | bit 0 | Alternate font (Character Pitch change) |
-| `[1728]` | bit 1 | Overtype / double-strike (CTRL+underscore) |
-| `[1729]` | bit 0 | Overtype stroke component |
-| `[1729]` | bit 1 | Boldface (CTRL+B) |
-| `[1729]` | bit 2 | Underline (CTRL+X) |
-| `[1729]` | bit 3 | Inverse video |
-| `[1729]` | bit 4 | Expanded Type / double-width (CTRL+Z) |
-| `[1729]` | bit 5 | Glyph render active |
-
-The renderer is called from:
 - Boot path (`C000:09D4` for "INITIALIZING" banner)
 - Startup display (`C000:08E5..0951` for copyright screens)
 - Diagnostic banner (`C000:1506` for chord UI)
