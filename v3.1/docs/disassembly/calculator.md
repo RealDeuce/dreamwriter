@@ -223,14 +223,33 @@ number, EE17:0568).
 
 ## Small Digit Glyphs (F325 Segment)
 
-The panel display area uses smaller 7×13 and 5×13 pixel glyphs
-from segment `F325` (file `0xF3250`). Used by EE17:00FD/01E8
-for the secondary number display. FF 42 parameters: height=0x0D
-(13), width=0x07 (7) or 0x05 (5).
+The panel display area uses smaller glyphs from segment `F325`
+(file `0xF3250`). Stride = 13 (0x0D), base offset = 2 (0x02).
+Offset = `2 + glyph_index × 13`. FF 42 parameters: height=0x0D
+(13), width=0x07 (7) for digits, width=0x05 (5) for separators.
 
-Fixed offsets:
-- `F325:0091` (file `0xF32E1`): blank glyph.
-- `F325:00B8` (file `0xF3308`): filled position marker.
+| Index | File offset | Source | Purpose | Image |
+| ---: | ---: | --- | --- | --- |
+| 0 | `0xF3252` | `F325:0002` | Digit 0 | ![](images/calc-sm-digit-0-0xF3252.png) |
+| 1 | `0xF325F` | `F325:000F` | Digit 1 | ![](images/calc-sm-digit-1-0xF325F.png) |
+| 2 | `0xF326C` | `F325:001C` | Digit 2 | ![](images/calc-sm-digit-2-0xF326C.png) |
+| 3 | `0xF3279` | `F325:0029` | Digit 3 | ![](images/calc-sm-digit-3-0xF3279.png) |
+| 4 | `0xF3286` | `F325:0036` | Digit 4 | ![](images/calc-sm-digit-4-0xF3286.png) |
+| 5 | `0xF3293` | `F325:0043` | Digit 5 | ![](images/calc-sm-digit-5-0xF3293.png) |
+| 6 | `0xF32A0` | `F325:0050` | Digit 6 | ![](images/calc-sm-digit-6-0xF32A0.png) |
+| 7 | `0xF32AD` | `F325:005D` | Digit 7 | ![](images/calc-sm-digit-7-0xF32AD.png) |
+| 8 | `0xF32BA` | `F325:006A` | Digit 8 | ![](images/calc-sm-digit-8-0xF32BA.png) |
+| 9 | `0xF32C7` | `F325:0077` | Digit 9 | ![](images/calc-sm-digit-9-0xF32C7.png) |
+| 10 | `0xF32D4` | `F325:0084` | Colon `:` | ![](images/calc-sm-glyph-10-0xF32D4.png) |
+| 11 | `0xF32E1` | `F325:0091` | Blank | ![](images/calc-sm-glyph-11-0xF32E1.png) |
+| 12 | `0xF32EE` | `F325:009E` | Decimal point `.` | ![](images/calc-sm-glyph-12-0xF32EE.png) |
+| 13 | `0xF32FB` | `F325:00AB` | Thousands separator `,` | ![](images/calc-sm-glyph-13-0xF32FB.png) |
+| 14 | `0xF3308` | `F325:00B8` | Minus `−` | ![](images/calc-sm-glyph-14-0xF3308.png) |
+| 15 | `0xF3315` | `F325:00C5` | Blank (alt) | ![](images/calc-sm-glyph-15-0xF3315.png) |
+
+The hardcoded offsets in the rendering code correspond to:
+- `F325:0091` (index 11): blank glyph for leading-zero fill.
+- `F325:00B8` (index 14): minus sign for negative indicator.
 
 ## Error Messages
 
@@ -244,11 +263,20 @@ displayed when `[A342]!=0` (overflow/error state):
 | 2 | `0xF24F9` | `OUT OF RANGE` |
 | 3 | `0xF2511` | `UNKNOWN ERROR` |
 
+## Display Frames
+
+The entry code draws two `FF 44` rectangles via `DEF0:0DF5`:
+
+| Call | X | Y | Width | Height | Purpose |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 1st | 0x1B | 0x08 | 2 | 0x189 | Main calculator frame (tall border). |
+| 2nd | 0x01 | 0x7B | 1 | 0xE6 | Number display area (inner panel). |
+
 ## Display Script Sources
 
 | Address | File | Length | Purpose |
 | --- | ---: | ---: | --- |
-| `F24A:000E` | `0xF24AE` | 6 | `FF 40` position (0x21, 0x14) — number display area. |
-| `F24B:0004` | `0xF24B4` | 6 | `FF 40` position (5, 0x90) — panel area. |
-| `F24B:000A` | `0xF24BA` | 15 | `FF 06` attribute — menu bar (shared with other organizer apps). |
+| `F24A:000E` | `0xF24AE` | 6 | `FF 40` position (0x21, 0x14) — number display area cursor. |
+| `F24B:0004` | `0xF24B4` | 6 | `FF 40` position (5, 0x90) — panel area cursor. |
+| `F24B:000A` | `0xF24BA` | 15 | `FF 06` attribute — sets glyph rendering parameters (shared with other organizer apps). |
 | `F24C:0009` | `0xF24C9` | 96 | Error message strings (4 × 24 bytes). |
