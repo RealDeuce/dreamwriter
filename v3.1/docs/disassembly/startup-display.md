@@ -195,3 +195,37 @@ offsets (physical addresses in window 6):
 | `EEFF` | `3B` | "US English" text |
 | `EF3A` | `5A` | "Reproduction" / license text |
 | `EF94` | `0B` | Trailing control bytes |
+
+### Display Script Raw Data (C772:EDB0, file 0xD64D0)
+
+The INITIALIZING script at `C772:EDB0` (24 bytes, rendered by
+`C000:09D4` during cold reinit):
+
+```text
+EDB0: FF 00 FF 04 00 06 FF 02 00 00 00 00  ; FF 00=clear, FF 04=font, FF 02=position
+EDBC: 49 4E 49 54 49 41 4C 49 5A 49 4E 47  ; "INITIALIZING"
+```
+
+The startup menu script at `C772:EFB0` (file `0xD66D0`, rendered by
+`C000:19A8` during application entry) contains `FF 42` bitmap
+commands referencing button and label bitmaps:
+
+```text
+EFB0: FF 06 00 82 00                        ; FF 06=attribute
+EFB5: FF 42 22 00 24 00 1B F0 72 C7         ; bitmap: 34×36 button at C772:F01B
+EFBF: FF 40 0B 00 87 00                     ; FF 40=position
+EFC5: FF 42 07 00 18 00 C5 F0 72 C7         ; bitmap: 7×24 "ORGN" at C772:F0C5
+EFCF: FF 02 0C 00 6A 00                     ; FF 02=text cursor
+EFD5: 4F 52 47 41 4E 49 5A 45 52 20 4D 45   ; "ORGANIZER ME"
+EFE1: 4E 55                                 ; "NU"
+EFE3: FF 40 06 00 3A 01                     ; position for WP button
+EFE9: FF 42 22 00 24 00 1B F0 72 C7         ; bitmap: same button
+EFF3: FF 40 0B 00 3F 01                     ; position
+EFF9: FF 42 07 00 18 00 DA F0 72 C7         ; bitmap: 7×24 "WP" at C772:F0DA
+F003: FF 02 0C 00 13 01                     ; text cursor
+F009: 57 4F 52 44 20 50 52 4F 43 45 53 53   ; "WORD PROCESS"
+F015: 4F 52 20 4D 45 4E 55                  ; "OR MENU"
+```
+
+See [`bitmaps.md`](../bitmaps.md) for rendered PNG images of the
+button and label bitmaps.

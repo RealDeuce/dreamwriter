@@ -56,6 +56,36 @@ The keyboard translation tables were copied from ROM during init
 by `C000:3EBB` (80 bytes to `[1643]`) and `C000:3ED4` (480 bytes
 to `[1126]` with a 6-entry pointer table at `[1114]`).
 
+### ROM Translation Table Source (C000:3887, 480 bytes)
+
+Six 80-byte tables (one per modifier state), each containing 10
+rows × 8 columns matching the physical keyboard matrix. `0xFF`
+marks unused positions. Copied to RAM `[1126..1305]`.
+
+```text
+; Table 0: unshifted (C000:3887, file 0xC3887)
+3887: FF FF FF 11 DA FF FF FF FF 60 03 20 FF FF 35 FF   ; row 0-1 partial
+3897: FF 0C 31 09 FF FF FF FF 33 32 71 77 65 FF 73 64   ; "32qwe.sd"
+38A7: 34 FF 7A 78 61 FF 72 66 FF FF 62 76 74 79 67 63   ; "4.zxa.rf..bvtygc"
+38B7: 36 12 0D 10 5C 2F 68 6E 3D 37 02 13 0B 75 6D 6B   ; "6...\\/hn=7...umk"
+38C7: 38 2D 5D 27 69 6A 2C 30 39 FF FF FF FF FF FF FF   ; "8-]'ij,09"
+
+; Table 1: shifted (C000:38D7)
+; Table 2: Caps Lock (C000:3927)
+; Table 3: Caps Lock + shifted (C000:3977)
+; Table 4: Alt (C000:39C7)
+; Table 5: Control (C000:3A17)
+```
+
+Key layout (unshifted): `32qwe`, `sd4`, `zxarfbvtygc6`, `\/hn=7`,
+`umk8-]'ij,09`, `p;lo.` — matching the DreamWriter physical key
+arrangement.
+
+### ROM Key Code Mapping Source (C000:3927, 80 bytes)
+
+Copied to RAM `[1643..1692]` by `C000:3EBB`. Maps key repeat
+pairings.
+
 ### State Variables
 
 | Address | Purpose |

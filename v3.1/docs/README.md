@@ -10,6 +10,8 @@ banking, and protocol docs in `../../docs/` apply to both v2.1 and v3.1.
 | [`map.md`](map.md) | Address model, banking layout, code segment map, reset chain, and v2.1 comparison. |
 | [`rom-regions.tsv`](rom-regions.tsv) | Machine-readable region map. |
 | [`entry-points.md`](entry-points.md) | Confirmed code entry points. |
+| [`strings.md`](strings.md) | String landmark index with file offsets. |
+| [`bitmaps.md`](bitmaps.md) | Bitmap resources with rendered PNGs. |
 
 ## Disassembly
 
@@ -33,6 +35,7 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 | [`disassembly/startup-display.md`](disassembly/startup-display.md) | RTC gate, copyright/product banner rendering from C772 display scripts. |
 | [`disassembly/display-stream.md`](disassembly/display-stream.md) | Display script renderer (C000:6557) and far wrapper (C000:3F35, 136 callers). |
 | [`disassembly/diagnostic-keyboard-check.md`](disassembly/diagnostic-keyboard-check.md) | F+J+SPACE keyboard chord check, diagnostic entry gate. |
+| [`disassembly/diagnostic-application.md`](disassembly/diagnostic-application.md) | Full diagnostic mode: command processor (M/S/I/O/L/Y/Z/K/T/N/P/Q/R), keyboard check UI with glyph rendering. |
 | [`disassembly/diagnostic-monitor.md`](disassembly/diagnostic-monitor.md) | Terminal command monitor (banked thunk slot 7). |
 | [`disassembly/subsystem-init.md`](disassembly/subsystem-init.md) | Bank mirrors, RAM clear, file/drive/storage init, state validation, full 2E72 init chain. |
 | [`disassembly/int21-dispatch.md`](disassembly/int21-dispatch.md) | INT 21h DOS-like service dispatcher and function table. |

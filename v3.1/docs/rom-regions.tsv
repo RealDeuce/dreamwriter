@@ -11,6 +11,8 @@ start	end	type	confidence	segment	label	notes
 0xC084A	0xC09FD	code	confirmed	C000	c000-084A	C000:084A..09FD (435 bytes, traced)
 0xC0A32	0xC0AAD	code	confirmed	C000	c000-0A32	C000:0A32..0AAD (123 bytes, traced)
 0xC0AE6	0xC0D89	code	confirmed	C000	c000-0AE6	C000:0AE6..0D89 (675 bytes, traced)
+0xC0D89	0xC0D93	table	confirmed	C000	sound-sequence-ptrs	5 word pointers to tone sequences (slots 0-4).
+0xC0D93	0xC0DBB	data	confirmed	C000	sound-sequence-data	Tone sequence data: (duration, frequency) pairs for 5 slots.
 0xC0DC5	0xC0F77	code	confirmed	C000	c000-0DC5	C000:0DC5..0F77 (434 bytes, traced)
 0xC0FA2	0xC1228	code	confirmed	C000	c000-0FA2	C000:0FA2..1228 (646 bytes, traced)
 0xC1228	0xC12CC	data	confirmed	C000	far-call-table-source	41 far-pointer entries copied to RAM [0200..029C].
@@ -35,6 +37,8 @@ start	end	type	confidence	segment	label	notes
 0xC30D1	0xC3595	code	confirmed	C000	c000-30D1	C000:30D1..3595 (1220 bytes, traced)
 0xC3AE3	0xC3CC6	code	confirmed	C000	c000-3AE3	C000:3AE3..3CC6 (483 bytes, traced)
 0xC3CEB	0xC3E5C	code	confirmed	C000	c000-3CEB	C000:3CEB..3E5C (369 bytes, traced)
+0xC3887	0xC3A67	data	confirmed	C000	keyboard-translation-rom	480 bytes copied to RAM [1126] by C000:3ED4. 6 keyboard layout tables (80 bytes each): unshifted, shifted, caps, caps+shift, alt, control.
+0xC3927	0xC3977	data	confirmed	C000	keyboard-mapping-rom	80 bytes copied to RAM [1643] by C000:3EBB. Key code mapping table.
 0xC3EAC	0xC61DF	code	confirmed	C000	c000-3EAC	C000:3EAC..61DF (9011 bytes, traced)
 0xC61DF	0xC623F	table	confirmed	C000	int21-validity	Byte map AH (00..5F) to dispatch slot. 0xFF=unsupported.
 0xC623F	0xC6277	table	confirmed	C000	int21-dispatch	Word table of handler offsets indexed by validity slot.
@@ -48,7 +52,9 @@ start	end	type	confidence	segment	label	notes
 0xC6E9E	0xC71C6	code	confirmed	C000	c000-6E9E	C000:6E9E..71C6 (808 bytes, traced)
 0xC7409	0xC7421	code	confirmed	C000	c000-7409	C000:7409..7421 (24 bytes, traced)
 0xC75B5	0xC7636	code	confirmed	C000	c000-75B5	C000:75B5..7636 (129 bytes, traced)
+0xC7701	0xC7726	text	confirmed	C000	terminal-mode-banner	Terminal mode banner and diagnostic command help strings.
 0xC7724	0xC777D	code	confirmed	C772	c772-0004	C772:0004..005D (89 bytes, traced)
+0xC7789	0xC785D	text	confirmed	C000	diagnostic-banner	Diagnostic 31BAB218 banner (98Jun21) and diagnostic command help: M/S/Y/Z/I/O/L/T/N/Q/R.
 0xC7799	0xC779D	data	confirmed	C000	warm-signature	4-byte warm-RAM signature checked at boot.
 0xC78BD	0xC78C4	code	confirmed	C000	c000-78BD	C000:78BD..78C4 (7 bytes, traced)
 0xC78BD	0xC78C4	code	confirmed	C772	c772-019D	C772:019D..01A4 (7 bytes, traced)
@@ -144,6 +150,11 @@ start	end	type	confidence	segment	label	notes
 0xD256B	0xD262E	code	confirmed	C772	c772-AE4B	C772:AE4B..AF0E (195 bytes, traced)
 0xD275E	0xD2781	code	confirmed	C772	c772-B03E	C772:B03E..B061 (35 bytes, traced)
 0xD27CA	0xD280D	code	confirmed	C772	c772-B0AA	C772:B0AA..B0ED (67 bytes, traced)
+0xD2744	0xD2751	text	confirmed	C772	merge-filename	:MERGE.FIL filename constant at C772:B024.
+0xD28FE	0xD290F	text	confirmed	C772	address-odb-path	H:ADDRESS.ODB address-book path at C772:B1DE.
+0xD36F9	0xD3A0B	data	confirmed	C772	printer-escape-seqs	HP PCL/ESC printer control sequences: margins, fonts, spacing.
+0xD3A0B	0xD3C6A	data	confirmed	C772	printer-font-table	PCL font selection sequences: pitch, height, style variations.
+0xD3C6A	0xD3D2A	data	confirmed	C772	char-translation-table	Character translation table (166 bytes): maps internal codes to printer character set.
 0xD4DBB	0xD4DD5	code	confirmed	C772	c772-D69B	C772:D69B..D6B5 (26 bytes, traced)
 0xD4DFB	0xD4E11	code	confirmed	C772	c772-D6DB	C772:D6DB..D6F1 (22 bytes, traced)
 0xD4E61	0xD4E67	code	confirmed	C772	c772-D741	C772:D741..D747 (6 bytes, traced)
@@ -152,7 +163,42 @@ start	end	type	confidence	segment	label	notes
 0xD6269	0xD628D	code	confirmed	C772	c772-EB49	C772:EB49..EB6D (36 bytes, traced)
 0xD62F0	0xD6368	code	confirmed	C772	c772-EBD0	C772:EBD0..EC48 (120 bytes, traced)
 0xD64C5	0xD64CF	code	confirmed	C772	c772-EDA5	C772:EDA5..EDAF (10 bytes, traced)
+0xD4A2	0xD550	data	confirmed	C772	ruler-pattern	80-column ruler string: 0,,,,+,,,,1... used by editor display at C772:5D82.
+0xD5E3F	0xD5ED4	text	confirmed	C772	status-line-labels	Editor status line mode labels: OFF, CHA, LIN, CAPS, SHIFT.
+0xD5E9E	0xD5EF2	text	confirmed	C772	status-line-indicators	Editor status indicators: CODE, PRNT, FULL, HYPH, FRM, INS, ZOOM, MARK.
+0xD5EFA	0xD5F1A	text	confirmed	C772	merge-field-tags	Merge field tags: NAME(, SALUTATION(, TEL(, FAX(, ADRS(.
+0xD64DC	0xD64EC	text	confirmed	C772	initializing-string	INITIALIZING display script (24 bytes).
+0xD64F4	0xD6550	text	confirmed	C772	startup-banner	WORD PROCESSOR (C) 1992 NER/mikrolab version banner.
 0xD650C	0xD65F0	text	confirmed	C772	copyright-strings	NER/mikrolab/Inso CorrectSpell copyright notices.
+0xD66F4	0xD6728	text	confirmed	C772	organizer-menu-title	ORGANIZER MENU display script.
+0xD6728	0xD6816	text	confirmed	C772	wp-menu-title	WORD PROCESSOR MENU display script.
+0xD6816	0xD684D	text	confirmed	C772	low-battery-msg	The batteries are too low to operate.
+0xD684D	0xD68AE	data	confirmed	C772	printer-control-table	Printer model/feature control sequence table.
+0xD68AE	0xD6920	text	confirmed	C772	clear-text-ui	CLEAR TEXT dialog strings.
+0xD6920	0xD6A6A	text	confirmed	C772	print-text-ui	PRINT TEXT dialog: page range, numbering, merge options.
+0xD6A6A	0xD6B6A	text	confirmed	C772	file-merge-ui	Convert to ASCII, NAME LIST, merge file error messages.
+0xD6B6A	0xD6C38	text	confirmed	C772	initialize-ui	INITIALIZE warning dialog, PLEASE WAIT, memory size display.
+0xD6C38	0xD6D27	text	confirmed	C772	search-replace-ui	SEARCH and REPLACE SEARCH dialogs.
+0xD6D27	0xD7002	text	confirmed	C772	print-status-ui	Active printing display: pause, cancel, page break, continuation.
+0xD7002	0xD73FC	text	confirmed	C772	storage-error-msgs	Card/FDD/memory error messages: no card, not formatted, write-protected, etc.
+0xD73FC	0xD76C1	text	confirmed	C772	file-ops-ui	RECALL FILE, BASIC, DIRECTORY, DELETE FILE, RENAME FILE dialogs.
+0xD76E4	0xD7736	text	confirmed	C772	store-ui	Same file name exists, Storing text, PLEASE WAIT.
+0xD7736	0xD77F9	text	confirmed		store-text-ui	STORE TEXT dialog, ENTER FILE NAME, overwrite prompt. Past C772 segment limit.
+0xD77F9	0xD7A84	text	confirmed		spell-check-ui	SPELL CHECK RUN/SPELL CHECK dialogs: suggest, add, bypass, retype, user dictionary, NO SUGGESTION.
+0xD7A84	0xD7CCC	text	confirmed		work-memory-msgs	Work memory full messages, COPY/MOVE prompts.
+0xD7CCC	0xD7E13	text	confirmed		format-settings-ui	FORMAT SETTING dialog: margins, paper width/length, tab space.
+0xD7E13	0xD7F9F	text	confirmed		init-memory-ui	Built-in/Card Memory labels, INITIALIZE BUILT-IN MEMORY warning, text recall prompts.
+0xD7F9F	0xD8039	text	confirmed		spell-status-msgs	Word added/already in dictionary, User Dictionary full, Invalid word.
+0xD803F	0xD80F1	text	confirmed		thesaurus-ui	THESAURUS display: meanings, synonyms, NO SYNONYM IN DICTIONARY.
+0xD8109	0xD8462	text	confirmed		grammar-check-ui	GRAMMAR CHECK error type dialogs: Beginning, Punctuation, Capitalization, Spacing, Double word, Quotation.
+0xD8462	0xD84C4	text	confirmed		spell-grammar-run-ui	SPELL & GRAMMAR CHECK RUN combined title.
+0xD84C4	0xD86FF	text	confirmed		comm-ui	RS-232C send/receive file dialogs, XMODEM variants.
+0xD86FF	0xD88F9	text	confirmed		dreamlink-ui	DreamLink labels and error messages.
+0xD88F9	0xD89B0	text	confirmed		directory-ui	DIRECTORY change/proceed/cancel prompts.
+0xD89B0	0xD8A17	text	confirmed		store-status-msgs	Text stored successfully, clear workspace prompt.
+0xD8A17	0xD8B30	text	confirmed		spell-disabled-msg	Spell Checking is Disabled, memory protected, To Be Implemented, NJD debug labels.
+0xD8B30	0xD8ED3	table	probable		display-script-ptrs	Display script resource pointer table (~450 word entries).
+0xD8ED3	0xDEF00	mixed	probable		display-script-data	Display script data, bitmaps, and glyph resources. Contains embedded bitmap data (icon/button shapes).
 0xDEF00	0xDEF0A	data	confirmed	DEF0	def0-header	Glyph bitmap/pixel mask data before first wrapper.
 0xDEF0B	0xE12F3	code	confirmed	DEF0	def0-000B	DEF0:000B..23F3 (9192 bytes, traced)
 0xE1335	0xE1830	code	confirmed	DEF0	def0-2435	DEF0:2435..2930 (1275 bytes, traced)
@@ -172,8 +218,16 @@ start	end	type	confidence	segment	label	notes
 0xEDFCE	0xEE15B	code	confirmed	ED1B	ed1b-0E1E	ED1B:0E1E..0FAB (397 bytes, traced)
 0xEE179	0xEF8AF	code	confirmed	EE17	ee17-0009	EE17:0009..173F (5942 bytes, traced)
 0xEF8AF	0xEFB1D	code	confirmed	EF8A	ef8a-000F	EF8A:000F..027D (622 bytes, traced)
+0xF131C	0xF1344	text	confirmed	EE17	eromcard-filename	EROMCARD.X ROM card executable filename.
 0xF1344	0xF13C0	text	confirmed	EE17	others-menu-strings	COMMUNICATE, SYSTEM, PREFERENCES, ROM CARD.
-0xF1772	0xF1830	text	confirmed	EE17	wp-menu-strings	EDIT TEXT, CLEAR TEXT, PRINTER, OTHERS, RECALL, STORE, DELETE, RENAME, COPY, INITIALIZE.
+0xF140F	0xF14E1	text	confirmed	EE17	system-setup-strings	SYSTEM SET UP: AUTO POWER OFF PERIOD, POWER ON BUZZER with type/duration choices.
+0xF14E1	0xF15B8	text	confirmed	EE17	editor-preferences	EDITOR PREFERENCES: STICKY SHIFT KEY, BIG FONT MODE, SPELL CHECKING, PASSWORDS, SAVE ONLY TEXT ON FDD.
+0xF15B8	0xF162E	text	confirmed	EE17	romcard-error-msgs	ROM card error messages: no card, inadequate memory, can not open, ID error.
+0xF16B0	0xF16C1	data	confirmed	EE17	filename-invalid-chars	Filename invalid characters: "\ *+,/:<=>?[]|.
+0xF16C1	0xF1716	text	confirmed	EE17	password-ui	Password Registry UI and default password (teacher123).
+0xF1772	0xF1830	text	confirmed	EE17	wp-menu-strings	EDIT TEXT, FILE, CLEAR TEXT, PRINTER, T I M E, OTHERS, RECALL, STORE, DELETE, RENAME, COPY, INITIALIZE.
+0xF1852	0xF18F6	text	confirmed	EE17	printer-menu-strings	PRINT OUT, SET UP 1, SET UP 2.
+0xF18C2	0xF1930	text	confirmed	EE17	comm-menu-strings	SEND FILE x2, RECEIVE FILE x2, TERMINAL, SET UP.
 0xF245A	0xF2610	text	confirmed	EE17	orgn-menu-strings	CALCULATOR, CALENDAR, SCHEDULER, WORLD CLOCK, ADDRESS BOOK, error messages.
 0xF2B9A	0xF2BB0	text	confirmed	EE17	schedule-odb	SCHEDULE.ODB filename.
 0xF37D0	0xF37E0	text	confirmed	EE17	address-odb	ADDRESS.ODB filename.

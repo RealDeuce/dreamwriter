@@ -7,9 +7,47 @@ far-call wrapper around it used by DEF0 and EE17 (136 callers).
 path).
 
 Display scripts are binary streams containing positioning commands,
-text, and resource references. They are NOT x86 instructions — the
-`FF xx` opcodes within display scripts are display commands, not CPU
-instructions.
+text, and resource references. They are NOT x86 instructions.
+
+### Byte Classification
+
+The renderer at `C000:6557` reads one byte at a time and classifies:
+
+| Byte range | Action |
+| --- | --- |
+| `0x00..0x1F` | Control — skipped (advance script pointer). |
+| `0x20..0xDF` | Character — rendered as a glyph via the character pipeline at `C000:65AA`. |
+| `0xE0..0xFE` | Single-byte command — dispatched through the main table at `C000:6865` (slots 0..30). Byte `0xE0` = slot 0, `0xE2` = slot 1, ..., `0xFE` = slot 30. |
+| `0xFF` | Extended prefix — slot 31 (`C000:6BAA`), reads the **next byte** as a sub-opcode. |
+
+### Sub-Opcode Dispatch (after 0xFF)
+
+Slot 31 reads the next byte from `[18A1]` and dispatches:
+
+| Sub-opcode range | Action |
+| --- | --- |
+| `0x00..0x12` (even only) | Sub-command table at `C000:6BCF` (10 entries, byte-indexed — only even values produce valid word-aligned reads). |
+| `0x13..0x3F` | Ignored (returns to main loop). |
+| `0x40..0x44` (even only) | Extended command table at `C000:7421` (3 entries, byte-indexed). |
+| `0x45+` | Invalid (returns to main loop). |
+
+### Two-Byte Command Summary
+
+| Command | Sub-opcode | Handler | Params | Purpose |
+| --- | ---: | --- | ---: | --- |
+| `FF 00` | `0x00` | `C000:6BF6` | 0 | Screen clear. |
+| `FF 02` | `0x02` | `C000:6C06` | 4 | Text cursor position (X:u16, Y:u16). |
+| `FF 04` | `0x04` | `C000:6C91` | 2 | Font select (style:u16). |
+| `FF 06` | `0x06` | `C000:6CD7` | 6 | Attribute set (6 bytes). |
+| `FF 08` | `0x08` | `C000:6D79` | — | (shared handler with 0E/10). |
+| `FF 0A` | `0x0A` | `C000:6C27` | — | Attribute modifier. |
+| `FF 0C` | `0x0C` | `C000:6D29` | — | Display mode. |
+| `FF 0E` | `0x0E` | `C000:6D79` | — | (shared handler). |
+| `FF 10` | `0x10` | `C000:6D79` | — | (shared handler). |
+| `FF 12` | `0x12` | `C000:6D4F` | — | State update. |
+| `FF 40` | `0x40` | `C000:7427` | 4 | Position set (X:u16, Y:u16) + clear attribute state. Returns AL=5. |
+| `FF 42` | `0x42` | `C000:7448` | 8 | Bitmap blit: height:u16, width_bits:u16, source_offset:u16, source_segment:u16. Returns AL=9. |
+| `FF 44` | `0x44` | `C000:755D` | 13 | Rectangle draw: X:u16, Y:u16, width:u16, height:u16, fill:u16, pattern:u16, border:u8. Returns AL=14. |
 
 ## C000:3F35 — Display Script Far Wrapper
 

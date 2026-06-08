@@ -106,6 +106,21 @@ Table pointers at `CS:0D89`:
 | 3 | `C000:0DB1` | silence(2) | |
 | 4 | `C000:0DB5` | 5 ascending tones (`0xC4`→`0x126`) | `C000:09CE` (NMI recovery) |
 
+Sequence table data at `C000:0D89..0DBB` (file `0xC0D89`):
+
+```text
+0D89: 93 0D 9D 0D A1 0D B1 0D B5 0D   ; 5 word pointers
+0D93: 08 5D 01 02 00 00 04 00 01 00   ; slot 0: tone(698,8) silence(2) tone(100,4)
+0D9D: 04 BA 02 00                     ; slot 1: tone(2BA,4)
+0DA1: 05 26 01 05 06 01 05 E9 00 05   ; slot 2: 5 descending tones
+0DAB: DC 00 05 C4 00 00               ;   126→106→E9→DC→C4
+0DB1: 02 00 00 00                     ; slot 3: silence(2)
+0DB5: 05 C4 00 05 DC 00              ; slot 4: 5 ascending tones
+0DBB:                                 ;   C4→DC→E9→106→126
+```
+
+Each entry: 1-byte duration, 2-byte LE frequency. Terminated by duration `0x00`.
+
 ```asm
 ; file 0xCDC5
 C000:0DC5  3C 05             cmp al,5
