@@ -7,6 +7,10 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 1. Reset and Boot (C000:0000-02FF)
 
+See [`boot.md`](disassembly/boot.md).
+
+See [`disassembly/boot.md`](disassembly/boot.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `FFFF:0000` | `0xFFFF0` | CPU reset vector; `CLI; JMP FAR F6E3:0000`. |
@@ -30,6 +34,10 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:02BE` | `0xC02BE` | Restores bank ports 11-15 from `[147B..147F]`, restores BX/CX/DX/SI/DI/ES/BP from `[1455..145F]`. |
 
 ## 2. Power/NMI/Context (C000:0300-05FF)
+
+See [`power-irq.md`](disassembly/power-irq.md), [`nmi-context.md`](disassembly/nmi-context.md).
+
+See [`disassembly/power-irq.md`](disassembly/power-irq.md), [`disassembly/nmi-context.md`](disassembly/nmi-context.md).
 
 | Address | File offset | Description |
 | --- | ---: | --- |
@@ -59,6 +67,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 3. IRQ Handlers (C000:05C0-08FF)
 
+See [`device-irq.md`](disassembly/device-irq.md), [`keyboard-irq.md`](disassembly/keyboard-irq.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `C000:05C0` | `0xC05C0` | irq_f9: timer/wake acknowledge handler. |
@@ -74,6 +84,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:08A2` | `0xC08A2` | Buzzer/display helper called from `DEF0:27E3`. Calls `C000:0DC5`. |
 
 ## 4. Startup Display and Sound (C000:08AA-0BAF)
+
+See [`startup-display.md`](disassembly/startup-display.md), [`sound-lowlevel.md`](disassembly/sound-lowlevel.md).
 
 | Address | File offset | Description |
 | --- | ---: | --- |
@@ -105,6 +117,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:0B6F` | `0xC0B6F` | Tone helper (high frequency). |
 
 ## 5. RTC and Keyboard (C000:0B74-0F0A)
+
+See [`rtc-alarm-power.md`](disassembly/rtc-alarm-power.md), [`keyboard-services.md`](disassembly/keyboard-services.md).
 
 | Address | File offset | Description |
 | --- | ---: | --- |
@@ -140,6 +154,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 6. IVT and Vectors (C000:0F6F-12CB)
 
+See [`installed-vectors.md`](disassembly/installed-vectors.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `C000:0F6F` | `0xC0F6F` | LCD clear: calls `C000:2F54`, `C000:0F0B`. |
@@ -163,6 +179,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 7. Diagnostic (C000:1303-15C2)
 
+See [`diagnostic-keyboard-check.md`](disassembly/diagnostic-keyboard-check.md), [`diagnostic-monitor.md`](disassembly/diagnostic-monitor.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `C000:1303` | `0xC1303` | Keyboard scan reset: clears row index, resets scan hardware. |
@@ -185,6 +203,10 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:1595` | `0xC1595` | Diagnostic command helper: calls `C000:1B4F`. |
 
 ## 8. Banked Thunks (C000:15C3-1DFF)
+
+See [`banked-thunk-dispatch.md`](disassembly/banked-thunk-dispatch.md).
+
+See [`disassembly/banked-thunk-dispatch.md`](disassembly/banked-thunk-dispatch.md).
 
 | Address | File offset | Description |
 | --- | ---: | --- |
@@ -234,6 +256,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 10. Subsystem Init (C000:1F61-2FFF)
 
+See [`subsystem-init.md`](disassembly/subsystem-init.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `C000:1F61` | `0xC1F61` | Called from editor init at `C000:99DE`. |
@@ -256,6 +280,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 11. Serial/DreamLink (C000:3168-35FF)
 
+See [`c000-serial-io.md`](disassembly/c000-serial-io.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `C000:3168` | `0xC3168` | Keyboard poll: reads keyboard ring buffer, returns translated keycode. |
@@ -269,6 +295,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 12. Keyboard Services (C000:3AE3-3EFF)
 
+See [`keyboard-services.md`](disassembly/keyboard-services.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `C000:3AE3` | `0xC3AE3` | Keyboard row processor: called after completed 10-row scan. Maintains debounce, queues press/repeat events. |
@@ -278,6 +306,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 13. Display Wrappers (C000:3F0C-3FC8)
 
+See [`display-stream.md`](disassembly/display-stream.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `C000:3F0C` | `0xC3F0C` | Display wrapper called from `DEF0:2BFC`. |
@@ -285,6 +315,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:3F47` | `0xC3F47` | Display script renderer (alternate far wrapper, far-call table `[023C]`). |
 
 ## 14. INT 21h File Ops (C000:3F5F-6276)
+
+See [`int21-file-io.md`](disassembly/int21-file-io.md).
 
 ### Disk/DTA Services
 
@@ -375,6 +407,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 15. INT 21h Dispatch (C000:6277-641F)
 
+See [`int21-dispatch.md`](disassembly/int21-dispatch.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `C000:6277` | `0xC6277` | INT 21h dispatch: validity table at `C000:61DF`, dispatch table at `C000:623F`. |
@@ -414,6 +448,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:30E7` | `0xC30E7` | int21_input_status_impl (AH=0Bh): checks keyboard/serial input status. |
 
 ## 16. Display Renderer (C000:6523-6BFF)
+
+See [`display-stream.md`](disassembly/display-stream.md).
 
 | Address | File offset | Description |
 | --- | ---: | --- |
@@ -460,6 +496,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 18. Editor Utility (C000:75B5-BBFE)
 
+See [`c000-editor-utility.md`](disassembly/c000-editor-utility.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `C000:75B5` | `0xC75B5` | Display string output for AD00 ROM card: calls `C000:6E55`. |
@@ -479,6 +517,10 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:DB96` | `0xCDB96` | Editor internal routine. |
 
 ## 19. C772 Entry Points
+
+See [`app-entry.md`](disassembly/app-entry.md), [`menu-interpreter.md`](disassembly/menu-interpreter.md), [`c772-native-helpers.md`](disassembly/c772-native-helpers.md).
+
+See [`disassembly/app-entry.md`](disassembly/app-entry.md), [`disassembly/menu-interpreter.md`](disassembly/menu-interpreter.md), [`disassembly/c772-native-helpers.md`](disassembly/c772-native-helpers.md).
 
 ### Application Entry
 
@@ -664,6 +706,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 ## 20. DEF0 Far-Call Table Entries
 
+See [`def0-wrappers.md`](disassembly/def0-wrappers.md), [`def0-display-services.md`](disassembly/def0-display-services.md), [`def0-file-services.md`](disassembly/def0-file-services.md).
+
 The far-call table at `[0200..029C]` is installed by `C000:1161` and
 contains 41 entries (38 to DEF0, 2 to C000). These provide the C772
 application layer with indirect access to services.
@@ -724,6 +768,10 @@ application layer with indirect access to services.
 | 39 | `[029C]` | `DEF0:57EF` | `0xE46EF` | Combined display render + file init. |
 
 ## 21. DEF0 Service Entry Points
+
+See [`def0-app-init.md`](disassembly/def0-app-init.md), [`def0-cursor-state.md`](disassembly/def0-cursor-state.md), [`def0-menu-display.md`](disassembly/def0-menu-display.md), [`def0-file-dialogs.md`](disassembly/def0-file-dialogs.md), [`def0-keyboard-subsystem.md`](disassembly/def0-keyboard-subsystem.md), [`def0-storage-subsystem.md`](disassembly/def0-storage-subsystem.md), [`def0-display-subsystem.md`](disassembly/def0-display-subsystem.md).
+
+See [`disassembly/def0-app-init.md`](disassembly/def0-app-init.md), [`disassembly/def0-cursor-state.md`](disassembly/def0-cursor-state.md), [`disassembly/def0-menu-display.md`](disassembly/def0-menu-display.md), [`disassembly/def0-file-dialogs.md`](disassembly/def0-file-dialogs.md), [`disassembly/def0-keyboard-subsystem.md`](disassembly/def0-keyboard-subsystem.md), [`disassembly/def0-storage-subsystem.md`](disassembly/def0-storage-subsystem.md), [`disassembly/def0-display-subsystem.md`](disassembly/def0-display-subsystem.md), [`disassembly/def0-display-rendering.md`](disassembly/def0-display-rendering.md).
 
 ### Wrapper Functions (DEF0:000B-00F9)
 
@@ -907,6 +955,8 @@ application layer with indirect access to services.
 
 ## 22. EE17/EF8A Utility
 
+See [`ee17-utility.md`](disassembly/ee17-utility.md), [`ef8a-utility.md`](disassembly/ef8a-utility.md).
+
 ### EE17 Printer/Spelling Services
 
 | Address | File offset | Description |
@@ -966,6 +1016,10 @@ application layer with indirect access to services.
 
 ## 23. ED1B Bank Switch
 
+See [`ed1b-ad00-banked.md`](disassembly/ed1b-ad00-banked.md).
+
+See [`disassembly/ed1b-ad00-banked.md`](disassembly/ed1b-ad00-banked.md).
+
 | Address | File offset | Description |
 | --- | ---: | --- |
 | `ED1B:0D25` | `0xEDE45` | Bank switch entry: calls `AD00:009A`. Called from `DEF0:27B9`. |
@@ -980,6 +1034,10 @@ application layer with indirect access to services.
 | `ED1B:0F4C` | `0xEE06C` | Bank switch helper. Called from `AD00:0577`. |
 
 ## 24. AD00 ROM Card
+
+See [`ed1b-ad00-banked.md`](disassembly/ed1b-ad00-banked.md).
+
+See [`disassembly/ed1b-ad00-banked.md`](disassembly/ed1b-ad00-banked.md).
 
 ### Dispatcher
 
