@@ -3410,6 +3410,92 @@
   AD00:1A79  E9AB00         jmp 0x1b27
   ; end: jmp
 
+--- AD00:1A7C..1A8B  ; ad00_sub_0  branches:AD00:1A8B,AD00:1A91
+  AD00:1A7C  83061E1B01     add word [0x1b1e],byte +0x1
+  AD00:1A81  833E1E1B02     cmp word [0x1b1e],byte +0x2
+  AD00:1A86  7703           ja 0x1a8b
+  AD00:1A88  E90600         jmp 0x1a91
+  ; end: jmp
+
+--- AD00:1A8B..1A94  ; from_AD00:1A7C  branches:AD00:1B49
+  AD00:1A8B  C7061E1B0100   mov word [0x1b1e],0x1
+  AD00:1A91  E9B500         jmp 0x1b49
+  ; end: jmp
+
+--- AD00:1A94..1AA3  ; ad00_sub_1  branches:AD00:1AA3,AD00:1AA9
+  AD00:1A94  832E1E1B01     sub word [0x1b1e],byte +0x1
+  AD00:1A99  833E1E1B01     cmp word [0x1b1e],byte +0x1
+  AD00:1A9E  7203           jc 0x1aa3
+  AD00:1AA0  E90600         jmp 0x1aa9
+  ; end: jmp
+
+--- AD00:1AA3..1AAC  ; from_AD00:1A94  branches:AD00:1B49
+  AD00:1AA3  C7061E1B0200   mov word [0x1b1e],0x2
+  AD00:1AA9  E99D00         jmp 0x1b49
+  ; end: jmp
+
+--- AD00:1AAC..1AB6  ; ad00_sub_2  branches:AD00:1AB6,AD00:1ABF
+  AD00:1AAC  833E0C1B01     cmp word [0x1b0c],byte +0x1
+  AD00:1AB1  7403           jz 0x1ab6
+  AD00:1AB3  E90900         jmp 0x1abf
+  ; end: jmp
+
+--- AD00:1AB6..1ABF  ; from_AD00:1AAC  branches:AD00:1AC5
+  AD00:1AB6  C7060C1B0200   mov word [0x1b0c],0x2
+  AD00:1ABC  E90600         jmp 0x1ac5
+  ; end: jmp
+
+--- AD00:1ABF..1AC8  ; from_AD00:1AAC  branches:AD00:1B49
+  AD00:1ABF  C7060C1B0100   mov word [0x1b0c],0x1
+  AD00:1AC5  E98100         jmp 0x1b49
+  ; end: jmp
+
+--- AD00:1AC8..1AD3  ; ad00_sub_3  branches:AD00:1AD3,AD00:1ADC
+  AD00:1AC8  813E241B0F27   cmp word [0x1b24],0x270f
+  AD00:1ACE  7403           jz 0x1ad3
+  AD00:1AD0  E90900         jmp 0x1adc
+  ; end: jmp
+
+--- AD00:1AD3..1ADC  ; from_AD00:1AC8  branches:AD00:1B49
+  AD00:1AD3  C706241B3C00   mov word [0x1b24],0x3c
+  AD00:1AD9  E96D00         jmp 0x1b49
+  ; end: jmp
+
+--- AD00:1ADC..1AEC  ; from_AD00:1AC8  branches:AD00:1AEC,AD00:1AF2
+  AD00:1ADC  8306241B3C     add word [0x1b24],byte +0x3c
+  AD00:1AE1  813E241B2C01   cmp word [0x1b24],0x12c
+  AD00:1AE7  7703           ja 0x1aec
+  AD00:1AE9  E90600         jmp 0x1af2
+  ; end: jmp
+
+--- AD00:1AEC..1AF5  ; from_AD00:1ADC  branches:AD00:1B49
+  AD00:1AEC  C706241B0F27   mov word [0x1b24],0x270f
+  AD00:1AF2  E95400         jmp 0x1b49
+  ; end: jmp
+
+--- AD00:1AF5..1B00  ; ad00_sub_5  branches:AD00:1B00,AD00:1B09
+  AD00:1AF5  813E241B0F27   cmp word [0x1b24],0x270f
+  AD00:1AFB  7403           jz 0x1b00
+  AD00:1AFD  E90900         jmp 0x1b09
+  ; end: jmp
+
+--- AD00:1B00..1B09  ; from_AD00:1AF5  branches:AD00:1B49
+  AD00:1B00  C706241B2C01   mov word [0x1b24],0x12c
+  AD00:1B06  E94000         jmp 0x1b49
+  ; end: jmp
+
+--- AD00:1B09..1B18  ; from_AD00:1AF5  branches:AD00:1B18,AD00:1B1E
+  AD00:1B09  832E241B3C     sub word [0x1b24],byte +0x3c
+  AD00:1B0E  833E241B3C     cmp word [0x1b24],byte +0x3c
+  AD00:1B13  7203           jc 0x1b18
+  AD00:1B15  E90600         jmp 0x1b1e
+  ; end: jmp
+
+--- AD00:1B18..1B21  ; from_AD00:1B09  branches:AD00:1B49
+  AD00:1B18  C706241B0F27   mov word [0x1b24],0x270f
+  AD00:1B1E  E92800         jmp 0x1b49
+  ; end: jmp
+
 --- AD00:1B21..1B24  ; from_AD00:1B27  branches:AD00:1B49
   AD00:1B21  E92500         jmp 0x1b49
   ; end: jmp
@@ -15325,6 +15411,73 @@
   C000:6C05  C3             ret
   ; end: ret
 
+--- C000:6C06..6C27  ; disp_sub_1  calls:C000:6E5A
+  C000:6C06  8B1EA118       mov bx,[0x18a1]
+  C000:6C0A  8B5701         mov dx,[bx+0x1]
+  C000:6C0D  8B4F03         mov cx,[bx+0x3]
+  C000:6C10  E84702         call 0x6e5a
+  C000:6C13  32C0           xor al,al
+  C000:6C15  A23C17         mov [0x173c],al
+  C000:6C18  A23317         mov [0x1733],al
+  C000:6C1B  A23717         mov [0x1737],al
+  C000:6C1E  A23917         mov [0x1739],al
+  C000:6C21  A22C17         mov [0x172c],al
+  C000:6C24  B005           mov al,0x5
+  C000:6C26  C3             ret
+  ; end: ret
+
+--- C000:6C27..6C91  ; disp_sub_5  calls:C000:6E5A  branches:C000:6C3E,C000:6C4F,C000:6C76,C000:6C8E
+  C000:6C27  32C0           xor al,al
+  C000:6C29  A23C17         mov [0x173c],al
+  C000:6C2C  8B1EA118       mov bx,[0x18a1]
+  C000:6C30  8A4701         mov al,[bx+0x1]
+  C000:6C33  803E3B1700     cmp byte [0x173b],0x0
+  C000:6C38  7404           jz 0x6c3e
+  C000:6C3A  D0E8           shr al,1
+  C000:6C3C  D0E8           shr al,1
+  C000:6C3E  A23317         mov [0x1733],al
+  C000:6C41  BE2C17         mov si,0x172c
+  C000:6C44  8124F0FF       and word [si],0xfff0
+  C000:6C48  0AC0           or al,al
+  C000:6C4A  7403           jz 0x6c4f
+  C000:6C4C  800C04         or byte [si],0x4
+  C000:6C4F  8B5702         mov dx,[bx+0x2]
+  C000:6C52  8B4F04         mov cx,[bx+0x4]
+  C000:6C55  E80202         call 0x6e5a
+  C000:6C58  A1DF16         mov ax,[0x16df]
+  C000:6C5B  D0E8           shr al,1
+  C000:6C5D  8A6706         mov ah,[bx+0x6]
+  C000:6C60  F6E4           mul ah
+  C000:6C62  A33717         mov [0x1737],ax
+  C000:6C65  0AC0           or al,al
+  C000:6C67  740D           jz 0x6c76
+  C000:6C69  B440           mov ah,0x40
+  C000:6C6B  F6E4           mul ah
+  C000:6C6D  01069F18       add [0x189f],ax
+  C000:6C71  800E2C1701     or byte [0x172c],0x1
+  C000:6C76  A1DF16         mov ax,[0x16df]
+  C000:6C79  D0E8           shr al,1
+  C000:6C7B  8A6707         mov ah,[bx+0x7]
+  C000:6C7E  F6E4           mul ah
+  C000:6C80  A33917         mov [0x1739],ax
+  C000:6C83  807F0700       cmp byte [bx+0x7],0x0
+  C000:6C87  7405           jz 0x6c8e
+  C000:6C89  800E2C1702     or byte [0x172c],0x2
+  C000:6C8E  B008           mov al,0x8
+  C000:6C90  C3             ret
+  ; end: ret
+
+--- C000:6C91..6CA7  ; disp_sub_2  branches:C000:6CA4
+  C000:6C91  8B1EA118       mov bx,[0x18a1]
+  C000:6C95  8A4F01         mov cl,[bx+0x1]
+  C000:6C98  8A4702         mov al,[bx+0x2]
+  C000:6C9B  A2E616         mov [0x16e6],al
+  C000:6C9E  0AC9           or cl,cl
+  C000:6CA0  7402           jz 0x6ca4
+  C000:6CA2  8AC1           mov al,cl
+  C000:6CA4  A2E516         mov [0x16e5],al
+  ; end: already_covered
+
 --- C000:6CA7..6CD7  ; call_C000:693A  branches:C000:6CAD
   C000:6CA7  3C0C           cmp al,0xc
   C000:6CA9  7502           jnz 0x6cad
@@ -15348,11 +15501,199 @@
   C000:6CD6  C3             ret
   ; end: ret
 
+--- C000:6CD7..6D0B  ; disp_sub_3  calls:C000:6E5A,C000:6E81,C000:7324  branches:C000:6D0B,C000:6D26
+  C000:6CD7  8B1EA118       mov bx,[0x18a1]
+  C000:6CDB  8B5701         mov dx,[bx+0x1]
+  C000:6CDE  8B4F03         mov cx,[bx+0x3]
+  C000:6CE1  E87601         call 0x6e5a
+  C000:6CE4  8B5705         mov dx,[bx+0x5]
+  C000:6CE7  E89701         call 0x6e81
+  C000:6CEA  8BC6           mov ax,si
+  C000:6CEC  8AE8           mov ch,al
+  C000:6CEE  8B5707         mov dx,[bx+0x7]
+  C000:6CF1  52             push dx
+  C000:6CF2  51             push cx
+  C000:6CF3  8B4F09         mov cx,[bx+0x9]
+  C000:6CF6  8B570B         mov dx,[bx+0xb]
+  C000:6CF9  8A470D         mov al,[bx+0xd]
+  C000:6CFC  8AE5           mov ah,ch
+  C000:6CFE  0AE1           or ah,cl
+  C000:6D00  0AE2           or ah,dl
+  C000:6D02  7507           jnz 0x6d0b
+  C000:6D04  59             pop cx
+  C000:6D05  5A             pop dx
+  C000:6D06  E81B06         call 0x7324
+  C000:6D09  EB1B           jmp short 0x6d26
+  ; end: jmp
+
+--- C000:6D0B..6D1D  ; from_C000:6CD7  calls:C000:6E81,C000:71C6  branches:C000:6D1D,C000:6D26
+  C000:6D0B  0BD2           or dx,dx
+  C000:6D0D  740E           jz 0x6d1d
+  C000:6D0F  E86F01         call 0x6e81
+  C000:6D12  87D6           xchg si,dx
+  C000:6D14  59             pop cx
+  C000:6D15  8AC5           mov al,ch
+  C000:6D17  59             pop cx
+  C000:6D18  E8AB04         call 0x71c6
+  C000:6D1B  EB09           jmp short 0x6d26
+  ; end: jmp
+
+--- C000:6D1D..6D26  ; from_C000:6D0B  calls:C000:724D
+  C000:6D1D  8BD1           mov dx,cx
+  C000:6D1F  59             pop cx
+  C000:6D20  8AC5           mov al,ch
+  C000:6D22  59             pop cx
+  C000:6D23  E82705         call 0x724d
+  ; end: already_covered
+
+--- C000:6D26..6D29  ; from_C000:6CD7
+  C000:6D26  B00E           mov al,0xe
+  C000:6D28  C3             ret
+  ; end: ret
+
+--- C000:6D29..6D4F  ; disp_sub_6  calls:C000:6E5A,C000:7324
+  C000:6D29  8B1EA118       mov bx,[0x18a1]
+  C000:6D2D  8B5701         mov dx,[bx+0x1]
+  C000:6D30  8B4F03         mov cx,[bx+0x3]
+  C000:6D33  E82401         call 0x6e5a
+  C000:6D36  8A4707         mov al,[bx+0x7]
+  C000:6D39  B440           mov ah,0x40
+  C000:6D3B  F6E4           mul ah
+  C000:6D3D  01069F18       add [0x189f],ax
+  C000:6D41  8B5705         mov dx,[bx+0x5]
+  C000:6D44  B501           mov ch,0x1
+  C000:6D46  8A4709         mov al,[bx+0x9]
+  C000:6D49  E8D805         call 0x7324
+  C000:6D4C  B00A           mov al,0xa
+  C000:6D4E  C3             ret
+  ; end: ret
+
+--- C000:6D4F..6D79  ; disp_sub_9  branches:C000:6D67,C000:6D6F
+  C000:6D4F  8B1EA118       mov bx,[0x18a1]
+  C000:6D53  8A4701         mov al,[bx+0x1]
+  C000:6D56  A2DF16         mov [0x16df],al
+  C000:6D59  32D2           xor dl,dl
+  C000:6D5B  3C02           cmp al,0x2
+  C000:6D5D  7508           jnz 0x6d67
+  C000:6D5F  B202           mov dl,0x2
+  C000:6D61  33F6           xor si,si
+  C000:6D63  89363C17       mov [0x173c],si
+  C000:6D67  3C08           cmp al,0x8
+  C000:6D69  B007           mov al,0x7
+  C000:6D6B  7402           jz 0x6d6f
+  C000:6D6D  FEC0           inc al
+  C000:6D6F  A2DD16         mov [0x16dd],al
+  C000:6D72  88163B17       mov [0x173b],dl
+  C000:6D76  B002           mov al,0x2
+  C000:6D78  C3             ret
+  ; end: ret
+
+--- C000:6D79..6D92  ; disp_sub_4  branches:C000:6D92,C000:6E53
+  C000:6D79  8B1EA118       mov bx,[0x18a1]
+  C000:6D7D  8B5701         mov dx,[bx+0x1]
+  C000:6D80  B003           mov al,0x3
+  C000:6D82  50             push ax
+  C000:6D83  A03317         mov al,[0x1733]
+  C000:6D86  32E4           xor ah,ah
+  C000:6D88  2BC2           sub ax,dx
+  C000:6D8A  7206           jc 0x6d92
+  C000:6D8C  A23317         mov [0x1733],al
+  C000:6D8F  E9C100         jmp 0x6e53
+  ; end: jmp
+
+--- C000:6D92..6E55  ; from_C000:6D79  calls:C000:7324,C000:7324  branches:C000:6D8F,C000:6DB4,C000:6D8F,C000:6DDB,C000:6DE6,C000:6E35,C000:6E35,C000:6E35
+  C000:6D92  03C2           add ax,dx
+  C000:6D94  C606331700     mov byte [0x1733],0x0
+  C000:6D99  92             xchg ax,dx
+  C000:6D9A  2BC2           sub ax,dx
+  C000:6D9C  8A163417       mov dl,[0x1734]
+  C000:6DA0  32F6           xor dh,dh
+  C000:6DA2  2BC2           sub ax,dx
+  C000:6DA4  76E9           jna 0x6d8f
+  C000:6DA6  8BD0           mov dx,ax
+  C000:6DA8  A0E516         mov al,[0x16e5]
+  C000:6DAB  3C0C           cmp al,0xc
+  C000:6DAD  A0DF16         mov al,[0x16df]
+  C000:6DB0  7502           jnz 0x6db4
+  C000:6DB2  D0E0           shl al,1
+  C000:6DB4  2A063717       sub al,[0x1737]
+  C000:6DB8  2A063917       sub al,[0x1739]
+  C000:6DBC  7ED1           jng 0x6d8f
+  C000:6DBE  8AE8           mov ch,al
+  C000:6DC0  803E3B1700     cmp byte [0x173b],0x0
+  C000:6DC5  7414           jz 0x6ddb
+  C000:6DC7  8B363C17       mov si,[0x173c]
+  C000:6DCB  03F2           add si,dx
+  C000:6DCD  8BC6           mov ax,si
+  C000:6DCF  250300         and ax,0x3
+  C000:6DD2  D1EE           shr si,1
+  C000:6DD4  D1EE           shr si,1
+  C000:6DD6  8BD6           mov dx,si
+  C000:6DD8  A33C17         mov [0x173c],ax
+  C000:6DDB  B000           mov al,0x0
+  C000:6DDD  F606291708     test byte [0x1729],0x8
+  C000:6DE2  7402           jz 0x6de6
+  C000:6DE4  B00F           mov al,0xf
+  C000:6DE6  52             push dx
+  C000:6DE7  50             push ax
+  C000:6DE8  E83905         call 0x7324
+  C000:6DEB  5A             pop dx
+  C000:6DEC  8AC2           mov al,dl
+  C000:6DEE  5A             pop dx
+  C000:6DEF  B40F           mov ah,0xf
+  C000:6DF1  2AE0           sub ah,al
+  C000:6DF3  8AC4           mov al,ah
+  C000:6DF5  F606291704     test byte [0x1729],0x4
+  C000:6DFA  7439           jz 0x6e35
+  C000:6DFC  8AE8           mov ch,al
+  C000:6DFE  A0DD16         mov al,[0x16dd]
+  C000:6E01  2A063717       sub al,[0x1737]
+  C000:6E05  722E           jc 0x6e35
+  C000:6E07  A0DD16         mov al,[0x16dd]
+  C000:6E0A  F6D8           neg al
+  C000:6E0C  0206DF16       add al,[0x16df]
+  C000:6E10  2A063917       sub al,[0x1739]
+  C000:6E14  781F           js 0x6e35
+  C000:6E16  8AC5           mov al,ch
+  C000:6E18  8B0E9F18       mov cx,[0x189f]
+  C000:6E1C  51             push cx
+  C000:6E1D  A0DD16         mov al,[0x16dd]
+  C000:6E20  B440           mov ah,0x40
+  C000:6E22  F6E4           mul ah
+  C000:6E24  03C1           add ax,cx
+  C000:6E26  A39F18         mov [0x189f],ax
+  C000:6E29  B501           mov ch,0x1
+  C000:6E2B  52             push dx
+  C000:6E2C  E8F504         call 0x7324
+  C000:6E2F  5A             pop dx
+  C000:6E30  5E             pop si
+  C000:6E31  89369F18       mov [0x189f],si
+  C000:6E35  A09E18         mov al,[0x189e]
+  C000:6E38  32E4           xor ah,ah
+  C000:6E3A  03C2           add ax,dx
+  C000:6E3C  8BF0           mov si,ax
+  C000:6E3E  2407           and al,0x7
+  C000:6E40  A29E18         mov [0x189e],al
+  C000:6E43  D1EE           shr si,1
+  C000:6E45  D1EE           shr si,1
+  C000:6E47  D1EE           shr si,1
+  C000:6E49  8B169F18       mov dx,[0x189f]
+  C000:6E4D  03F2           add si,dx
+  C000:6E4F  89369F18       mov [0x189f],si
+  C000:6E53  58             pop ax
+  C000:6E54  C3             ret
+  ; end: ret
+
 --- C000:6E55..6E5A  ; call_C000:75B5  branches:C000:6E5E
   C000:6E55  51             push cx
   C000:6E56  8BF2           mov si,dx
   C000:6E58  EB04           jmp short 0x6e5e
   ; end: jmp
+
+--- C000:6E5A..6E5E  ; call_C000:6C06  calls:C000:6E81
+  C000:6E5A  51             push cx
+  C000:6E5B  E82300         call 0x6e81
+  ; end: already_covered
 
 --- C000:6E5E..6E7D  ; from_C000:6E55
   C000:6E5E  8BC1           mov ax,cx
@@ -15371,6 +15712,18 @@
   C000:6E7A  58             pop ax
   C000:6E7B  59             pop cx
   C000:6E7C  C3             ret
+  ; end: ret
+
+--- C000:6E81..6E92  ; call_C000:6CD7
+  C000:6E81  96             xchg ax,si
+  C000:6E82  8BE9           mov bp,cx
+  C000:6E84  8B0EDF16       mov cx,[0x16df]
+  C000:6E88  D1E9           shr cx,1
+  C000:6E8A  8AC2           mov al,dl
+  C000:6E8C  F6E9           imul cl
+  C000:6E8E  8BCD           mov cx,bp
+  C000:6E90  96             xchg ax,si
+  C000:6E91  C3             ret
   ; end: ret
 
 --- C000:6E9E..6F00  ; from_C000:6A7B  branches:C000:6EE8,C000:6EE8,C000:6ED4,C000:6EE8,C000:6EE8,C000:6EE8,C000:6EE8,C000:6F00,C000:6EFD,C000:6F00,C000:6FE8
@@ -17999,11 +18352,193 @@
   C772:04A5  FFE6           jmp si
   ; end: jmp_indirect
 
+--- C772:04E4..04EA  ; fmt_tgt_0  calls:C772:15A9,C772:15B2
+  C772:04E4  E8C210         call 0x15a9
+  C772:04E7  E8C810         call 0x15b2
+  ; end: already_covered
+
 --- C772:04E8..04EE  ; vm_op_B8
   C772:04E8  C810C3E8       enter 0xc310,0xe8
   C772:04EC  3F             aas
   C772:04ED  FD             std
   ; end: blacklisted
+
+--- C772:0500..0503  ; call_C772:0584  calls:C772:022D
+  C772:0500  E82AFD         call 0x22d
+  ; end: blacklisted
+
+--- C772:0584..05A5  ; fmt_tgt_1  calls:C772:6C8A,C772:0500  branches:C772:05C2,C772:05C2,C772:05C2,C772:05A5,C772:05A5,C772:059C
+  C772:0584  B002           mov al,0x2
+  C772:0586  E80167         call 0x6c8a
+  C772:0589  E874FF         call 0x500
+  C772:058C  A0C874         mov al,[0x74c8]
+  C772:058F  B90000         mov cx,0x0
+  C772:0592  722E           jc 0x5c2
+  C772:0594  0AC0           or al,al
+  C772:0596  742A           jz 0x5c2
+  C772:0598  0BD2           or dx,dx
+  C772:059A  7426           jz 0x5c2
+  C772:059C  41             inc cx
+  C772:059D  2BF2           sub si,dx
+  C772:059F  7804           js 0x5a5
+  C772:05A1  7402           jz 0x5a5
+  C772:05A3  EBF7           jmp short 0x59c
+  ; end: jmp
+
+--- C772:05A5..05C2  ; from_C772:0584  branches:C772:05BF,C772:05B9,C772:05C2
+  C772:05A5  8AC5           mov al,ch
+  C772:05A7  0AC0           or al,al
+  C772:05A9  7514           jnz 0x5bf
+  C772:05AB  8B1E0D71       mov bx,[0x710d]
+  C772:05AF  8A870400       mov al,[bx+0x4]
+  C772:05B3  0AC0           or al,al
+  C772:05B5  7502           jnz 0x5b9
+  C772:05B7  B005           mov al,0x5
+  C772:05B9  02C0           add al,al
+  C772:05BB  3AC1           cmp al,cl
+  C772:05BD  7303           jnc 0x5c2
+  C772:05BF  B90000         mov cx,0x0
+  ; end: already_covered
+
+--- C772:05C2..0602  ; from_C772:0584  calls:C772:5E35,C772:5E35,C772:0682  branches:C772:05D7,C772:0602,C772:05FA,C772:05FA,C772:0602,C772:0616
+  C772:05C2  03F2           add si,dx
+  C772:05C4  51             push cx
+  C772:05C5  56             push si
+  C772:05C6  8B167474       mov dx,[0x7474]
+  C772:05CA  8B361574       mov si,[0x7415]
+  C772:05CE  2BF2           sub si,dx
+  C772:05D0  B182           mov cl,0x82
+  C772:05D2  7303           jnc 0x5d7
+  C772:05D4  E85E58         call 0x5e35
+  C772:05D7  5E             pop si
+  C772:05D8  59             pop cx
+  C772:05D9  51             push cx
+  C772:05DA  56             push si
+  C772:05DB  B185           mov cl,0x85
+  C772:05DD  B201           mov dl,0x1
+  C772:05DF  E85358         call 0x5e35
+  C772:05E2  5E             pop si
+  C772:05E3  59             pop cx
+  C772:05E4  50             push ax
+  C772:05E5  8AC2           mov al,dl
+  C772:05E7  3C20           cmp al,0x20
+  C772:05E9  7517           jnz 0x602
+  C772:05EB  0BF6           or si,si
+  C772:05ED  4E             dec si
+  C772:05EE  750A           jnz 0x5fa
+  C772:05F0  49             dec cx
+  C772:05F1  4E             dec si
+  C772:05F2  F6C580         test ch,0x80
+  C772:05F5  7403           jz 0x5fa
+  C772:05F7  B90000         mov cx,0x0
+  C772:05FA  E88500         call 0x682
+  C772:05FD  7303           jnc 0x602
+  C772:05FF  58             pop ax
+  C772:0600  EB14           jmp short 0x616
+  ; end: jmp
+
+--- C772:0602..0616  ; from_C772:05C2  calls:C772:159A  branches:C772:05D9,C772:0616,C772:0616,C772:0589
+  C772:0602  58             pop ax
+  C772:0603  A802           test al,0x2
+  C772:0605  74D2           jz 0x5d9
+  C772:0607  E8900F         call 0x159a
+  C772:060A  750A           jnz 0x616
+  C772:060C  A0C874         mov al,[0x74c8]
+  C772:060F  0AC0           or al,al
+  C772:0611  7403           jz 0x616
+  C772:0613  E973FF         jmp 0x589
+  ; end: jmp
+
+--- C772:0616..061C  ; from_C772:05C2
+  C772:0616  32C0           xor al,al
+  C772:0618  A2C874         mov [0x74c8],al
+  C772:061B  C3             ret
+  ; end: ret
+
+--- C772:061C..0620  ; fmt_tgt_2  branches:C772:0622
+  C772:061C  B001           mov al,0x1
+  C772:061E  EB02           jmp short 0x622
+  ; end: jmp
+
+--- C772:0620..066F  ; fmt_tgt_3  calls:C772:6C8A,C772:0500,C772:5E35,C772:5E1E,C772:0682,C772:5E1E,C772:022D  branches:C772:066C,C772:0639,C772:064B,C772:065C,C772:0679,C772:066C
+  C772:0620  32C0           xor al,al
+  C772:0622  E86566         call 0x6c8a
+  C772:0625  50             push ax
+  C772:0626  E8D7FE         call 0x500
+  C772:0629  7241           jc 0x66c
+  C772:062B  58             pop ax
+  C772:062C  0AC0           or al,al
+  C772:062E  50             push ax
+  C772:062F  7508           jnz 0x639
+  C772:0631  8BDE           mov bx,si
+  C772:0633  D0EF           shr bh,1
+  C772:0635  D0DB           rcr bl,1
+  C772:0637  8BF3           mov si,bx
+  C772:0639  56             push si
+  C772:063A  8B167474       mov dx,[0x7474]
+  C772:063E  8B361574       mov si,[0x7415]
+  C772:0642  2BF2           sub si,dx
+  C772:0644  B182           mov cl,0x82
+  C772:0646  7303           jnc 0x64b
+  C772:0648  E8EA57         call 0x5e35
+  C772:064B  5E             pop si
+  C772:064C  A05F74         mov al,[0x745f]
+  C772:064F  A801           test al,0x1
+  C772:0651  9F             lahf
+  C772:0652  50             push ax
+  C772:0653  7407           jz 0x65c
+  C772:0655  56             push si
+  C772:0656  B2F1           mov dl,0xf1
+  C772:0658  E8C357         call 0x5e1e
+  C772:065B  5E             pop si
+  C772:065C  8BCE           mov cx,si
+  C772:065E  E82100         call 0x682
+  C772:0661  7216           jc 0x679
+  C772:0663  58             pop ax
+  C772:0664  9E             sahf
+  C772:0665  B2F0           mov dl,0xf0
+  C772:0667  7403           jz 0x66c
+  C772:0669  E8B257         call 0x5e1e
+  C772:066C  E8BEFB         call 0x22d
+  ; end: blacklisted
+
+--- C772:0679..0682  ; from_C772:0620
+  C772:0679  58             pop ax
+  C772:067A  9E             sahf
+  C772:067B  58             pop ax
+  C772:067C  32C0           xor al,al
+  C772:067E  A2C874         mov [0x74c8],al
+  C772:0681  C3             ret
+  ; end: ret
+
+--- C772:0682..06B7  ; call_C772:0620  calls:C772:5E1E,C772:5202  branches:C772:06B1,C772:06B1,C772:06A0,C772:0690
+  C772:0682  51             push cx
+  C772:0683  56             push si
+  C772:0684  8B361574       mov si,[0x7415]
+  C772:0688  8B163674       mov dx,[0x7436]
+  C772:068C  2BF2           sub si,dx
+  C772:068E  7321           jnc 0x6b1
+  C772:0690  0BC9           or cx,cx
+  C772:0692  741D           jz 0x6b1
+  C772:0694  BE0500         mov si,0x5
+  C772:0697  2BF1           sub si,cx
+  C772:0699  51             push cx
+  C772:069A  8AC1           mov al,cl
+  C772:069C  7302           jnc 0x6a0
+  C772:069E  B005           mov al,0x5
+  C772:06A0  04DF           add al,0xdf
+  C772:06A2  8AD0           mov dl,al
+  C772:06A4  E87757         call 0x5e1e
+  C772:06A7  5E             pop si
+  C772:06A8  BA0500         mov dx,0x5
+  C772:06AB  2BF2           sub si,dx
+  C772:06AD  8BCE           mov cx,si
+  C772:06AF  73DF           jnc 0x690
+  C772:06B1  E84E4B         call 0x5202
+  C772:06B4  5E             pop si
+  C772:06B5  59             pop cx
+  C772:06B6  C3             ret
+  ; end: ret
 
 --- C772:0802..0805  ; call_C772:364B  calls:C772:022D
   C772:0802  E828FA         call 0x22d
@@ -18470,6 +19005,394 @@
   C772:1339  58             pop ax
   C772:133A  9E             sahf
   C772:133B  C3             ret
+  ; end: ret
+
+--- C772:159A..15A9  ; call_C772:0602  branches:C772:15A8
+  C772:159A  A02F74         mov al,[0x742f]
+  C772:159D  A820           test al,0x20
+  C772:159F  7407           jz 0x15a8
+  C772:15A1  A05F74         mov al,[0x745f]
+  C772:15A4  34FF           xor al,0xff
+  C772:15A6  A802           test al,0x2
+  C772:15A8  C3             ret
+  ; end: ret
+
+--- C772:15A9..15AC  ; call_C772:04E4  calls:C772:022D
+  C772:15A9  E881EC         call 0x22d
+  ; end: blacklisted
+
+--- C772:15B2..15C6  ; call_C772:04E4  branches:C772:15E0
+  C772:15B2  32C0           xor al,al
+  C772:15B4  A2FD74         mov [0x74fd],al
+  C772:15B7  BE0000         mov si,0x0
+  C772:15BA  89367674       mov [0x7476],si
+  C772:15BE  A05F74         mov al,[0x745f]
+  C772:15C1  A28074         mov [0x7480],al
+  C772:15C4  EB1A           jmp short 0x15e0
+  ; end: jmp
+
+--- C772:15C6..15DA  ; call_C772:15E0
+  C772:15C6  BE8074         mov si,0x7480
+  C772:15C9  B95F74         mov cx,0x745f
+  C772:15CC  A05F74         mov al,[0x745f]
+  C772:15CF  8A34           mov dh,[si]
+  C772:15D1  8804           mov [si],al
+  C772:15D3  88365F74       mov [0x745f],dh
+  C772:15D7  8AC6           mov al,dh
+  C772:15D9  C3             ret
+  ; end: ret
+
+--- C772:15DA..15E0  ; from_C772:17B7
+  C772:15DA  A01C75         mov al,[0x751c]
+  C772:15DD  A25E74         mov [0x745e],al
+  ; end: already_covered
+
+--- C772:15E0..1637  ; from_C772:15B2  calls:C772:15C6,C772:5E35,C772:15C6  branches:C772:1637,C772:167D
+  C772:15E0  E8E3FF         call 0x15c6
+  C772:15E3  8B369D74       mov si,[0x749d]
+  C772:15E7  89361A75       mov [0x751a],si
+  C772:15EB  8B366074       mov si,[0x7460]
+  C772:15EF  89362075       mov [0x7520],si
+  C772:15F3  A00774         mov al,[0x7407]
+  C772:15F6  A27374         mov [0x7473],al
+  C772:15F9  33C0           xor ax,ax
+  C772:15FB  A2B374         mov [0x74b3],al
+  C772:15FE  A3AD74         mov [0x74ad],ax
+  C772:1601  8AD0           mov dl,al
+  C772:1603  80CA40         or dl,0x40
+  C772:1606  B188           mov cl,0x88
+  C772:1608  E82A48         call 0x5e35
+  C772:160B  9F             lahf
+  C772:160C  50             push ax
+  C772:160D  8B361A75       mov si,[0x751a]
+  C772:1611  89369D74       mov [0x749d],si
+  C772:1615  E8AEFF         call 0x15c6
+  C772:1618  A05E74         mov al,[0x745e]
+  C772:161B  A21C75         mov [0x751c],al
+  C772:161E  8B362075       mov si,[0x7520]
+  C772:1622  89366074       mov [0x7460],si
+  C772:1626  A07374         mov al,[0x7473]
+  C772:1629  A20774         mov [0x7407],al
+  C772:162C  58             pop ax
+  C772:162D  9E             sahf
+  C772:162E  50             push ax
+  C772:162F  A810           test al,0x10
+  C772:1631  7404           jz 0x1637
+  C772:1633  B0DB           mov al,0xdb
+  C772:1635  EB46           jmp short 0x167d
+  ; end: jmp
+
+--- C772:1637..166F  ; from_C772:15E0  calls:C772:25DE,C772:25DE  branches:C772:164E,C772:166F,C772:166B,C772:167D,C772:167D
+  C772:1637  BEB374         mov si,0x74b3
+  C772:163A  A880           test al,0x80
+  C772:163C  8AC2           mov al,dl
+  C772:163E  740E           jz 0x164e
+  C772:1640  9F             lahf
+  C772:1641  50             push ax
+  C772:1642  A0E574         mov al,[0x74e5]
+  C772:1645  56             push si
+  C772:1646  E8950F         call 0x25de
+  C772:1649  5E             pop si
+  C772:164A  2814           sub [si],dl
+  C772:164C  58             pop ax
+  C772:164D  9E             sahf
+  C772:164E  FE0C           dec byte [si]
+  C772:1650  3C20           cmp al,0x20
+  C772:1652  741B           jz 0x166f
+  C772:1654  3CD7           cmp al,0xd7
+  C772:1656  7413           jz 0x166b
+  C772:1658  3CD1           cmp al,0xd1
+  C772:165A  7521           jnz 0x167d
+  C772:165C  B0D7           mov al,0xd7
+  C772:165E  E87D0F         call 0x25de
+  C772:1661  8B36AD74       mov si,[0x74ad]
+  C772:1665  03F2           add si,dx
+  C772:1667  8936AD74       mov [0x74ad],si
+  C772:166B  B0D1           mov al,0xd1
+  C772:166D  EB0E           jmp short 0x167d
+  ; end: jmp
+
+--- C772:166F..167D  ; from_C772:1637
+  C772:166F  8B36AD74       mov si,[0x74ad]
+  C772:1673  8B0E2B74       mov cx,[0x742b]
+  C772:1677  2BF1           sub si,cx
+  C772:1679  8936AD74       mov [0x74ad],si
+  ; end: already_covered
+
+--- C772:167D..1756  ; from_C772:15E0  calls:C772:69C5,C772:18C6  branches:C772:16E1,C772:16B2,C772:16B2,C772:16B5,C772:16E1,C772:16E1,C772:16E1,C772:16E1,C772:16E1,C772:16E1,C772:171D,C772:171D,C772:172B,C772:172E,C772:17B7
+  C772:167D  8CC5           mov bp,es
+  C772:167F  8CC9           mov cx,cs
+  C772:1681  8EC1           mov es,cx
+  C772:1683  B90600         mov cx,0x6
+  C772:1686  BF4715         mov di,0x1547
+  C772:1689  FD             std
+  C772:168A  F2AE           repne scasb
+  C772:168C  8EC5           mov es,bp
+  C772:168E  51             push cx
+  C772:168F  8B36AD74       mov si,[0x74ad]
+  C772:1693  83FE00         cmp si,byte +0x0
+  C772:1696  7449           jz 0x16e1
+  C772:1698  B107           mov cl,0x7
+  C772:169A  8B161574       mov dx,[0x7415]
+  C772:169E  03F2           add si,dx
+  C772:16A0  E82253         call 0x69c5
+  C772:16A3  A07674         mov al,[0x7476]
+  C772:16A6  3C07           cmp al,0x7
+  C772:16A8  7408           jz 0x16b2
+  C772:16AA  3C03           cmp al,0x3
+  C772:16AC  7404           jz 0x16b2
+  C772:16AE  3C06           cmp al,0x6
+  C772:16B0  7503           jnz 0x16b5
+  C772:16B2  BA0000         mov dx,0x0
+  C772:16B5  03F2           add si,dx
+  C772:16B7  8B163674       mov dx,[0x7436]
+  C772:16BB  2BF2           sub si,dx
+  C772:16BD  7422           jz 0x16e1
+  C772:16BF  7220           jc 0x16e1
+  C772:16C1  FEC9           dec cl
+  C772:16C3  A0C374         mov al,[0x74c3]
+  C772:16C6  A808           test al,0x8
+  C772:16C8  7417           jz 0x16e1
+  C772:16CA  8B362D74       mov si,[0x742d]
+  C772:16CE  8B161574       mov dx,[0x7415]
+  C772:16D2  2BF2           sub si,dx
+  C772:16D4  720B           jc 0x16e1
+  C772:16D6  7409           jz 0x16e1
+  C772:16D8  A02F74         mov al,[0x742f]
+  C772:16DB  A801           test al,0x1
+  C772:16DD  7502           jnz 0x16e1
+  C772:16DF  B108           mov cl,0x8
+  C772:16E1  8AC1           mov al,cl
+  C772:16E3  A27774         mov [0x7477],al
+  C772:16E6  8B367674       mov si,[0x7476]
+  C772:16EA  8BD6           mov dx,si
+  C772:16EC  03F6           add si,si
+  C772:16EE  03F6           add si,si
+  C772:16F0  03F6           add si,si
+  C772:16F2  03F2           add si,dx
+  C772:16F4  03F1           add si,cx
+  C772:16F6  81E6FF00       and si,0xff
+  C772:16FA  BA4915         mov dx,0x1549
+  C772:16FD  03F2           add si,dx
+  C772:16FF  2E8A04         mov al,[cs:si]
+  C772:1702  83C603         add si,byte +0x3
+  C772:1705  2E8A2C         mov ch,[cs:si]
+  C772:1708  8B36E674       mov si,[0x74e6]
+  C772:170C  56             push si
+  C772:170D  A810           test al,0x10
+  C772:170F  740C           jz 0x171d
+  C772:1711  8B36E674       mov si,[0x74e6]
+  C772:1715  8B169D74       mov dx,[0x749d]
+  C772:1719  2BF2           sub si,dx
+  C772:171B  7400           jz 0x171d
+  C772:171D  A880           test al,0x80
+  C772:171F  740A           jz 0x172b
+  C772:1721  8B362F74       mov si,[0x742f]
+  C772:1725  F7C60100       test si,0x1
+  C772:1729  7403           jz 0x172e
+  C772:172B  E89801         call 0x18c6
+  C772:172E  5A             pop dx
+  C772:172F  59             pop cx
+  C772:1730  5B             pop bx
+  C772:1731  86FB           xchg bl,bh
+  C772:1733  8AD8           mov bl,al
+  C772:1735  8BF3           mov si,bx
+  C772:1737  56             push si
+  C772:1738  52             push dx
+  C772:1739  240F           and al,0xf
+  C772:173B  02C0           add al,al
+  C772:173D  8AD0           mov dl,al
+  C772:173F  B600           mov dh,0x0
+  C772:1741  BE5617         mov si,0x1756
+  C772:1744  03F2           add si,dx
+  C772:1746  8AC1           mov al,cl
+  C772:1748  FEC0           inc al
+  C772:174A  A27674         mov [0x7476],al
+  C772:174D  A02F74         mov al,[0x742f]
+  C772:1750  A801           test al,0x1
+  C772:1752  7563           jnz 0x17b7
+  C772:1754  FFE6           jmp si
+  ; end: jmp_indirect
+
+--- C772:1756..1758  ; landing_1756  branches:C772:17B7
+  C772:1756  EB5F           jmp short 0x17b7
+  ; end: jmp
+
+--- C772:17B7..182F  ; from_C772:167D  calls:C772:5E35,C772:159A  branches:C772:17DE,C772:17CD,C772:186B,C772:17FB,C772:1800,C772:1806,C772:1826,C772:1826,C772:182F,C772:15DA
+  C772:17B7  BE4B7A         mov si,0x7a4b
+  C772:17BA  89360475       mov [0x7504],si
+  C772:17BE  A0B374         mov al,[0x74b3]
+  C772:17C1  8AD0           mov dl,al
+  C772:17C3  0AC0           or al,al
+  C772:17C5  7417           jz 0x17de
+  C772:17C7  B600           mov dh,0x0
+  C772:17C9  03F2           add si,dx
+  C772:17CB  87F2           xchg dx,si
+  C772:17CD  52             push dx
+  C772:17CE  B146           mov cl,0x46
+  C772:17D0  B200           mov dl,0x0
+  C772:17D2  E86046         call 0x5e35
+  C772:17D5  5A             pop dx
+  C772:17D6  8B360475       mov si,[0x7504]
+  C772:17DA  2BF2           sub si,dx
+  C772:17DC  72EF           jc 0x17cd
+  C772:17DE  5E             pop si
+  C772:17DF  89364E74       mov [0x744e],si
+  C772:17E3  8936E674       mov [0x74e6],si
+  C772:17E7  5E             pop si
+  C772:17E8  F7C60008       test si,0x800
+  C772:17EC  757D           jnz 0x186b
+  C772:17EE  F7C64000       test si,0x40
+  C772:17F2  7407           jz 0x17fb
+  C772:17F4  A0FD74         mov al,[0x74fd]
+  C772:17F7  0AC0           or al,al
+  C772:17F9  7505           jnz 0x1800
+  C772:17FB  E89CFD         call 0x159a
+  C772:17FE  7406           jz 0x1806
+  C772:1800  8BDE           mov bx,si
+  C772:1802  B327           mov bl,0x27
+  C772:1804  8BF3           mov si,bx
+  C772:1806  A0C374         mov al,[0x74c3]
+  C772:1809  A808           test al,0x8
+  C772:180B  7419           jz 0x1826
+  C772:180D  56             push si
+  C772:180E  8B363674       mov si,[0x7436]
+  C772:1812  8B161574       mov dx,[0x7415]
+  C772:1816  2BF2           sub si,dx
+  C772:1818  5E             pop si
+  C772:1819  730B           jnc 0x1826
+  C772:181B  8BDE           mov bx,si
+  C772:181D  B320           mov bl,0x20
+  C772:181F  8BF3           mov si,bx
+  C772:1821  B008           mov al,0x8
+  C772:1823  A27774         mov [0x7477],al
+  C772:1826  F7C62000       test si,0x20
+  C772:182A  7503           jnz 0x182f
+  C772:182C  E9ABFD         jmp 0x15da
+  ; end: jmp
+
+--- C772:182F..1850  ; from_C772:17B7  calls:C772:18C6  branches:C772:18B8,C772:1846,C772:1850,C772:15DA
+  C772:182F  8BC6           mov ax,si
+  C772:1831  E89200         call 0x18c6
+  C772:1834  240F           and al,0xf
+  C772:1836  3C07           cmp al,0x7
+  C772:1838  747E           jz 0x18b8
+  C772:183A  A07674         mov al,[0x7476]
+  C772:183D  3C07           cmp al,0x7
+  C772:183F  7405           jz 0x1846
+  C772:1841  B000           mov al,0x0
+  C772:1843  A27674         mov [0x7476],al
+  C772:1846  A07774         mov al,[0x7477]
+  C772:1849  3C08           cmp al,0x8
+  C772:184B  7403           jz 0x1850
+  C772:184D  E98AFD         jmp 0x15da
+  ; end: jmp
+
+--- C772:1850..186B  ; from_C772:186B  calls:C772:5E35,C772:25DE,C772:5E35  branches:C772:18C5
+  C772:1850  B200           mov dl,0x0
+  C772:1852  B115           mov cl,0x15
+  C772:1854  E8DE45         call 0x5e35
+  C772:1857  B0D7           mov al,0xd7
+  C772:1859  E8820D         call 0x25de
+  C772:185C  8B363674       mov si,[0x7436]
+  C772:1860  2BF2           sub si,dx
+  C772:1862  87D6           xchg si,dx
+  C772:1864  B112           mov cl,0x12
+  C772:1866  E8CC45         call 0x5e35
+  C772:1869  EB5A           jmp short 0x18c5
+  ; end: jmp
+
+--- C772:186B..18AC  ; from_C772:17B7  calls:C772:5E1E  branches:C772:18AC,C772:18B8,C772:18B8,C772:1850
+  C772:186B  56             push si
+  C772:186C  8B363674       mov si,[0x7436]
+  C772:1870  8B161574       mov dx,[0x7415]
+  C772:1874  2BF2           sub si,dx
+  C772:1876  5E             pop si
+  C772:1877  9F             lahf
+  C772:1878  50             push ax
+  C772:1879  F7C60010       test si,0x1000
+  C772:187D  752D           jnz 0x18ac
+  C772:187F  8B360475       mov si,[0x7504]
+  C772:1883  BFE574         mov di,0x74e5
+  C772:1886  B90800         mov cx,0x8
+  C772:1889  06             push es
+  C772:188A  BD0000         mov bp,0x0
+  C772:188D  8EC5           mov es,bp
+  C772:188F  FC             cld
+  C772:1890  F3A4           rep movsb
+  C772:1892  07             pop es
+  C772:1893  8BD7           mov dx,di
+  C772:1895  8B360475       mov si,[0x7504]
+  C772:1899  8A14           mov dl,[si]
+  C772:189B  E88045         call 0x5e1e
+  C772:189E  58             pop ax
+  C772:189F  9E             sahf
+  C772:18A0  7316           jnc 0x18b8
+  C772:18A2  BEC374         mov si,0x74c3
+  C772:18A5  F60408         test byte [si],0x8
+  C772:18A8  740E           jz 0x18b8
+  C772:18AA  EBA4           jmp short 0x1850
+  ; end: jmp
+
+--- C772:18AC..18C6  ; from_C772:186B  branches:C772:18B8,C772:1857,C772:18C5
+  C772:18AC  58             pop ax
+  C772:18AD  9E             sahf
+  C772:18AE  7308           jnc 0x18b8
+  C772:18B0  BEC374         mov si,0x74c3
+  C772:18B3  F60408         test byte [si],0x8
+  C772:18B6  759F           jnz 0x1857
+  C772:18B8  BEC374         mov si,0x74c3
+  C772:18BB  F60408         test byte [si],0x8
+  C772:18BE  7405           jz 0x18c5
+  C772:18C0  9F             lahf
+  C772:18C1  8024F7         and byte [si],0xf7
+  C772:18C4  9E             sahf
+  C772:18C5  C3             ret
+  ; end: ret
+
+--- C772:18C6..18E9  ; call_C772:167D  calls:C772:18FA  branches:C772:18E9
+  C772:18C6  8B367674       mov si,[0x7476]
+  C772:18CA  81E6FF00       and si,0xff
+  C772:18CE  BA4215         mov dx,0x1542
+  C772:18D1  4A             dec dx
+  C772:18D2  03F2           add si,dx
+  C772:18D4  2E8A14         mov dl,[cs:si]
+  C772:18D7  9F             lahf
+  C772:18D8  50             push ax
+  C772:18D9  8AC2           mov al,dl
+  C772:18DB  3CEE           cmp al,0xee
+  C772:18DD  750A           jnz 0x18e9
+  C772:18DF  8B364E74       mov si,[0x744e]
+  C772:18E3  E81400         call 0x18fa
+  C772:18E6  58             pop ax
+  C772:18E7  9E             sahf
+  C772:18E8  C3             ret
+  ; end: ret
+
+--- C772:18E9..18FA  ; from_C772:18C6  calls:C772:5E1E,C772:5E1E  branches:C772:18F4
+  C772:18E9  3CDB           cmp al,0xdb
+  C772:18EB  7507           jnz 0x18f4
+  C772:18ED  B2D1           mov dl,0xd1
+  C772:18EF  E82C45         call 0x5e1e
+  C772:18F2  B20C           mov dl,0xc
+  C772:18F4  E82745         call 0x5e1e
+  C772:18F7  58             pop ax
+  C772:18F8  9E             sahf
+  C772:18F9  C3             ret
+  ; end: ret
+
+--- C772:18FA..1916  ; call_C772:18C6  calls:C772:5E1E  branches:C772:1915
+  C772:18FA  B0EE           mov al,0xee
+  C772:18FC  A2E574         mov [0x74e5],al
+  C772:18FF  8936E674       mov [0x74e6],si
+  C772:1903  A2EA74         mov [0x74ea],al
+  C772:1906  8B161574       mov dx,[0x7415]
+  C772:190A  87D6           xchg si,dx
+  C772:190C  2BF2           sub si,dx
+  C772:190E  8AD0           mov dl,al
+  C772:1910  7303           jnc 0x1915
+  C772:1912  E80945         call 0x5e1e
+  C772:1915  C3             ret
   ; end: ret
 
 --- C772:1916..191E  ; call_C772:1ADB  branches:C772:191E,C772:1A1C
@@ -25689,6 +26612,13 @@
   C772:6C3F  5A             pop dx
   C772:6C40  5E             pop si
   C772:6C41  C3             ret
+  ; end: ret
+
+--- C772:6C8A..6C90  ; call_C772:0584  calls:C772:15A9
+  C772:6C8A  50             push ax
+  C772:6C8B  E81BA9         call 0x15a9
+  C772:6C8E  58             pop ax
+  C772:6C8F  C3             ret
   ; end: ret
 
 --- C772:6C90..6C91  ; call_C772:6CE4

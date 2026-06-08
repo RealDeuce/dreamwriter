@@ -402,6 +402,23 @@ def read_dispatch_tables() -> list[tuple[str, int, str]]:
     # Reached via C772:3FA6  jmp dx  where dx = [cs:si], si = 0x40ED + (al-1)*2
     seeds.extend(read_word_table("C772", 0x40ED, 7, "fmt_op"))
 
+    # AD00:1B3B — ROM Card sub-dispatch (7 word entries)
+    # Reached via AD00:1B36  jmp [cs:bx+0x1B3B]
+    seeds.extend(read_word_table("AD00", 0x1B3B, 7, "ad00_sub"))
+
+    # C000:6BCF — display renderer sub-dispatch (10 word entries)
+    # Reached via C000:6BC2  jmp [cs:bx+0x6BCF]
+    seeds.extend(read_word_table("C000", 0x6BCF, 10, "disp_sub"))
+
+    # C772:0494 format entry targets — SI loaded from fmt_op handlers
+    for addr, label in [(0x04E4, "fmt_tgt_0"), (0x0584, "fmt_tgt_1"),
+                         (0x061C, "fmt_tgt_2"), (0x0620, "fmt_tgt_3")]:
+        seeds.append(("C772", addr, label))
+
+    # C772:1756 — text operation landing pad (JMP SHORT fan-out)
+    # Reached via C772:1754  jmp si  where si = (AL & 0xF) * 2 + 0x1756
+    seeds.append(("C772", 0x1756, "landing_1756"))
+
     # C772:215F — computed-jump landing pad (JMP SHORT fan-out)
     # Reached via C772:215D  jmp si  where si = byte_index + 0x215F
     seeds.append(("C772", 0x215F, "landing_215F"))
