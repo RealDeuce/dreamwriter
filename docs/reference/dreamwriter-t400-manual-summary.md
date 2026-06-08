@@ -44,6 +44,32 @@ Two top-level menus selected by dedicated keys:
 | 5 | Communicate | Send/receive documents via modem (p.81) |
 | 6 | Others | System setup, preferences, time, ROM card (p.8) |
 
+### Communicate Sub-menu (p.81)
+
+| # | Icon | Function |
+|---|------|----------|
+| 1 | Send File | Send file via RS-232C serial (p.81) |
+| 2 | XMODEM Send File | Send file via XMODEM protocol (p.84) |
+| 3 | Receive File | Receive file via RS-232C serial (p.83) |
+| 4 | XMODEM Receive File | Receive file via XMODEM protocol (p.85) |
+| 5 | Terminal | Simple terminal mode — keyboard to serial, serial to LCD (p.86) |
+| 6 | Set Up | RS-232C communication parameters (p.91) |
+
+Terminal mode settings: ALT+1 local echo on, ALT+2 echo off,
+ALT+3 auto linefeed on, ALT+4 linefeed off (p.86).
+
+### Printer Sub-menu (p.88)
+
+| # | Icon | Function |
+|---|------|----------|
+| 1 | Print Out | Print the document (p.92) |
+| 2 | Set Up 1 | Printer type, interface, paper feed (p.89) |
+| 3 | Set Up 2 | Additional printer settings |
+
+Supported printers: IBM X24E, IBM XIII, Epson LQ, Epson FX,
+Canon BJ-10e, HP, ImageWriter (p.89).
+Interface: Parallel or Serial. Paper feed: Automatic or Manual (p.89).
+
 ### Others Sub-menu (p.8)
 
 | # | Icon | Function |
