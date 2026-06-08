@@ -17,7 +17,7 @@ The renderer at `C000:6557` reads one byte at a time and classifies:
 | --- | --- |
 | `0x00..0x1F` | Control — skipped (advance script pointer). |
 | `0x20..0xDF` | Character — rendered as a glyph via the character pipeline at `C000:65AA`. |
-| `0xE0..0xFE` | Single-byte command — dispatched through the main table at `C000:6865` (slots 0..30). Byte `0xE0` = slot 0, `0xE2` = slot 1, ..., `0xFE` = slot 30. These are NOT aliases for `FF xx` — they have a separate handler set. |
+| `0xE0..0xFE` | Single-byte command — dispatched through the main table at `C000:6865` (slots 0..30). |
 | `0xFF` | Extended prefix — slot 31 (`C000:6BAA`), reads the **next byte** as a sub-opcode. |
 
 ### Single-Byte Command Table (0xE0..0xFE)
