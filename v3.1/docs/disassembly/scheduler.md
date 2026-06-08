@@ -174,13 +174,13 @@ the given day. Highlight=1 marks today's column.
 | CANCEL | `0x02`/`0x03` | return 0 | Exit scheduler. |
 | EXIT | `0x0B` | return 1 | Exit scheduler. |
 | TAB | `0x09` | `DEF0:821B` | View/edit entry content. |
-| BEGIN | `0x0F` | `DEF0:8664` | Jump to first entry date. |
-| END | `0x0E` | `DEF0:8688` | Jump to last entry date. |
+| BEGIN (CTRL+↑) | `0x0E` | `DEF0:8688` | Jump to last entry date. |
+| END (CTRL+↓) | `0x0F` | `DEF0:8664` | Jump to first entry date. |
 | D/d | `0x44`/`0x64` | `DEF0:8082` | Edit selected entry date. |
-| ← | `0x13` | `DEF0:86E0` | Previous day (scroll if needed). |
-| → | `0x12` | `DEF0:87E2` | Next day (scroll if needed). |
+| ↑ | `0x13` | `DEF0:86E0` | Previous day (scroll if needed). |
+| ↓ | `0x12` | `DEF0:87E2` | Next day (scroll if needed). |
 
-### BEGIN Handler (0x0F, DEF0:8664)
+### END Handler (0x0F / CTRL+↓, DEF0:8664)
 
 Jumps to the date of the first schedule entry:
 
@@ -199,7 +199,7 @@ DEF0:8664  mov si,[0xA00C]        ; secondary buffer base
            jmp 0x88D8             ; → top of main loop
 ```
 
-### END Handler (0x0E, DEF0:8688)
+### BEGIN Handler (0x0E / CTRL+↑, DEF0:8688)
 
 Jumps to the date of the last schedule entry:
 
@@ -241,7 +241,7 @@ DEF0:86B2  mov ax,[bp-4]          ; pass current day
            jmp 0x88D8
 ```
 
-### ← Previous Day (0x13, DEF0:86E0)
+### ↑ Previous Day (0x13, DEF0:86E0)
 
 Range check ensures current day > 0 before decrementing:
 
@@ -251,10 +251,10 @@ DEF0:86C7  mov cx,0               ; check day > 0
            sub cx,[bp-4]
            sbb bx,[bp-2]
            jl 0x86D8              ; day > 0 → check key
-           jmp 0x87C8             ; day == 0 → try → key
-DEF0:86D8  cmp ax,0x13            ; ← key?
+           jmp 0x87C8             ; day == 0 → try ↓ key
+DEF0:86D8  cmp ax,0x13            ; ↑ key?
            jz 0x86E0
-           jmp 0x87C8             ; not ← → try → key
+           jmp 0x87C8             ; not ↑ → try ↓ key
 ```
 
 If the new day is still within the current 7-day view, just moves
@@ -287,7 +287,7 @@ DEF0:8708  ; scroll display right (shift content to show earlier day)
            jmp 0x87AB             ; update cursor
 ```
 
-### → Next Day (0x12, DEF0:87E2)
+### ↓ Next Day (0x12, DEF0:87E2)
 
 Range check ensures current day < max (0x11D58):
 
@@ -298,9 +298,9 @@ DEF0:87C8  mov cx,[bp-4]
            sbb bx,1              ; 0x11D58 = last valid week start + 6
            jl 0x87DA              ; in range → check key
            jmp 0x88D5             ; at max → ignore
-DEF0:87DA  cmp ax,0x12            ; → key?
+DEF0:87DA  cmp ax,0x12            ; ↓ key?
            jz 0x87E2
-           jmp 0x88D5             ; not → → ignore
+           jmp 0x88D5             ; not ↓ → ignore
 
 DEF0:87E2  ; unhighlight, increment day
            call DEF0:7D60

@@ -30,19 +30,19 @@ Entry point: `DEF0:627F`. Returns via RET when the user exits.
 Key dispatch:
   0x02/0x03  → exit (return 0)
   0x0B       → exit (return 1)
-  0x13 (←)   → previous month
-  0x12 (→)   → next month
+  0x13 (↑)   → previous month
+  0x12 (↓)   → next month
   0x59/'Y'   → Year select sub-screen (DEF0:603F)
   0x46/'F'   → Display Form toggle (DEF0:6137)
   other      → ignored, loop to DEF0:0043
 ```
 
-### Previous Month (0x13)
+### Previous Month (0x13 / ↑)
 
 Decrements SI (month). If SI reaches 0, wraps to 12 and
 decrements DX (year). Year clamped to minimum 0x76C (1900).
 
-### Next Month (0x12)
+### Next Month (0x12 / ↓)
 
 Increments SI (month). If SI reaches 13, wraps to 1 and
 increments DX (year). Year clamped to maximum 0x833 (2099).
@@ -155,7 +155,7 @@ February overridden to 29 by `DEF0:C2C9` leap year check.
 | Address | File | Length | Purpose |
 | --- | ---: | ---: | --- |
 | `F255:0008` | `0xF2558` | 90 | Calendar grid frame: 6 `FF 44` rectangles (horizontal row dividers). |
-| `F263:0004` | `0xF2634` | 92 | Main screen title + key legend: `CALENDAR`, `[←] PREV MONTH`, `[→] NEXT MONTH`, `[Y] YEAR`, `[F] DISPLAY FORM`. |
+| `F263:0004` | `0xF2634` | 92 | Main screen title + key legend: `CALENDAR`, `[↑] PREV MONTH`, `[↓] NEXT MONTH`, `[Y] YEAR`, `[F] DISPLAY FORM`. |
 | `F25B:0002` | `0xF25B2` | 6 | `FF 02` cursor (1, 0x36) — top calendar position. |
 | `F25B:0008` | `0xF25B8` | 6 | `FF 02` cursor (1, 0xF0) — bottom calendar position. |
 | `F25B:000E` | `0xF25BE` | 15 | `FF 06` attribute for top calendar area (column=4, Y=0x36, cell 12×0x7E). |
@@ -172,8 +172,8 @@ February overridden to 29 by `DEF0:C2C9` leap year check.
 | `0xF2E38` | `F2E3:0008` | Month abbreviations: `JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC` (12 × 3 bytes). |
 | `0xF2E5C` | `F2E5:000C` | Day-of-week abbreviations: `Sun Mon Tue Wed Thu Fri Sat` (7 × 3 bytes). |
 | `0xF2634` | `F263:0004` | `CALENDAR` title. |
-| `0xF2644` | `F263:0014` | `[←] PREV MONTH`. |
-| `0xF2654` | `F263:0024` | `[→] NEXT MONTH`. |
+| `0xF2644` | `F263:0014` | `[↑] PREV MONTH` (0xDE = ↑ glyph). |
+| `0xF2654` | `F263:0024` | `[↓] NEXT MONTH` (0xDD = ↓ glyph). |
 | `0xF2664` | `F263:0034` | `[Y] YEAR`. |
 | `0xF2674` | `F263:0044` | `[F] DISPLAY FORM`. |
 | `0xF26B4` | `F26B:0004` | `YEAR` title. |
