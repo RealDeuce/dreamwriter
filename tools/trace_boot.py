@@ -54,8 +54,10 @@ WINDOW6_END = 0xE0000
 SEGMENTS: dict[str, Segment] = {}
 
 
-def add_segment(name: str, seg_value: int, max_offset: int):
-    file_base = (seg_value << 4)
+def add_segment(name: str, seg_value: int, max_offset: int,
+                file_base: int | None = None):
+    if file_base is None:
+        file_base = (seg_value << 4)
     SEGMENTS[name] = Segment(name, seg_value, file_base, max_offset)
 
 
@@ -83,10 +85,21 @@ def find_segment_for_far(seg_value: int, offset: int) -> tuple[str, int] | None:
                   file=sys.stderr)
             break
     name = f"{seg_value:04X}"
-    max_off = len(ROM) - (seg_value << 4)
+    cpu_addr = seg_value << 4
+    # Check if this CPU address falls in a banked window
+    # and compute the correct file base from the bank mapping
+    fb = None
+    for existing in SEGMENTS.values():
+        if existing.file_base != (existing.seg_value << 4):
+            # This is a banked segment — check if new seg falls in same window
+            existing_cpu = existing.seg_value << 4
+            if existing_cpu <= cpu_addr < existing_cpu + existing.max_offset:
+                fb = existing.file_base + (cpu_addr - existing_cpu)
+                break
+    max_off = len(ROM) - (fb if fb is not None else cpu_addr)
     if max_off <= 0:
         return None
-    add_segment(name, seg_value, min(max_off, 0x10000))
+    add_segment(name, seg_value, min(max_off, 0x10000), file_base=fb)
     return name, offset
 
 
@@ -605,6 +618,14 @@ def main():
     add_segment("C772", 0xC772, 0x188E0)     # C772:0000 to end of window
     add_segment("DEF0", 0xDEF0, 0x10F00)     # DEF0:0000 to end of window
 
+    # Window 3 (port 0x13=0x03 during spell check, bank 12, file 0x80000)
+    # CPU 0x60000-0x7FFFF maps to ROM file 0x80000-0x9FFFF
+    add_segment("6000", 0x6000, 0x20000, file_base=0x80000)
+
+    # Window 4 (port 0x14=0x02 during spell check, bank 13, file 0xA0000)
+    # CPU 0x80000-0x9FFFF maps to ROM file 0xA0000-0xBFFFF
+    add_segment("8000", 0x8000, 0x20000, file_base=0xA0000)
+
     # Window 5 (port 0x15=0x02 during banked call, bank 13, file 0xA0000)
     add_segment("AD00", 0xAD00, 0x13000)     # AD00:0000 to end of window
 
@@ -718,7 +739,8 @@ def main():
         seeds.extend(irq_seeds)
 
     if args.thunks:
-        seeds.extend(read_thunk_table())
+        seeds.extend(read_thunk_table(0x1A00, 12))   # thunk A
+        seeds.extend(read_thunk_table(0x1B38, 12))   # thunk B
 
     if args.int21:
         # INT 21h validity table at C000:61DF maps AH (0..5F) to slot index.
