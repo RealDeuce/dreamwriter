@@ -415,6 +415,10 @@ def read_dispatch_tables() -> list[tuple[str, int, str]]:
                          (0x061C, "fmt_tgt_2"), (0x0620, "fmt_tgt_3")]:
         seeds.append(("C772", addr, label))
 
+    # C772:69D8 — character processing landing pad
+    # Reached via C772:6667  jmp si  where si = [74E6] & 0xFF + 0x69D8
+    seeds.append(("C772", 0x69D8, "landing_69D8"))
+
     # C772:1756 — text operation landing pad (JMP SHORT fan-out)
     # Reached via C772:1754  jmp si  where si = (AL & 0xF) * 2 + 0x1756
     seeds.append(("C772", 0x1756, "landing_1756"))

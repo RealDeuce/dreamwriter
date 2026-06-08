@@ -26542,6 +26542,29 @@
   C772:69D7  C3             ret
   ; end: ret
 
+--- C772:69D8..69DA  ; landing_69D8  branches:C772:6A24
+  C772:69D8  EB4A           jmp short 0x6a24
+  ; end: jmp
+
+--- C772:6A24..6A53  ; from_C772:69D8  calls:C772:68D8  branches:C772:6A4C,C772:6A37,C772:6A50,C772:6A50,C772:6A50,C772:6878
+  C772:6A24  F6C110         test cl,0x10
+  C772:6A27  8B36E974       mov si,[0x74e9]
+  C772:6A2B  751F           jnz 0x6a4c
+  C772:6A2D  F6C510         test ch,0x10
+  C772:6A30  7505           jnz 0x6a37
+  C772:6A32  F6C508         test ch,0x8
+  C772:6A35  7519           jnz 0x6a50
+  C772:6A37  F6C580         test ch,0x80
+  C772:6A3A  7514           jnz 0x6a50
+  C772:6A3C  F6C510         test ch,0x10
+  C772:6A3F  740F           jz 0x6a50
+  C772:6A41  8B369D74       mov si,[0x749d]
+  C772:6A45  E890FE         call 0x68d8
+  C772:6A48  8B36E774       mov si,[0x74e7]
+  C772:6A4C  89369D74       mov [0x749d],si
+  C772:6A50  E925FE         jmp 0x6878
+  ; end: jmp
+
 --- C772:6B6D..6B80  ; call_C772:58A8  branches:C772:6B80,C772:6C3E
   C772:6B6D  56             push si
   C772:6B6E  52             push dx
