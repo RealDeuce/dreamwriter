@@ -50,23 +50,55 @@ Two timezone panels, side-by-side on the 480×64 LCD:
 
 Panel 1 (home city) is at X=0, panel 2 (2nd city) at X=0x22.
 
-## Main Display Loop (DEF0:AAEF)
+## Main Display Loop (DEF0:AA8E..ABFA)
 
-Alternates between the two timezone panels, updating the
-time display and checking for key input:
+After the initial render, reads the home city's map coordinates
+and enters a timed loop that blinks the city indicator on the
+world map while updating the time display.
+
+### Setup (DEF0:AA8E)
 
 ```text
-loop:
-  1. toggle SI between 0 and 1 (panel index)
-  2. build display script:
-     FF 40 (CX, DX)              time position from timezone record
-     FF 42 (6, 6)                time indicator bitmap
-     embed (SI*6+6, F2F1)        time digit segment
-  3. C000:3F35(buf)              render time display
-  4. DEF0:9058                   update time for both panels
-  5. DEF0:0063                   delay/timer check
-  6. if timer expired → loop
-  7. DEF0:0043                   read key → dispatch
+SI = 0                           panel toggle (0 or 1)
+DI = 0                           tick counter (counts to 3)
+CX = home_record[+0x1B] - 2     map X (from [A444] timezone)
+DX = home_record[+0x1A] + 0xE4  map Y
+```
+
+### Tick Loop (DEF0:AAE6)
+
+```text
+1. DI++
+2. if DI < 3: → DEF0:AB7B (time update only)
+3. if DI == 3: → DEF0:AAEF (redraw indicator + time)
+```
+
+### Indicator Blink (DEF0:AAEF, every 3 ticks)
+
+```text
+1. push DX, CX; DI = 0          save position, reset counter
+2. SI = 1 - SI                  toggle: 0→1→0→1...
+3. build display script at 0x18F1:
+   FF 40 (CX, DX)               home city map position
+   FF 42 (6, 6, SI*6+6, F2F1)   indicator bitmap:
+     SI=0 → F2F1:0006 (filled)
+     SI=1 → F2F1:000C (hollow)
+4. C000:3F35(buf)                render blinking indicator
+5. pop DI=0, CX, DX             restore
+```
+
+The city indicator on the world map blinks by alternating
+between the filled and hollow 6×6 icons every 3 timer ticks.
+Only the home city indicator blinks; the 2nd city indicator
+is static (drawn once by DEF0:90B8).
+
+### Time Update (DEF0:AB7B)
+
+```text
+1. DEF0:9058                    update time for both panels
+2. DEF0:0063                    delay/timer check
+3. if no key ready: → AAE6      continue tick loop
+4. DEF0:0043                    read key → dispatch
 ```
 
 ## Key Dispatch
@@ -152,31 +184,47 @@ World map bitmap (96×64, 768 bytes):
 
 ![World map](images/wc-world-map-0xF2F52.png)
 
-The filled indicator marks the home city; the hollow frame marks
-the 2nd city. The timezone record fields +0x1A and +0x1B encode
-the city's map coordinates:
+Initial render: 2nd city drawn first (hollow, F2F1:000C), home
+city drawn second (filled, F2F1:0006) on top. The home city
+indicator then blinks in the main loop (see above). The timezone
+record fields +0x1A and +0x1B encode each city's map coordinates:
 - Map X = `[+0x1B] - 2` (range ~0x12..0x55, left to right)
 - Map Y = `[+0x1A] + 0xE4` (range ~0xF5..0x139, top to bottom)
 
 ## DEF0:9058 — Time Display
 
-Called from the main display loop. Reads current date/time
-(`DEF0:0074`, `DEF0:0098`), then displays the time for both
-panels:
+Called from the main display loop (via `RETF` — far call).
+Reads current date/time, then renders the time for both panels
+using the shared alarm time renderer from the scheduler:
 
-```text
-1. DEF0:0074                   read RTC date
-2. DEF0:0098                   read RTC time
-3. C000:3F35(A, F2BB, 6)       position for panel 1 time
-4. DEF0:8AB4([A444] offset)    render panel 1 time (AM/PM format)
-5. DEF0:8FC0([A446])           adjust for timezone offset
-6. C000:3F35(A, F2C3, 6)       position for panel 2 time
-7. DEF0:8AB4([A448] offset)    render panel 2 time
+```
+DEF0:9058  push cx / push si
+           call DEF0:0074              ; read RTC date
+           call DEF0:0098              ; read RTC time
+           ; panel 1 (home city):
+           call C000:3F35(A, F2BB, 6)  ; position for home time
+           mov si,[0xA444]             ; home city index
+           mov cl,[si-0x59B6]          ; CL = DST flag from [A64A+si]
+           xor ch,ch
+           call DEF0:8AB4              ; render time (AX=date, BX=time, CX=DST)
+           ; compute 2nd city offset:
+           mov cx,0
+           mov es,cx
+           mov cx,[es:0xA446]          ; CX = UTC offset diff
+           call DEF0:8FC0              ; adjust date/time by offset
+           ; panel 2 (2nd city):
+           call C000:3F35(A, F2C3, 6)  ; position for 2nd time
+           mov si,[0xA448]             ; 2nd city index
+           mov cl,[si-0x59B6]          ; CL = DST flag
+           xor ch,ch
+           call DEF0:8AB4              ; render adjusted time
+           pop si / pop cx
+           retf
 ```
 
-The timezone offset at `[A446]` is read from RAM `[SI - 0x59B6]`
-where SI = `[A444]`. This maps to the per-city UTC offset stored
-in RAM at `[A64A + city_index]`.
+`[A446]` holds the pre-computed UTC offset difference between the
+2nd and home cities (in quarter-hours), adjusted for DST. It is
+recalculated whenever either city or DST state changes.
 
 ## DEF0:92C4 — Form Display Helper
 
@@ -192,76 +240,198 @@ DEF0:92C4  call C000:3F35(0, F2BC, F)  ; FF 06 attribute set
 ## DEF0:92EF — Set Home/2nd City
 
 Called with AX=0 for home city, AX=1 for 2nd city. Allocates
-0x16 bytes on stack. Draws the city selection list with scrolling.
+0x16 bytes on stack. Draws a scrolling 6-line city list.
+
+### Local Variables
+
+| Offset | Purpose |
+| --- | --- |
+| `[bp-2]` | Mode: 0=home city, 1=2nd city (from AX param). |
+| `[bp-4]` | Previous city index (saved on entry). |
+| `[bp-6]` | Selected city index (highlighted row). |
+| `[bp-8]` | Scroll position (first visible city in list). |
+| `[bp-A]` | Display loop counter (0..5 for 6 visible rows). |
+| `[bp-C]` | Scratch buffer pointer. |
+| `[bp-E]` | Working city index for inner loops. |
+| `[bp-10]` | Resolved city index for ENTER/INS. |
+| `[bp-13]` | Key code from DEF0:0043. |
+| `[bp-15]` | UTC offset difference scratch. |
+
+### Entry
 
 ```text
-1. DEF0:92C4                   draw form area
-2. C000:3F35(6, F2BD, 5A)      draw grid frame
-3. if AX==1: C000:3F35(8, F2D8, 60) — "SET 2ND CITY" legend
-   if AX==0: C000:3F35(6, F2D2, 61) — "SET HOME CITY" legend
-4. load current city index from [A448] or [A444]
-5. display 6 cities at a time in scrolling list
-6. key loop:
-   - show city names from timezone data (F382/F68C)
-   - highlight selected city with 0xF2 attribute
-   - mark home city with 0xF8 marker
-   - mark alarm-enabled city with '*'
-   - ↵ (0xDA): confirm selection
-   - ↑ (0x13): scroll up
-   - ↓ (0x12): scroll down
-   - TAB: reorder
-   - INS: toggle daylight time
-   - CAN: cancel
+1. DEF0:92C4                   draw form input area
+2. C000:3F35(6, F2BD, 5A)      grid frame
+3. if [bp-2]==1: C000:3F35(8, F2D8, 60) — "SET 2ND CITY"
+   if [bp-2]==0: C000:3F35(6, F2D2, 61) — "SET HOME CITY"
+4. [bp-4] = current index from [A448] or [A444]
+5. [A74A] = 0 (normal display mode)
+6. [bp-6] = [bp-8] = 0
 ```
 
-### City List Display
+### Display Loop (DEF0:9359..94C8)
 
-Each row in the 6-line list shows:
+Renders 6 rows (counter at `[bp-A]` from 0 to 5). Each row:
 
 ```text
-[highlight] [alarm*] city_name (20 chars) [home_marker]
+1. FF 02 cursor at (row*2+2, 0xD1)     position
+2. if row == selected: 0xF2             highlight attribute
+3. 0xE3                                 normal attribute
+4. if [A74A]==0: read city from RAM table [A44A+index]
+   if [A74A]!=0: use index directly
+5. if DST flag [A64A+city] != 0: '*'    DST marker
+   else: ' '
+6. 0xE3
+7. if city == [A444] (home): 0xF8       home city marker
+8. 0xE3
+9. if index < record count (222):
+   loop 20 chars: copy city name from F382 record
+   else: FF 0E 0078 (blank row filler)
+10. C000:3F35(buf)                      render row
 ```
 
-City names are read from `F382:[0x0E + F68C:[index*2] * 0x38]`.
-When the display reaches the end of the 222-record list, remaining
-rows show `FF 0E 0078` (underline off + spacing).
+### Key Dispatch
+
+| Key | Code | Handler | Action |
+| --- | ---: | --- | --- |
+| TAB | `0x09` | `DEF0:94F5` | Toggle display order ([A74A] 0↔1). |
+| INS | `0x0D` | `DEF0:9519` | Toggle DST for selected city. |
+| A-Z/a-z | `0x41-5A`/`0x61-7A` | `DEF0:95F5` | Alpha search: jump to first city starting with letter. |
+| ↵ ENTER | `0xDA` | `DEF0:9668` | Confirm city selection. |
+| ↑ | `0x13` | `DEF0:97CD` | Move selection up. |
+| ↓ | `0x12` | `DEF0:97CD` | Move selection down. |
+| CAN | — | `DEF0:9810` | Cancel, return to main. |
+
+### TAB — Toggle Display Order (DEF0:94F5)
+
+Toggles `[A74A]` between 0 and 1:
+- 0 = display cities by RAM index order (from `[A44A]` table)
+- 1 = display cities by timezone record order (alphabetical)
+
+Resets scroll position and redraws.
+
+### INS — Toggle DST (DEF0:9519)
+
+Toggles the DST flag byte at `[A64A + city_index]` between 0
+and 1. Then recalculates the UTC offset for `[A446]`:
+
+```text
+new_offset = record[A448].utc - record[A444].utc
+           + (DST[A448] - DST[A444]) × 4
+```
+
+The ×4 converts DST flag (0/1) to quarter-hours (0/4 = 0/1 hour).
+
+If the modified city is the home city, adjusts the RTC time by
+±4 quarter-hours (±1 hour) via `DEF0:8FC0` / `DEF0:00BC` /
+`DEF0:00D9` / `DEF0:C5BC`.
+
+### Alpha Search (DEF0:95F5)
+
+Converts lowercase to uppercase (`sub [bp-13], 0x20`), sets
+`[A74A]=1`, then scans through the timezone index table comparing
+the first character of each city name (`F382:[F68C:[i*2]*0x38+0x0E]`)
+until finding one >= the typed letter. Jumps the selection to
+that position.
+
+### ENTER — Confirm Selection (DEF0:9668)
+
+Resolves the selected index, then swaps city assignments in the
+RAM order table by cycling through indices. If selecting the
+2nd city, stores to `[A448]`. If selecting the home city:
+
+```text
+1. store [A444] = selected
+2. read RTC date/time
+3. compute UTC offset: new_record[+0x18] - old_record[+0x18]
+4. if DST flags differ: adjust ±4 quarter-hours
+5. DEF0:8FC0(date, time, offset) — adjust RTC
+6. DEF0:00BC, DEF0:00D9           — write date/time
+7. DEF0:C5BC                      — update alarm state
+```
+
+Then recalculates `[A446]` for the 2nd panel.
+
+### Arrow Navigation (DEF0:97CD)
+
+```text
+↑ (0x13): if [bp-6] > 0: [bp-6]--
+↓ (0x12): if [bp-6] < count-1: [bp-6]++
+if [bp-6] < [bp-8]: [bp-8]--        scroll up
+if [bp-6] >= [bp-8]+6: [bp-8]++     scroll down
+```
 
 ## DEF0:9BFC — Set Time/Date
 
-Allocates 0x14 bytes on stack. Draws the time/date editing form
-with 3 or 4 input fields depending on time format:
+Allocates 0x14 bytes on stack. Edits time and date using a
+field-by-field input form with live preview.
+
+### Local Variables (date/time struct)
+
+| Offset | Purpose |
+| --- | --- |
+| `[bp-2]` | Year |
+| `[bp-4]` | Day |
+| `[bp-6]` | Month |
+| `[bp-8]` | AM/PM flag (0=AM, 1=PM, 12-hour mode only) |
+| `[bp-A]` | Minute |
+| `[bp-C]` | Hour (12-hour adjusted if [1108]!=0) |
+
+### Entry
 
 ```text
-1. DEF0:92C4                   draw form area
-2. C000:3F35(6, F2BD, 5A)      draw grid frame
-3. C000:3F35(E, F2CE, 38)      draw "SET TIME/DATE" legend
-4. DEF0:0074, DEF0:0098        read current date/time
-5. if [1108]!=0 (24-hour mode):
-     store hour directly
-   else (12-hour mode):
-     compute hour mod 12 → [bp-0xC]
-     if hour==0: set to 12
-     compute AM/PM flag → [bp-8]
-6. field edit loop (DI=0..3):
-   field 0: hour (2 digits)
-   field 1: minute (2 digits)
-   field 2: AM/PM selector (12-hour mode only, via DEF0:9B2F)
-   field 3: confirm (via DEF0:9817 display, ↵=0xDA to accept)
-7. validate via DEF0:9AA0
-8. if valid: write to RTC via DEF0:00BC/DEF0:00D9
-9. DEF0:C5BC                   update RTC alarm state
+1. DEF0:92C4                   draw form input area
+2. C000:3F35(6, F2BD, 5A)      grid frame
+3. C000:3F35(E, F2CE, 38)      "SET TIME/DATE" legend
+4. DEF0:0074, DEF0:0098        read current RTC date/time
+5. [bp-2] = [18E3] (year)
+   [bp-6] = [18E5] (month)
+   [bp-4] = [18E7] (day)
+6. if [1108]!=0 (12-hour mode):
+     [bp-C] = [18EB] mod 12; if 0 → 12
+     [bp-8] = ([18EB] >= 12) ? 1 : 0
+   else (24-hour mode):
+     [bp-C] = [18EB]
+7. [bp-A] = [18ED] (minute)
 ```
 
-### Field Navigation
+### Field Edit Loop (DI=0..3)
 
-```
-LEFT  (0x11): previous field, skip AM/PM in 24-hour mode
-RIGHT (0x10): next field, skip AM/PM in 24-hour mode
-UP    (0x13): jump to first field (DI=0)
-DOWN  (0x12): jump to confirm (DI=3)
+```text
+DI=0: DEF0:0F87 format hour → DEF0:1806 numeric input
+DI=1: DEF0:0F87 format minute → DEF0:1806 numeric input
+DI=2: DEF0:9B2F AM/PM selector (skipped in 24-hour mode)
+DI=3: DEF0:9817 renders "Time HH:MM am/pm (Day) MMM DD, YYYY"
+      then DEF0:9AA0 validates all fields
+      if valid: ↵ (0xDA) confirms
 ```
 
-Field descriptors at `F2F2:0002` (8 bytes per field).
+Field descriptors at `F2F2:0002` (8 bytes per field, 3 entries).
+
+### Navigation Keys (DEF0:9E02)
+
+```text
+LEFT  (0x11): DI--; if DI==2 and 24-hour mode: DI-- (skip AM/PM)
+RIGHT (0x10): DI++; if DI==2 and 24-hour mode: DI++ (skip AM/PM)
+UP    (0x13): DI = 0 (first field)
+DOWN  (0x12): DI = 3 (confirm)
+```
+
+### Validation and Commit
+
+`DEF0:9AA0` validates the struct at `[bp-C]`:
+- 12-hour: hour 1..12; 24-hour: hour 0..23
+- Minute < 60
+- Month 1..12
+- Year 1980 (0x7BC)..2080 (0x820)
+- Day 1..days_in_month (via `DEF0:C394`)
+
+Returns: 0=valid, 1=bad hour, 2=bad minute, 4=bad month,
+5=bad day, 6=bad year. On error, `DEF0:00F9` shows message.
+
+On success, writes fields back to `[18E3..18EF]` and calls
+`DEF0:00BC` (write date), `DEF0:00D9` (write time),
+`DEF0:C5BC` (update alarm state).
 
 ## DEF0:9E42 — Display Form Toggle
 
@@ -322,19 +492,53 @@ and `[A793]` (alarm active byte).
 
 ### DEF0:9EB4 — Alarm Row Display
 
-Renders a single alarm entry row. Called with AX=row index,
-BX=alarm data word, CX=alarm data string pointer. Formats the
-time and label for display.
+Called with AX=row index, BX=alarm time (minutes since midnight,
+or -1 for empty), CX=alarm label string pointer.
+
+```text
+1. FF 40 (row*10+0x13, 0xC2)     position at row
+2. if BX == -1 (empty slot):
+     write "  :     " (blank time)
+   else:
+     hour = BX / 60; minute = BX % 60
+     if [1108]!=0 (12-hour):
+       display_hour = hour mod 12; if 0 → 12
+       append 'p'/'a' + 'm' based on hour >= 12
+     else (24-hour):
+       display_hour = hour
+       append "  " (two spaces)
+     format as "HH:MM am" or "HH:MM   "
+3. C000:3F35(buf)                render time string
+4. DEF0:1471(label, 0x14, 1, 0xF1) render label text at row position
+```
+
+Alarm time is stored as minutes since midnight (0..1439).
 
 ### DEF0:A4F8 — Alarm Highlight
 
-Updates the highlight cursor on the selected alarm row.
-Called with AX=row index.
+Builds an `FF 44` rectangle to highlight the selected alarm row:
+
+```text
+FF 44  x = row*10+0x12
+       y = 0xC1
+       w = 9
+       h = 0xA8
+       scroll_x = 0
+       scroll_y = 0
+       0x0A (attribute)
+```
 
 ### DEF0:A039 — Alarm Edit
 
-Edits the selected alarm entry. Sets time and label fields.
-Called with AX=alarm index.
+Large function (A039..A4F8, 29 blocks). Edits time and label
+for the selected alarm. Called with AX=alarm index.
+
+Fields: hour (2 digits), minute (2 digits), AM/PM (12-hour
+mode only, via `DEF0:9B2F`), label (text via `DEF0:1806`).
+
+Validates hour/minute ranges. On confirm (0xDA), stores the
+alarm time as minutes since midnight at `[A74C + index*0x17]`
+and the label string at `[A74C + index*0x17 + 2]`.
 
 ## Display Script Sources
 
@@ -358,6 +562,8 @@ Called with AX=alarm index.
 | `F2F1:0006` | `0xF2F16` | 6 | Map city indicator (filled, 6×6 — home city). ![](images/wc-time-ind0-0xF2F16.png) |
 | `F2F1:000C` | `0xF2F1C` | 6 | Map city indicator (hollow frame, 6×6 — 2nd city). ![](images/wc-time-ind1-0xF2F1C.png) |
 | `F2F5:0002` | `0xF2F52` | 768 | World map bitmap (96×64). ![](images/wc-world-map-0xF2F52.png) |
+| `F2C5:0000` | `0xF2C50` | 14 | `FF 02` cursor + `Time` label (used by DEF0:9817). |
+| `F2C5:000E` | `0xF2C5E` | 14 | `FF 02` cursor + `Date` label (used by DEF0:9817). |
 | `F2F2:0002` | `0xF2F22` | 24 | Time input field descriptors (3 × 8 bytes). |
 
 ## String Data
@@ -381,20 +587,23 @@ Called with AX=alarm index.
 | `0xF2E98` | `F2E7:0028` | `[BACK] DELETE`. |
 | `0xF2EA8` | `F2E7:0038` | `[CAN]  EXIT`. |
 | `0xF2EBA` | `F2EB:000A` | `TIME` column header. |
+| `0xF2C50` | `F2C5:0000` | `Time` label (set time display). |
+| `0xF2C5E` | `F2C5:000E` | `Date` label (set time display). |
 | `0xF382E` | `F382:000E` | Timezone city/country database (222 × 56 bytes). |
 
 ## State Variables
 
 | Address | Purpose |
 | --- | --- |
-| `[A444]` | Home city timezone index |
-| `[A446]` | Home city UTC offset (from RAM table) |
-| `[A448]` | 2nd city timezone index |
-| `[A64A+i]` | Per-city alarm/offset byte (indexed by city) |
-| `[A74A]` | Display mode flag for city list |
-| `[A74C]` | Alarm entry table base (4 × 23 bytes) |
-| `[A791]` | Alarm enable word (-1 = disabled) |
-| `[A793]` | Alarm active byte |
+| `[A444]` | Home city timezone index. |
+| `[A446]` | UTC offset difference: 2nd city minus home city, in quarter-hours, DST-adjusted. Recalculated on city change or DST toggle. |
+| `[A448]` | 2nd city timezone index. |
+| `[A44A+i]` | City order table (addressed as `[i - 0x5BB6]`). Maps display position to city index. |
+| `[A64A+i]` | DST flag per city (addressed as `[i - 0x59B6]`). 0=standard, 1=daylight saving. |
+| `[A74A]` | City list display mode: 0=by RAM order table, 1=by timezone record order (alphabetical). |
+| `[A74C]` | Daily alarm table base (4 × 23 bytes). |
+| `[A791]` | Alarm enable word (-1 = disabled). |
+| `[A793]` | Alarm active byte. |
 | `[1108]` | Time format: 0 = 12-hour, non-zero = 24-hour |
 | `[18E3]` | Year (from RTC) |
 | `[18E5]` | Month |
@@ -415,7 +624,7 @@ Called with AX=alarm index.
 | `DEF0:8FC0` | Time adjustment for timezone offset. |
 | `DEF0:90B8` | Time detail view (from scheduler). |
 | `DEF0:92C4` | Form display helper (attribute + input field rect). |
-| `DEF0:9817` | Time display formatting. |
+| `DEF0:9817` | Time/date display: renders "HH:MM am (Day) MMM DD, YYYY". |
 | `DEF0:9AA0` | Time validation. |
 | `DEF0:9B11` | String to number conversion. |
 | `DEF0:9B2F` | AM/PM selector input. |
