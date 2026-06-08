@@ -133,6 +133,21 @@ All handlers use the C-style frame: `PUSH BP; MOV BP,SP; SUB SP,n`.
 | `AD00:1E44` | op 17 | Display render callback (→ `ED1B:0D63` → `DEF0:0D91`) |
 | `AD00:1F4E` | op 18 | Time read callback (→ `ED1B:0E51` → `DEF0:00B8`) |
 
+### AD00:1B3B — Operation Sub-Dispatch (7 entries)
+
+Secondary dispatch table reached from `AD00:1B36 jmp [cs:bx+0x1B3B]`.
+Handles ROM Card operation state transitions.
+
+| Index | Handler | Behavior |
+| ---: | --- | --- |
+| 0 | `AD00:1A7C` | Increment `[1B1E]`, clamp to 2 max. |
+| 1 | `AD00:1A94` | Decrement `[1B1E]`, clamp to 1 min. |
+| 2 | `AD00:1AAC` | Check `[1B0C]==1` (card ready flag). |
+| 3 | `AD00:1AC8` | Check `[1B24]==0x270F` (timeout sentinel). |
+| 4 | `AD00:1AAC` | Same as index 2 (card ready check). |
+| 5 | `AD00:1AF5` | Check `[1B24]==0x270F` (timeout sentinel, alternate path). |
+| 6 | `AD00:1B21` | Already traced (loop continuation). |
+
 ### Call Flow
 
 ```text

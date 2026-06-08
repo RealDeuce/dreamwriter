@@ -181,6 +181,35 @@ arbitrary bit-aligned source data with a shift-and-mask pipeline:
 - Byte width from `[7002]`, mask in `[7006]`
 - Special case for width=1 uses a narrower mask path at `C000:752B`
 
+### Display Renderer Sub-Dispatch (C000:6BCF, 10 entries)
+
+When the main renderer loop needs to perform a display operation
+beyond simple text, it dispatches through a second table at
+`C000:6BCF` via `C000:6BC2  jmp [cs:bx+0x6BCF]`.
+
+| Index | Handler | Behavior |
+| ---: | --- | --- |
+| 0 | `C000:6BF6` | Clear framebuffer: `REP STOSW` fills `[8000..8FFF]` with zero. |
+| 1 | `C000:6C06` | String output: reads segment:length from script, calls `C000:6E5A`, clears display state. Same as blit_ext_0. |
+| 2 | `C000:6C91` | Display mode set: reads mode byte and drive byte from script, stores to `[16E6]` and `[16E5]`. |
+| 3 | `C000:6CD7` | Positioned string + blit: reads segment:length via `C000:6E5A`, position via `C000:6E81`, then calls `C000:7324` (simple blit) or enters multi-parameter path. |
+| 4 | `C000:6D79` | Column adjust: reads delta from script, subtracts from `[1733]` (column counter). |
+| 5 | `C000:6C27` | String output with position: reads segment:length via `C000:6E5A`, dispatches on mode flags for centering/alignment. |
+| 6 | `C000:6D29` | Row-positioned blit: reads segment:length, adds row offset (`[BX+7] * 64`) to `[189F]`, calls `C000:7324`. |
+| 7 | `C000:6D79` | Same as index 4 (column adjust). |
+| 8 | `C000:6D79` | Same as index 4 (column adjust). |
+| 9 | `C000:6D4F` | Display geometry set: reads pixel width from script, stores to `[16DF]`/`[16DD]`. Width 2 clears `[173C]`, width 8 sets row height to 7, others to 8. |
+
+### Blit Helpers
+
+| Address | Purpose |
+| --- | --- |
+| `C000:6E5A` | String setup: calls `C000:6E81` to compute pixel position from DX:CX. |
+| `C000:6E81` | Pixel position calculator: computes `[189F]` (byte column) and `[189E]` (bit offset) from row/column parameters. |
+| `C000:7324` | Simple blit: copies AL (height) rows of CH-byte width from source to framebuffer at `ES:DI` with 64-byte stride. |
+| `C000:71C6` | Shifted blit: bit-aligned source-to-framebuffer copy with shift pipeline via `C000:72EF`/`72F3`. |
+| `C000:724D` | Multi-row blit: similar to `71C6` but with different row stride calculation. |
+
 ### Display Attribute Bytes
 
 | Address | Bit | Meaning |

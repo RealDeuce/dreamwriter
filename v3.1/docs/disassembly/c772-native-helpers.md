@@ -13,7 +13,7 @@ See [`app-entry.md`](app-entry.md) for the cold/warm entry points.
 | Address range | Blocks | Purpose |
 | --- | --- | --- |
 | `C772:0004..022D` | 14 | Entry points + far-call wrappers |
-| `C772:0300..0BEF` | 20 | VM outlier handlers + helpers |
+| `C772:0300..0BEF` | 20 | VM outlier handlers + format targets + helpers |
 | `C772:0D20..2FFF` | 234 | Display update + text processing |
 | `C772:3600..39FF` | 86 | VM core (interpreter + dispatch + handlers) |
 | `C772:3A00..45FF` | 74 | Text buffer operations + state |
@@ -115,6 +115,28 @@ then RETF. `C000:19C7` calls `C000:1B28` (thunk B entry) then RETF.
 
 Sets `[7094]` and `[7095]` to `0xFF` — marks the cached state as
 invalid so the next `C772:98EC` check will force a refresh.
+
+### Format Dispatch Targets (C772:04E4-0620)
+
+The `fmt_op_*` handlers at `C772:0480..048F` load SI with a format
+table pointer and jump to `C772:0494`, which then `JMP SI` to one
+of these targets:
+
+| Address | SI value | Behavior |
+| --- | --- | --- |
+| `C772:04E4` | `0x04E4` | Calls `C772:15A9` and `C772:15B2` (text measurement). |
+| `C772:0584` | `0x0584` | Calls `C772:6C8A` (display refresh), `C772:0500` (yield to VM), dispatches on mode flags. |
+| `C772:061C` | `0x061C` | Falls through to `C772:0622` (shared with `0620`). |
+| `C772:0620` | `0x0620` | Calls `C772:6C8A`, `0500`, `5E35` (editor service), `5E1E` (queue char), `0682` (format helper), then `022D` (yield to VM). Full reformat + display update cycle. |
+
+### Computed-Jump Landing Pads
+
+| Address | Reached from | Entries | Purpose |
+| --- | --- | --- | --- |
+| `C772:1756` | `C772:1754 jmp si` (SI = `(AL & 0xF) * 2 + 0x1756`) | 16 | Text operation dispatch. 15 JMP SHORT entries + 1 inline `MOV DL`. |
+| `C772:215F` | `C772:215D jmp si` (SI = `[751A/751C] & 0xFF + 0x215F`) | ~12 | Display page operation dispatch. |
+| `C772:69D8` | `C772:6667 jmp si` (SI = `[74E6] & 0xFF + 0x69D8`) | 4+ | Character class processing dispatch. |
+| `C772:6BE3` | `C772:6BE1 jmp si` (SI = `nibble * 2 + 0x6BE3`) | 16 | Character type dispatch from `[7E62]` lookup. |
 
 ### C772:0D20 — Display Updater
 
