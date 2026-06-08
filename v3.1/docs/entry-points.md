@@ -248,11 +248,11 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:2DD9` | `0xC2DD9` | Subsystem dispatch entry. |
 | `C000:2E2D` | `0xC2E2D` | Validation: checks `[1337]==0x7CE`, validates `[1106]` against 8/9/A/B. Returns CF=1 if fail. |
 | `C000:2E72` | `0xC2E72` | Subsystem init chain: sets `[1106]=8`, `[1339]=8`, calls RAM checksum verify, seeds bank mirrors, chain of init subroutines. |
-| `C000:2EA8` | `0xC2EA8` | Init subroutine (part of `C000:2E72` chain). |
-| `C000:2F32` | `0xC2F32` | Init subroutine: calls `C000:0CA7` (RTC sentinels). |
-| `C000:2F7C` | `0xC2F7C` | Init subroutine. |
-| `C000:2FB0` | `0xC2FB0` | Init subroutine. |
-| `C000:2FD5` | `0xC2FD5` | Init subroutine. |
+| `C000:2EA8` | `0xC2EA8` | Clear state variables: zeroes `[146F]`, `[1443]`, `[15A2]`, `[1439]`, `[143C]`, `[143D]`, `[1446]`, `[1442]`, `[1445]`, etc. Fills `[133A..142B]` with zero. |
+| `C000:2F32` | `0xC2F32` | Set date to 1998-01-01 (INT 21h AH=2Bh), clear time to 00:00 (AH=2Dh), set RTC sentinels via `C000:0CA7`, set `[1337]=0x7CE`, `[1335]=0x1770`. |
+| `C000:2F7C` | `0xC2F7C` | Set RS-232C defaults: baud=6 (9600), bits=1 (8-bit), stop=0 (1 stop), parity=0 (none), XON=0 (off) at `[132E..1332]`. |
+| `C000:2FB0` | `0xC2FB0` | Set power-on buzzer defaults: `[1447]=3` (type), `[1448]=0`, `[1449]=0`. |
+| `C000:2FD5` | `0xC2FD5` | Set display defaults: `[1333]=3` (menu page), `[1334]=0`. |
 
 ## 11. Serial/DreamLink (C000:3168-35FF)
 
@@ -295,7 +295,7 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:3F7B` | `0xC3F7B` | int21_set_dta_impl: sets DTA address from DS:DX. |
 | `C000:3F88` | `0xC3F88` | int21_get_dta_impl: returns DTA address in ES:BX. |
 | `C000:3F98` | `0xC3F98` | int21_disk_free_impl: returns free space for selected drive. |
-| `C000:3FC9` | `0xC3FC9` | IOCTL helper. |
+| `C000:3FC9` | `0xC3FC9` | IOCTL sub-dispatch: calls `C000:32B9`, checks DreamLink endpoint `[6F51]==0x0A`. |
 
 ### File Create/Open/Close
 
@@ -423,24 +423,24 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:68A5` | `0xC68A5` | disp_cmd_5: display command handler. |
 | `C000:68A7` | `0xC68A7` | disp_cmd_0: display command handler (primary text renderer). |
 | `C000:68D5` | `0xC68D5` | disp_cmd_7: jumps to `C000:6557` (script restart). |
-| `C000:68D8` | `0xC68D8` | disp_cmd_16: display parameter set. |
-| `C000:68DF` | `0xC68DF` | disp_cmd_17: display parameter set. |
-| `C000:68E6` | `0xC68E6` | disp_cmd_18: display parameter set. |
-| `C000:68ED` | `0xC68ED` | disp_cmd_19: display parameter set. |
-| `C000:68F4` | `0xC68F4` | disp_cmd_20: display parameter set. |
-| `C000:6900` | `0xC6900` | disp_cmd_21: display conditional. |
-| `C000:6924` | `0xC6924` | disp_cmd_22: display parameter set. |
-| `C000:692B` | `0xC692B` | disp_cmd_23: display jump. |
-| `C000:6933` | `0xC6933` | disp_cmd_24: display parameter set. |
-| `C000:693A` | `0xC693A` | disp_cmd_25: display area clear, calls `C000:6CA7`. |
-| `C000:6948` | `0xC6948` | disp_cmd_26: display parameter set. |
-| `C000:6954` | `0xC6954` | disp_cmd_27: display parameter set. |
-| `C000:6960` | `0xC6960` | disp_cmd_28: display parameter set. |
-| `C000:6967` | `0xC6967` | disp_cmd_30: display conditional/mode select. |
+| `C000:68D8` | `0xC68D8` | disp_cmd_16: `FF 20` underline on (`[1729]\|=0x04`). |
+| `C000:68DF` | `0xC68DF` | disp_cmd_17: `FF 22` underline off (`[1729]&=~0x04`). |
+| `C000:68E6` | `0xC68E6` | disp_cmd_18: `FF 24` inverse on (`[1729]\|=0x08`). |
+| `C000:68ED` | `0xC68ED` | disp_cmd_19: `FF 26` inverse off (`[1729]&=~0x08`). |
+| `C000:68F4` | `0xC68F4` | disp_cmd_20: `FF 28` boldface on (`[1729]\|=0x02`, clear `[16E7]`). |
+| `C000:6900` | `0xC6900` | disp_cmd_21: `FF 2A` boldface off (`[1729]&=~0x02`, restore glyph source). |
+| `C000:6924` | `0xC6924` | disp_cmd_22: `FF 2C` expanded type on (`[1729]\|=0x10`). |
+| `C000:692B` | `0xC692B` | disp_cmd_23: `FF 2E` expanded type off (`[1729]&=~0x10`), return to renderer. |
+| `C000:6933` | `0xC6933` | disp_cmd_24: `FF 30` alternate font on (`[1728]\|=0x01`). |
+| `C000:693A` | `0xC693A` | disp_cmd_25: `FF 32` default font (`[1728]&=~0x01`), reconfigure via `C000:6CA7`. |
+| `C000:6948` | `0xC6948` | disp_cmd_26: `FF 34` overtype on (`[1729]\|=0x01`, `[1728]\|=0x02`). |
+| `C000:6954` | `0xC6954` | disp_cmd_27: `FF 36` overtype off (`[1729]&=~0x01`, `[1728]&=~0x02`), reconfigure. |
+| `C000:6960` | `0xC6960` | disp_cmd_28: `FF 38` partial overtype (`[1729]&=~0x01`, `[1728]\|=0x02`). |
+| `C000:6967` | `0xC6967` | disp_cmd_30: `FF 3C` read pixel shift from script, store to `[1734]`. |
 | `C000:6BAA` | `0xC6BAA` | disp_cmd_31: bitmap blit handler. |
-| `C000:6BF6` | `0xC6BF6` | Display init subroutine called from `C000:6523`. |
-| `C000:6CA7` | `0xC6CA7` | Display area clear/fill. |
-| `C000:6E55` | `0xC6E55` | Display string output helper. |
+| `C000:6BF6` | `0xC6BF6` | Clear framebuffer: `REP STOSW` fills `[8000..8FFF]` with zero (4 KiB). |
+| `C000:6CA7` | `0xC6CA7` | Font table lookup: reads glyph base from segment `D8C6` index table, stores to `[16E3]`. |
+| `C000:6E55` | `0xC6E55` | Display string renderer: iterates SI (string pointer) through character rendering loop. |
 
 ## 17. Interrupt Stubs (C000 Jump Table)
 
@@ -465,16 +465,16 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | `C000:75B5` | `0xC75B5` | Display string output for AD00 ROM card: calls `C000:6E55`. |
 | `C000:75FD` | `0xC75FD` | Display script render for AD00: calls `C000:6557`. |
 | `C000:794D` | `0xC794D` | Editor service helper called from thunk_slot_11. |
-| `C000:89C1` | `0xC89C1` | Cross-segment call target (also `C772:12A1`). |
-| `C000:90B6` | `0xC90B6` | Cross-segment call target (also `C772:1996`). |
-| `C000:91DB` | `0xC91DB` | Cross-segment call target (also `C772:1ABB`): calls `C000:DB96`. |
+| `C000:89C1` | `0xC89C1` | No-op stub: single `RET`. Also `C772:12A1`. |
+| `C000:90B6` | `0xC90B6` | Editor page init: sets `[74FB]=0x7C`, loads `[7537]` into `[748D]`, clears `[74F9]`, sets `[747E]=1`. Also `C772:1996`. |
+| `C000:91DB` | `0xC91DB` | Character class lookup: stores AL to `[7470]`, calls `C000:DB96` (class table), writes result to `[SI]`. Also `C772:1ABB`. |
 | `C000:9431` | `0xC9431` | Editor/display service body for thunk_slot_10. |
 | `C000:9698` | `0xC9698` | Editor helper. |
 | `C000:98E9` | `0xC98E9` | thunk_slot_10: editor/display service, calls `C000:9431`. |
 | `C000:993F` | `0xC993F` | Editor init helper. |
 | `C000:99DE` | `0xC99DE` | Editor state initializer. |
 | `C000:9333` | `0xC9333` | Editor service helper. |
-| `C000:BA35` | `0xCBA35` | Cross-segment call target (also `C772:4315`). |
+| `C000:BA35` | `0xCBA35` | Divide SI by 4 (`SHR SI,1` x2). Editor block helper. Also `C772:4315`. |
 | `C000:BBFE` | `0xCBBFE` | thunk_slot_11: calls `C000:794D` x2. |
 | `C000:DB96` | `0xCDB96` | Editor internal routine. |
 
@@ -596,11 +596,11 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 | Address | File offset | Description |
 | --- | ---: | --- |
-| `C772:0480` | `0xC7BA0` | fmt_op_3: format helper. |
-| `C772:0485` | `0xC7BA5` | fmt_op_4: format helper. |
-| `C772:048A` | `0xC7BAA` | fmt_op_5: format helper. |
-| `C772:048F` | `0xC7BAF` | fmt_op_2: format helper. |
-| `C772:33E9` | `0xCAB09` | fmt_op_6: format with display update, calls `C772:365E`, `C772:3864`. |
+| `C772:0480` | `0xC7BA0` | fmt_op_3: load format table pointer SI=`0x0584`, jump to common formatter. |
+| `C772:0485` | `0xC7BA5` | fmt_op_4: load format table pointer SI=`0x0620`, jump to common formatter. |
+| `C772:048A` | `0xC7BAA` | fmt_op_5: load format table pointer SI=`0x061C`, jump to common formatter. |
+| `C772:048F` | `0xC7BAF` | fmt_op_2: load format table pointer SI=`0x04E4`, jump to common formatter. |
+| `C772:33E9` | `0xCAB09` | fmt_op_6: reformat and redraw — calls `C772:365E` (reformat text), `C772:3864` (redraw screen). |
 
 ### C772 Native Helpers
 
@@ -608,8 +608,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 | --- | ---: | --- |
 | `C772:01CD` | `0xC78ED` | Called from `DEF0:2CDD`: display setup with `C772:45A7`, `C772:8526`, `C772:92AA`. |
 | `C772:01F3` | `0xC7913` | Called from `DEF0:2CDD`: calls `C772:941D`, `C772:9715`. |
-| `C772:0212` | `0xC7932` | Called from `DEF0:2D9C`. |
-| `C772:0221` | `0xC7941` | Called from `DEF0:2ADA`. |
+| `C772:0212` | `0xC7932` | File dialog indirect call: `CALL FAR [CA04]` (runtime far pointer). |
+| `C772:0221` | `0xC7941` | File dialog flag clear: `AND byte [7A44],0x7F`. |
 | `C772:0802` | `0xC7F22` | Display helper: calls `C772:022D`. |
 | `C772:0DC0` | `0xC84E0` | Display helper: calls `C772:022D`. |
 | `C772:0EB2` | `0xC85D2` | Display helper called from `C772:A126`. |
@@ -639,8 +639,8 @@ EE17=`0xEE170`, EF8A=`0xEF8A0`, ED1B=`0xED1B0`, AD00=`0xAD000`.
 
 | Address | File offset | Description |
 | --- | ---: | --- |
-| `C772:215F` | `0xC987F` | landing_215F: branch target. |
-| `C772:6BE3` | `0xCE303` | landing_6BE3: branch target. |
+| `C772:215F` | `0xC987F` | landing_215F: computed-jump fan-out (JMP SHORT instructions dispatching on `[751A]`/`[751C]` byte index). |
+| `C772:6BE3` | `0xCE303` | landing_6BE3: character class fan-out (JMP SHORT instructions dispatching on nibble from `[7E62]` lookup table). |
 | `C772:9652` | `0xD0D72` | search_96_0B: search entry. |
 | `C772:966B` | `0xD0D8B` | search_96_13: search helper, calls `C772:965A`. |
 | `C772:9677` | `0xD0D97` | search_96_12: search helper, calls `C772:9653`. |
@@ -738,10 +738,10 @@ application layer with indirect access to services.
 | `DEF0:0074` | `0xDEF74` | INT 21h AH=2Ah: get date; stores to `[18E3..18E9]`. Near RET. |
 | `DEF0:0098` | `0xDEF98` | INT 21h AH=2Ch: get time; stores to `[18EB..18F1]`. |
 | `DEF0:00B8` | `0xDEFB8` | Flow-control helper: calls `DEF0:0098`. Called from `ED1B:0E51`. |
-| `DEF0:00BC` | `0xDEFBC` | Service helper called from `DEF0:9DE1`. |
-| `DEF0:00D9` | `0xDEFD9` | Service helper called from `DEF0:9DE1`. |
+| `DEF0:00BC` | `0xDEFBC` | Set date: loads CX/DX from `[18E3..18E7]`, INT 21h AH=2Bh. |
+| `DEF0:00D9` | `0xDEFD9` | Set time: loads CH/CL/DH from `[18EB..18EF]`, DL=0, INT 21h AH=2Dh. |
 | `DEF0:00F9` | `0xDEFF9` | INT 21h AH=2Bh: set date. Called from `ED1B:0EB1`. |
-| `DEF0:010D` | `0xDF00D` | Service helper called from `DEF0:8987`. |
+| `DEF0:010D` | `0xDF00D` | 32-bit multiply: AX:DX * CX, result in AX:BX. |
 
 ### Display Rendering (DEF0:0D80-1B00)
 
@@ -751,10 +751,10 @@ application layer with indirect access to services.
 | `DEF0:0D91` | `0xDFC91` | Build display script from params. Called from `ED1B:0D63`. |
 | `DEF0:0DF5` | `0xDFCF5` | Display page setup (FF 44 command). Large routine, 402 bytes. |
 | `DEF0:0F87` | `0xDFE87` | Display mode dispatch (CX=1..4). |
-| `DEF0:101E` | `0xDFF1E` | Display helper. |
+| `DEF0:101E` | `0xDFF1E` | Display page builder: builds `FF 44` page setup script (pos 0x33, size 9x76) at `[18F1]`, renders via `C000:3F35`. |
 | `DEF0:115C` | `0xE005C` | Display subsystem query/init. |
 | `DEF0:1471` | `0xE0371` | Display area compute. |
-| `DEF0:15B0` | `0xE04B0` | Display helper. |
+| `DEF0:15B0` | `0xE04B0` | Display row builder: builds `FF 44` page setup script (size 8x7) at `[18F1]` with computed position from AX*6+SI, renders via `C000:3F35`. |
 | `DEF0:1639` | `0xE0539` | Display script builder, calls `C000:3F35`. |
 | `DEF0:1775` | `0xE0675` | Set display callback pointers. |
 | `DEF0:1806` | `0xE0706` | Display parameter config. |
@@ -775,9 +775,9 @@ application layer with indirect access to services.
 | --- | ---: | --- |
 | `DEF0:32D8` | `0xE21D8` | Display mode + file dispatch: calls `DEF0:0F87`, `DEF0:0FE4`, `DEF0:0D91`. |
 | `DEF0:330E` | `0xE220E` | File service: calls `C000:3F35`. |
-| `DEF0:3F22` | `0xE2E22` | File dispatch caller. |
-| `DEF0:3F3C` | `0xE2E3C` | File dispatch caller. |
-| `DEF0:462D` | `0xE352D` | File helper caller. |
+| `DEF0:3F22` | `0xE2E22` | File empty-directory handler: if `[SI+0x808]==0`, calls `C000:32D8` (display mode), sets `[SI+0x80E]=0x0E`, calls `DEF0:2F6C` (file selection). |
+| `DEF0:3F3C` | `0xE2E3C` | File list renderer: loops calling `DEF0:34F5` (filename display), `DEF0:330E` (page position), `DEF0:0043` (keyboard input). |
+| `DEF0:462D` | `0xE352D` | File operation dialog: renders 15-byte script from `F167`, builds 5 display labels from `F1BE..F1C4`, calls `DEF0:2EAB` (dialog frame) and `DEF0:39E3` (file execute). |
 | `DEF0:5614` | `0xE4514` | File service: calls `C000:3F35`. |
 | `DEF0:57EF` | `0xE46EF` | Combined display render + file init. Called from `C772:9555`. |
 | `DEF0:5B03` | `0xE4A03` | App reinit: called from `C000:018A` (cold reinit), `C000:0303` (warm resume). |
@@ -874,7 +874,7 @@ application layer with indirect access to services.
 | `DEF0:D5D6` | `0xEC4D6` | Cursor/display helper. |
 | `DEF0:D5EA` | `0xEC4EA` | Cursor/display helper. |
 | `DEF0:D60D` | `0xEC50D` | Cursor + display init: calls `DEF0:CFDE`, `DEF0:0D80`. |
-| `DEF0:D94D` | `0xEC84D` | Display helper. |
+| `DEF0:D94D` | `0xEC84D` | Save cursor position: copies `[A9C9]`->`[A9CD]` (column), `[A9CB]`->`[A9CF]` (row). |
 | `DEF0:D95A` | `0xEC85A` | Display helper: calls `DEF0:CFDE` x2. |
 | `DEF0:D96D` | `0xEC86D` | Display buffer write: calls `C000:3F35`. |
 | `DEF0:D984` | `0xEC884` | Display buffer large write: calls `C000:3F35`. |
@@ -893,7 +893,7 @@ application layer with indirect access to services.
 | `DEF0:E08C` | `0xECF8C` | File helper (entries #19, #24, #27, #28). |
 | `DEF0:E0A4` | `0xECFA4` | File service entry #25. |
 | `DEF0:E0C0` | `0xECFC0` | File service entry #29. |
-| `DEF0:E119` | `0xED019` | Service helper called from `DEF0:DD60`. |
+| `DEF0:E119` | `0xED019` | Memory fill: `REP STOSB` fills CX bytes at DS:AX with BL. |
 | `DEF0:E14C` | `0xED04C` | File service helper (called by entry #17). |
 | `DEF0:E1F0` | `0xED0F0` | File service entry #32. |
 | `DEF0:E195` | `0xED095` | File service entry #33. |
@@ -902,8 +902,8 @@ application layer with indirect access to services.
 | `DEF0:E232` | `0xED132` | File service entry #36. |
 | `DEF0:E254` | `0xED154` | File service entry #37. |
 | `DEF0:E26C` | `0xED16C` | File service entry #38. |
-| `DEF0:E288` | `0xED188` | Service helper called from `DEF0:39E3`. |
-| `DEF0:E28E` | `0xED18E` | Service helper called from `DEF0:459B`. |
+| `DEF0:E288` | `0xED188` | IOCTL get device info: INT 21h AX=`0x4428`. |
+| `DEF0:E28E` | `0xED18E` | IOCTL set device info: BX=AX, INT 21h AX=`0x4429`. |
 
 ## 22. EE17/EF8A Utility
 
@@ -1046,10 +1046,10 @@ application layer with indirect access to services.
 | `AD00:1F4E` | `0xAEF4E` | Input helper: calls `ED1B:0E51`. |
 | `AD00:1FD2` | `0xAEFD2` | Data display: calls `AD00:2000`. |
 | `AD00:2000` | `0xAF000` | Data display body. |
-| `AD00:2116` | `0xAF116` | Display helper. |
+| `AD00:2116` | `0xAF116` | ROM Card state clear: zeroes `[200B]`, `[1B2E..1B3E]`, `[2003]`, `[2015..2023]`. |
 | `AD00:2176` | `0xAF176` | Display helper: calls `ED1B:0E1E`. |
 | `AD00:21BC` | `0xAF1BC` | Display helper: calls `AD00:2176`. |
-| `AD00:223E` | `0xAF23E` | Display helper. |
+| `AD00:223E` | `0xAF23E` | ROM Card parameter check: reads `[BP+4]`, compares against `0x3E`. |
 
 ## 25. Far-Call Targets (Cross-Segment)
 
