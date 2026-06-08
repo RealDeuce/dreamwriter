@@ -147,6 +147,40 @@ bytes `[1729]` and `[1728]`, then return to the renderer loop.
 | 30 | `FF 3C` | `C000:6967` | Read pixel shift value. Decrements `[16E1]` (byte count), reads next byte from `[18A1]` (script pointer), stores to `[1734]`. If `[173B]!=0`, shifts right by 2. If nonzero, sets `[172C]\|=0x08`. |
 | 31 | `FF 3E` | `C000:6BAA` | Bitmap blit. Reads next byte from `[18A1]`, dispatches on value: if `>=0x40` enters the extended blit path at `C000:7409`, otherwise processes as a glyph index with direct pixel blitting to the display buffer via `[189F]` (pixel column) and `[189E]` (bit offset). |
 
+### Extended Blit Dispatch (C000:7409)
+
+When `disp_cmd_31` receives a byte `>= 0x40`, it subtracts `0x40`
+and dispatches through a 5-entry word table at `C000:7421`:
+
+```asm
+C000:7409  sub bx,0x40
+C000:740C  cmp bl,0x05
+C000:740F  jc  7414           ; 0..4 valid
+C000:7411  jmp 6585           ; out of range -> return to renderer
+C000:7414  mov si,[cs:bx+7421] ; load handler
+C000:7419  mov al,0
+C000:741B  mov cx,6BE3        ; push return to character class landing
+C000:741E  push cx
+C000:741F  jmp si
+```
+
+| Index | Byte | Handler | Behavior |
+| ---: | --- | --- | --- |
+| 0 | `0x40` | `C000:7427` | String blit: reads DX (segment) and CX (length) from `[18A1]`, calls `C000:6E55` (string renderer), clears display state `[173C]`, `[1733]`, `[1737]`, `[1739]`, `[172C]`. Returns AL=5. |
+| 1 | `0x41` | `C000:7448` | Bitmap blit: reads CX (height), DX (bit-width), SI (source offset), `[BP+7]` (source segment) from `[18A1]`. Computes byte-width, builds pixel mask from bit offset `[189E]`, shifts source data, ORs into framebuffer at `ES:DI` with 64-byte row stride. Returns AL=9. |
+| 2 | `0x42` | `C000:755D` | Positioned blit: reads DX/CX (string segment/length) via `C000:6E55`, then reads position and source parameters. Dispatches to `C000:7324` (simple blit), `C000:71C6` (shifted blit), or `C000:724D` (multi-row blit). Returns AL=14. |
+| 3 | `0x43` | `C000:1E8B` | Indirect blit: calls `C000:2036` (resolved from editor utility context). |
+| 4 | `0x44` | `C000:18A1` | Banked display: context-dependent, reached from thunk dispatch area. |
+
+The bitmap blit (index 1) is the core pixel renderer. It handles
+arbitrary bit-aligned source data with a shift-and-mask pipeline:
+
+- Source segment from `[7004]`, source pointer in SI
+- Destination in framebuffer via `ES:DI`, row stride 0x40 (64 bytes)
+- Bit offset from `[7008]` (0-7), determines shift amount
+- Byte width from `[7002]`, mask in `[7006]`
+- Special case for width=1 uses a narrower mask path at `C000:752B`
+
 ### Display Attribute Bytes
 
 | Address | Bit | Meaning |

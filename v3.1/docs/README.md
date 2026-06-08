@@ -13,7 +13,7 @@ banking, and protocol docs in `../../docs/` apply to both v2.1 and v3.1.
 
 ## Disassembly
 
-Generated from a full recursive trace (4168 blocks, 45996 instructions
+Generated from a full recursive trace (4199 blocks, 46511 instructions
 across 7 segments). Raw trace at [`disassembly/trace-full.txt`](disassembly/trace-full.txt).
 Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 

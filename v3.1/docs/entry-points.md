@@ -473,8 +473,14 @@ See [`display-stream.md`](disassembly/display-stream.md).
 | `C000:6954` | `0xC6954` | disp_cmd_27: `FF 36` overtype off (`[1729]&=~0x01`, `[1728]&=~0x02`), reconfigure. |
 | `C000:6960` | `0xC6960` | disp_cmd_28: `FF 38` partial overtype (`[1729]&=~0x01`, `[1728]\|=0x02`). |
 | `C000:6967` | `0xC6967` | disp_cmd_30: `FF 3C` read pixel shift from script, store to `[1734]`. |
-| `C000:6BAA` | `0xC6BAA` | disp_cmd_31: bitmap blit handler. |
+| `C000:6BAA` | `0xC6BAA` | disp_cmd_31: `FF 3E` bitmap blit. If byte `>=0x40`, dispatches to extended blit at `C000:7409`. |
 | `C000:6BF6` | `0xC6BF6` | Clear framebuffer: `REP STOSW` fills `[8000..8FFF]` with zero (4 KiB). |
+| `C000:7409` | `0xC7409` | Extended blit dispatch: subtracts `0x40` from byte, indexes 5-entry table at `C000:7421`. |
+| `C000:7427` | `0xC7427` | blit_ext_0: string blit — reads segment:length from script, calls `C000:6E55`, clears display state. |
+| `C000:7448` | `0xC7448` | blit_ext_1: pixel bitmap blit — bit-aligned source-to-framebuffer copy with shift and mask. |
+| `C000:755D` | `0xC755D` | blit_ext_2: positioned blit — string render then dispatches to `C000:7324`/`71C6`/`724D`. |
+| `C000:1E8B` | `0xC1E8B` | blit_ext_3: indirect blit — calls `C000:2036`. |
+| `C000:18A1` | `0xC18A1` | blit_ext_4: banked display context entry. |
 | `C000:6CA7` | `0xC6CA7` | Font table lookup: reads glyph base from segment `D8C6` index table, stores to `[16E3]`. |
 | `C000:6E55` | `0xC6E55` | Display string renderer: iterates SI (string pointer) through character rendering loop. |
 
