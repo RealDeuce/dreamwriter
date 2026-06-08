@@ -394,6 +394,10 @@ def read_dispatch_tables() -> list[tuple[str, int, str]]:
     # Reached via C000:6860  jmp [cs:si+0x6865]
     seeds.extend(read_word_table("C000", 0x6865, 32, "disp_cmd"))
 
+    # C000:7421 — extended blit dispatch (5 word entries)
+    # Reached via C000:7414  jmp si  where si = [cs:bx+0x7421], bx = 0..4
+    seeds.extend(read_word_table("C000", 0x7421, 5, "blit_ext"))
+
     # C772:40ED — format sub-dispatch (7 word entries)
     # Reached via C772:3FA6  jmp dx  where dx = [cs:si], si = 0x40ED + (al-1)*2
     seeds.extend(read_word_table("C772", 0x40ED, 7, "fmt_op"))
@@ -464,10 +468,20 @@ def load_trace(path: str) -> int:
             return
         seg = SEGMENTS.get(cur_seg)
         if seg is None:
-            print(f"warning: unknown segment '{cur_seg}' in loaded trace, skipping",
-                  file=sys.stderr)
-            in_block = False
-            return
+            try:
+                seg_val = int(cur_seg, 16)
+                max_off = len(ROM) - (seg_val << 4) if ROM else 0x10000
+                if max_off > 0:
+                    add_segment(cur_seg, seg_val, min(max_off, 0x10000))
+                    seg = SEGMENTS[cur_seg]
+                else:
+                    in_block = False
+                    return
+            except ValueError:
+                print(f"warning: unparseable segment '{cur_seg}' in loaded trace, skipping",
+                      file=sys.stderr)
+                in_block = False
+                return
         block = Block(cur_seg, cur_start, cur_end, list(cur_insns),
                       list(cur_calls), list(cur_branches), cur_end_type, cur_label,
                       list(cur_aliases))
