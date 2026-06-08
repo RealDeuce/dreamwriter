@@ -12,6 +12,7 @@ handlers that call these routines.
 
 | Address | Caller | Purpose |
 | --- | --- | --- |
+| `C000:3F47` | Far-call table `[023C]` (#15) | Serial input wrapper: calls `C000:316D`, returns AH=0. |
 | `C000:3168` | `C000:62F6` (INT 21h AH=03h) | Serial input (aux read) |
 | `C000:3396` | `C000:0676` | Output buffer management |
 | `C000:30D1` | internal | Serial buffer check |

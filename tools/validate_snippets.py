@@ -9,15 +9,25 @@ import subprocess
 import sys
 from pathlib import Path
 
-from rom2 import (
-    expand_markdown_inputs,
-    parse_addr_expr,
-    parse_addr_part,
-    parse_file_base,
-    parse_seg_off_label,
-    phys_to_file,
-    read_rom,
-)
+def _select_rom_module():
+    """Import rom2 or rom3 depending on --rom argument."""
+    for i, arg in enumerate(sys.argv):
+        if arg == "--rom" and i + 1 < len(sys.argv):
+            rom_path = sys.argv[i + 1]
+            if "3.1" in rom_path or "v31" in rom_path:
+                import rom3
+                return rom3
+    import rom2
+    return rom2
+
+_rom = _select_rom_module()
+expand_markdown_inputs = _rom.expand_markdown_inputs
+parse_addr_expr = _rom.parse_addr_expr
+parse_addr_part = _rom.parse_addr_part
+parse_file_base = _rom.parse_file_base
+parse_seg_off_label = _rom.parse_seg_off_label
+phys_to_file = _rom.phys_to_file
+read_rom = _rom.read_rom
 
 
 INSTR_RE = re.compile(

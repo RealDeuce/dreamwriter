@@ -26,7 +26,9 @@ Far-call table entries #0-#11 and #15 are display services.
 | 9 | `[0224]` | `DEF0:0F87` | Display mode dispatch (CX=1..4 selects mode). |
 | 10 | `[0228]` | `DEF0:0FE4` | Character filter (replaces `0x30` with `0x20` space). |
 | 11 | `[022C]` | `DEF0:1775` | Set display callback pointers at `[1AF1..1AF3]`. |
-| 15 | `[023C]` | `C000:3F47` | Serial input wrapper: calls `C000:316D`, returns AH=0. |
+
+Entry #15 (`[023C]` → `C000:3F47`) is a serial input wrapper, not
+a display service. See [`c000-serial-io.md`](c000-serial-io.md).
 
 ## DEF0:0D80 — Display Init
 
