@@ -182,29 +182,73 @@ All check `[A342]` (overflow flag) and skip if already in error.
 The scratch register at `[A390]` is used for intermediate results
 during multiplication and division.
 
-## Digit Glyphs
+## Large Digit Glyphs (F6A7 Segment)
 
-The number display uses two bitmap sizes from segment `F325`
-(file `0xF3250`):
+The main number display uses 16×25 pixel digit bitmaps from segment
+`F6A7` (file `0xF6A70`). Each glyph is 50 bytes (0x32): 25 rows ×
+2 bytes/row. Source offset computed by EE17:0642:
 
-- **7×13** (FF 42: height=0x0D, width=0x07, 1 byte/row): main
-  digit glyphs for the number display. Source offsets computed
-  at runtime from digit values.
-- **5×13** (FF 42: height=0x0D, width=0x05, 1 byte/row): narrow
-  glyphs (decimal point, operators).
+```text
+offset = 0x0C + digit_value × 0x32
+```
 
-Fixed offsets used:
-- `F325:0091` (file `0xF32E1`): blank/space glyph (leading zero fill).
-- `F325:00B8` (file `0xF3308`): active digit position marker.
+FF 42 parameters: height=0x19 (25), width=0x10 (16) for full-width
+digits; width=0x08 (8) for half-width (decimal point, separator).
 
-The `F6A7` segment (file `0xF6A70`) is referenced from the
-large-digit display functions at `EE17:0518`/`05F9`, containing
-a 6-word table followed by larger glyph data.
+| Index | File offset | Source | Purpose | Image |
+| ---: | ---: | --- | --- | --- |
+| 0 | `0xF6A7C` | `F6A7:000C` | Digit 0 | ![](images/calc-digit-0-0xF6A7C.png) |
+| 1 | `0xF6AAE` | `F6A7:003E` | Digit 1 | ![](images/calc-digit-1-0xF6AAE.png) |
+| 2 | `0xF6AE0` | `F6A7:0070` | Digit 2 | ![](images/calc-digit-2-0xF6AE0.png) |
+| 3 | `0xF6B12` | `F6A7:00A2` | Digit 3 | ![](images/calc-digit-3-0xF6B12.png) |
+| 4 | `0xF6B44` | `F6A7:00D4` | Digit 4 | ![](images/calc-digit-4-0xF6B44.png) |
+| 5 | `0xF6B76` | `F6A7:0106` | Digit 5 | ![](images/calc-digit-5-0xF6B76.png) |
+| 6 | `0xF6BA8` | `F6A7:0138` | Digit 6 | ![](images/calc-digit-6-0xF6BA8.png) |
+| 7 | `0xF6BDA` | `F6A7:016A` | Digit 7 | ![](images/calc-digit-7-0xF6BDA.png) |
+| 8 | `0xF6C0C` | `F6A7:019C` | Digit 8 | ![](images/calc-digit-8-0xF6C0C.png) |
+| 9 | `0xF6C3E` | `F6A7:01CE` | Digit 9 | ![](images/calc-digit-9-0xF6C3E.png) |
+| 11 | `0xF6CA2` | `F6A7:0232` | Blank (leading zero fill) | ![](images/calc-blank-0xF6CA2.png) |
+| 12 | `0xF6CD4` | `F6A7:0264` | Decimal point `.` (`[A3A2]`) | ![](images/calc-decimal-0xF6CD4.png) |
+| 13 | `0xF6D06` | `F6A7:0296` | Thousands separator `,` (`[A3A3]`) | ![](images/calc-separator-0xF6D06.png) |
+| 14 | `0xF6D38` | `F6A7:02C8` | Minus sign `−` (negative indicator) | ![](images/calc-minus-0xF6D38.png) |
 
-## Display Script Sources Summary
+The decimal point glyph index is stored in `[A3A2]` (set to 0x0C
+at init). The thousands separator glyph index is stored in `[A3A3]`
+(set to 0x0D). At EE17:065F, when the current position matches
+the decimal position (DI), the code falls through to EE17:0664
+which reads `[A3A2]` to render the decimal point. When positions
+don't match, EE17:06B1 reads `[A3A3]` for the thousands separator.
+The minus sign at `F6A7:02C8` is used when `[A348]!=0` (negative
+number, EE17:0568).
+
+## Small Digit Glyphs (F325 Segment)
+
+The panel display area uses smaller 7×13 and 5×13 pixel glyphs
+from segment `F325` (file `0xF3250`). Used by EE17:00FD/01E8
+for the secondary number display. FF 42 parameters: height=0x0D
+(13), width=0x07 (7) or 0x05 (5).
+
+Fixed offsets:
+- `F325:0091` (file `0xF32E1`): blank glyph.
+- `F325:00B8` (file `0xF3308`): filled position marker.
+
+## Error Messages
+
+Four 24-byte padded strings at `F24C:0009` (file `0xF24C9`),
+displayed when `[A342]!=0` (overflow/error state):
+
+| Index | File offset | Text |
+| ---: | ---: | --- |
+| 0 | `0xF24C9` | `OVERFLOW` |
+| 1 | `0xF24E1` | `DIVISION BY ZERO` |
+| 2 | `0xF24F9` | `OUT OF RANGE` |
+| 3 | `0xF2511` | `UNKNOWN ERROR` |
+
+## Display Script Sources
 
 | Address | File | Length | Purpose |
 | --- | ---: | ---: | --- |
-| `F24A:000E` | `0xF24AE` | 6 | `FF 40` position (0x21, 0x14) — number display. |
+| `F24A:000E` | `0xF24AE` | 6 | `FF 40` position (0x21, 0x14) — number display area. |
 | `F24B:0004` | `0xF24B4` | 6 | `FF 40` position (5, 0x90) — panel area. |
-| `F24B:000A` | `0xF24BA` | 15 | Menu bar (shared with other organizer apps). |
+| `F24B:000A` | `0xF24BA` | 15 | `FF 06` attribute — menu bar (shared with other organizer apps). |
+| `F24C:0009` | `0xF24C9` | 96 | Error message strings (4 × 24 bytes). |
