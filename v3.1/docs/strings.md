@@ -195,6 +195,23 @@ tools/romtool.py find <text>
 | `0xF2B9A` | `EE17:442A` | `SCHEDULE.ODB` scheduler database filename. |
 | `0xF37D0` | `EE17:5060` | `ADDRESS.ODB` address book database filename. |
 
+## Calculator Strings
+
+| File offset | Segment:Offset | Notes |
+| ---: | ---: | --- |
+| `0xF24C9` | `F24C:0009` | Calculator error messages: `OVERFLOW`, `DIVISION BY ZERO`, `OUT OF RANGE`, `UNKNOWN ERROR` (4 × 24 bytes). |
+
+## Calendar Strings
+
+| File offset | Segment:Offset | Notes |
+| ---: | ---: | --- |
+| `0xF2E38` | `F2E3:0008` | Month abbreviations: `JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC` (12 × 3 bytes). |
+| `0xF2E5C` | `F2E5:000C` | Day-of-week abbreviations: `Sun Mon Tue Wed Thu Fri Sat` (7 × 3 bytes). |
+| `0xF2634` | `F263:0004` | Calendar title and key legend: `CALENDAR`, `[←] PREV MONTH`, `[→] NEXT MONTH`, `[Y] YEAR`, `[F] DISPLAY FORM`. |
+| `0xF26B4` | `F26B:0004` | Year sub-screen: `YEAR`, `[↵] SET`, `[CAN] CANCEL`. |
+| `0xF26E4` | `F26E:0004` | Display Form sub-screen: `DISPLAY FORM`, `[↵] SET`, `[CAN] CANCEL`. |
+| `0xF2690` | `F269:0000` | `Year` input label. |
+
 ## Miscellaneous
 
 | File offset | Segment:Offset | Notes |
