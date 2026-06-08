@@ -31,7 +31,7 @@ display and file operations until the user completes or cancels.
 
 ```asm
 DEF0:2DF5  B80800         mov ax,8
-DEF0:2DF8  BBF132         mov bx,F132          ; display mode descriptor
+DEF0:2DF8  BB32F1         mov bx,F132          ; display mode descriptor
 DEF0:2DFB  9A5C11F0DE     call far DEF0:115C   ; display init
 ; ...
 DEF0:2E0C  E803F8         call DEF0:2612        ; menu display init
@@ -140,9 +140,9 @@ via `DEF0:0D80`, renders status line via `DEF0:0D91`, then calls
 
 ```asm
 DEF0:4A19  ...
-DEF0:4A31  9A800DF0DE     call far DEF0:0D80   ; display init
+DEF0:4A31  32FF           xor bh,bh            ; clear high byte
 DEF0:4A36  ...            ; render status
-DEF0:4A58  E8D2FB         call DEF0:462D       ; file operation dialog
+DEF0:4A5E  E8 CCFB        call DEF0:462D       ; file operation dialog
 ```
 
 ## DEF0:462D — File Operation Dialog

@@ -67,7 +67,7 @@ for rendering horizontal and vertical elements.
 ```asm
 ; file 0xDF0BA
 DEF0:01E3  B8E6EF         mov ax,0xEFE6        ; glyph segment
-DEF0:01E5  8EC0           mov es,ax
+DEF0:01E6  8EC0           mov es,ax
 DEF0:01E7  268A87...      mov al,[es:bx+...]   ; read glyph data
 ```
 

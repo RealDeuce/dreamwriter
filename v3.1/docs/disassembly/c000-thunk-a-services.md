@@ -22,27 +22,35 @@ thunk A dispatch mechanism.
 
 ## C000:1AA2 — Multi-Function Service (Slot 0/6)
 
-The main thunk A handler. Dispatches on AX to select the operation:
+The main thunk A handler. Reads a service byte from `[ES:SI]`
+(using BX as the segment, SI as the offset), restores ES, loads
+DI from `[710F]`, then dispatches on AL:
 
 ```asm
-C000:1AA2  3D0200         cmp ax,2
-C000:1AA5  7C2F           jl 1AD6       ; AX < 2: state save
-C000:1AA7  7411           jz 1ABA       ; AX == 2: (unused?)
-C000:1AA9  3D0500         cmp ax,5
-C000:1AAC  7438           jz 1AE6       ; AX == 5: display script render
-C000:1AAE  3D0300         cmp ax,3
-C000:1AB1  742A           jz 1ADA       ; AX == 3: text output service
-C000:1AB3  3D0400         cmp ax,4
-C000:1AB6  7417           jz 1ACF       ; AX == 4: state save + display
-; other: falls through
+C000:1AA2  8CC5           mov bp,es       ; save ES
+C000:1AA4  8EC3           mov es,bx       ; ES = caller segment
+C000:1AA6  268A04         mov al,[es:si]  ; AL = service byte
+C000:1AA9  8EC5           mov es,bp       ; restore ES
+C000:1AAB  8B3E0F71       mov di,[710F]   ; DI = state pointer
+C000:1AAF  3C05           cmp al,5
+C000:1AB1  7423           jz 1AD6         ; AL == 5: display script render
+C000:1AB3  3C07           cmp al,7
+C000:1AB5  742F           jz 1AE6         ; AL == 7: display script render (alt)
+C000:1AB7  3C03           cmp al,3
+C000:1AB9  741F           jz 1ADA         ; AL == 3: text output service
+C000:1ABB  3C08           cmp al,8
+C000:1ABD  741F           jz 1ADE         ; AL == 8
+C000:1ABF  3C09           cmp al,9
+C000:1AC1  741F           jz 1AE2         ; AL == 9
 ```
 
-| AX | Handler | Behavior |
+| AL | Handler | Behavior |
 | ---: | --- | --- |
-| < 2 | `C000:1AD6` | State save: calls `C000:2295`. |
 | 3 | `C000:1ADA` | Text output service: calls `C000:1DEA`. |
-| 4 | `C000:1ACF` | State save + display init: calls `C000:2295`, `C000:0FB0`. |
-| 5 | `C000:1AE6` | Display script render: calls `C000:6557` x2 with parameters from SI/DX/CX. |
+| 5 | `C000:1AD6` | Display script render. |
+| 7 | `C000:1AE6` | Display script render (alternate). |
+| 8 | `C000:1ADE` | Service 8. |
+| 9 | `C000:1AE2` | Service 9. |
 
 ## C000:1DEA — Text Output Service
 

@@ -33,15 +33,15 @@ C000:6393  E8 44EA           call C000:4DDA  ; AH=42h: seek
 C000:6396  C3                ret
 C000:6397  E8 8CEC           call C000:5026  ; AH=43h: get/set attributes
 C000:639A  C3                ret
-C000:6405  E8 04F6           call C000:5A0C  ; AH=4Eh: find first
+C000:6405  E8 35E1           call C000:453D  ; AH=4Eh: find first
 C000:6408  C3                ret
-C000:6409  E8 27F6           call C000:5A33  ; AH=4Fh: find next
+C000:6409  E8 7DE1           call C000:4589  ; AH=4Fh: find next
 C000:640C  C3                ret
-C000:640D  E8 73F7           call C000:5B83  ; AH=56h: rename file
+C000:640D  E8 46E3           call C000:4756  ; AH=56h: rename file
 C000:6410  C3                ret
-C000:6411  E8 B5F7           call C000:5BC9  ; AH=57h: get/set file date
+C000:6411  E8 7EE4           call C000:4892  ; AH=57h: get/set file date
 C000:6414  C3                ret
-C000:6415  E8 9BDC           call C000:40B3  ; AH=5Bh: create new (same as 3Ch)
+C000:6415  E8 13DD           call C000:412B  ; AH=5Bh: create new (same as 3Ch)
 C000:6418  C3                ret
 ```
 

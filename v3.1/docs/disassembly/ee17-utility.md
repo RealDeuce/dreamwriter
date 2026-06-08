@@ -38,9 +38,9 @@ EE17:0053  EB 05             jmp short EE17:005A
 EE17:0055  C6 07 00          mov byte [bx],0
 EE17:0058  43                inc bx
 EE17:0059  40                inc ax
-EE17:005A  3D 1100           cmp ax,11       ; 17 bytes
-EE17:005D  72 F6             jc EE17:0055
-EE17:005F  C3                ret
+EE17:005A  3D 1000           cmp ax,10       ; 16 bytes
+EE17:005D  7C F6             jl EE17:0055
+EE17:005F  CB                retf
 ```
 
 Clears a structure with two 17-byte fields at offset 0 and offset 0x11.
@@ -66,9 +66,9 @@ EE17:08BD  8A 07             mov al,[bx]     ; copy loop
 EE17:08BF  88 04             mov [si],al
 EE17:08C1  8A 47 11          mov al,[bx+11]
 EE17:08C4  88 44 11          mov [si+11],al
-EE17:08C7  43                inc bx
-EE17:08C8  46                inc si
-EE17:08C9  40                inc ax
+EE17:08C7  8B FE             mov di,si
+EE17:08C9  47                inc di
+EE17:08CA  43                inc bx
 ```
 
 ## EE17:16C1 — Init Entry (Called from DEF0:5C07)

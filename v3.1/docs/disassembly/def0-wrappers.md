@@ -13,25 +13,25 @@ The segment is in window 6 (CPU `0xC0000..0xDFFFF`) alongside the `C000` and
 Typical DEF0 wrapper:
 
 ```asm
-DEF0:000A  55                push bp
-DEF0:000B  57                push di
-DEF0:000C  56                push si
-DEF0:000D  52                push dx
-DEF0:000E  51                push cx
-DEF0:000F  E8 F0CD           call DEF0:CE03      ; inner routine
-DEF0:0012  59                pop cx
-DEF0:0013  5A                pop dx
-DEF0:0014  5E                pop si
-DEF0:0015  5F                pop di
-DEF0:0016  5D                pop bp
-DEF0:0017  CB                retf
+DEF0:000B  55                push bp
+DEF0:000C  57                push di
+DEF0:000D  56                push si
+DEF0:000E  52                push dx
+DEF0:000F  51                push cx
+DEF0:0010  E8 F0CD           call DEF0:CE03      ; inner routine
+DEF0:0013  59                pop cx
+DEF0:0014  5A                pop dx
+DEF0:0015  5E                pop si
+DEF0:0016  5F                pop di
+DEF0:0017  5D                pop bp
+DEF0:0018  CB                retf
 ```
 
 ## Confirmed Wrappers
 
 | Offset | Inner call | Notes |
 | --- | --- | --- |
-| `DEF0:000A` | `call DEF0:CE03` | |
+| `DEF0:000B` | `call DEF0:CE03` | |
 | `DEF0:0019` | `call DEF0:CE6A` | |
 | `DEF0:0027` | `call DEF0:CE36` | |
 | `DEF0:0035` | `call DEF0:CE92` | |

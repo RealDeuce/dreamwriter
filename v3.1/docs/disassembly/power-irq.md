@@ -97,9 +97,9 @@ C000:044B  C6 06 0711 00     mov byte [1107],0
 C000:0450  C7 06 6714 0D32   mov word [1467],320D
 C000:0456  8C C8             mov ax,cs
 C000:0458  A3 6914           mov [1469],ax
-C000:045B  A3 7514           mov [1475],ax
-C000:045E  C7 06 6D14 0000   mov word [146D],0  ; clear saved flags
-C000:0464  EB 19             jmp short C000:047F ; -> context_save_and_halt
+C000:045B  C7 06 6F14 9519   mov word [146F],1995 ; set battery warning flag
+C000:0461  80 26 3C14 F7     and byte [143C],F7   ; clear bit 3
+C000:0466  8B EC             mov bp,sp            ; -> context_save_and_halt
 ```
 
 ## C000:0466 — Save Context From Stack and Halt

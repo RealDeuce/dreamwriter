@@ -151,12 +151,12 @@ DEF0:5C69  75 11             jnz DEF0:5C7C
 If the result is `0x31`, calls `EE17:16CA` and updates `[A000]`:
 
 ```asm
-DEF0:5C6B  9A CA16 17EE      call far EE17:16CA
-DEF0:5C70  B8 0F00           mov ax,0F
-DEF0:5C73  BB 43F2           mov bx,F243
-DEF0:5C76  9A 5C11 F0DE      call far DEF0:115C
-DEF0:5C7B  90                nop
-DEF0:5C7C  89 0E 00A0        mov [A000],cx
+DEF0:5C6B  C7 06 00A0 0000   mov word [A000],0   ; clear [A000]
+DEF0:5C71  9A CA16 17EE      call far EE17:16CA
+DEF0:5C76  85 C0             test ax,ax
+DEF0:5C78  74 02             jz DEF0:5C7C
+DEF0:5C7A  EB 5A             jmp short DEF0:5CD6
+DEF0:5C7C  83 F9 32          cmp cx,32           ; cx == 0x32?
 ```
 
 ## DEF0:5B03 — Application Session Init
@@ -204,9 +204,9 @@ Alternate path when `DEF0:595A` returns nonzero (session state error):
 DEF0:5B3E  E8 D6FE           call DEF0:5A17    ; attempt recovery
 DEF0:5B41  85 C0             test ax,ax
 DEF0:5B43  75 15             jnz DEF0:5B5A     ; recovery failed
-DEF0:5B45  E8 12FE           call DEF0:5A6C    ; alternate recovery
-DEF0:5B48  85 C0             test ax,ax
-DEF0:5B4A  75 0E             jnz DEF0:5B5A     ; also failed
+DEF0:5B45  8D 46 EA          lea ax,[bp-16]
+DEF0:5B48  E8 21FF           call DEF0:5A6C    ; alternate recovery
+DEF0:5B4B  3D DA00           cmp ax,DA         ; check result
 ```
 
 Return path:

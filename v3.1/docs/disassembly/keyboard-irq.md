@@ -66,7 +66,8 @@ C000:0670  07                pop es
 C000:0671  1F                pop ds
 C000:0672  5B                pop bx
 C000:0673  58                pop ax
-C000:0674  CF                iret
+C000:0674  FB                sti
+C000:0675  CF                iret
 ```
 
 Note: `C000:05F2` (the IRQ-clear return path) is the target at `C000:0621`
@@ -74,8 +75,10 @@ and `C000:0648`. It is above the handler entry point:
 
 ```asm
 ; file 0xC05F2 (shared IRQ clear/return)
-C000:05F2  A0 3A14           mov al,[143A]
-C000:05F5  E6 60             out 60,al       ; restore IRQ mask
+C000:05F2  1F                pop ds
+C000:05F3  5B                pop bx
+C000:05F4  58                pop ax
+C000:05F5  FB                sti
                                               ; falls into the pop/iret at 0671
 ```
 

@@ -129,15 +129,14 @@ C000:0877  43                inc bx
 C000:0878  89 1E 8014        mov [1480],bx       ; advance pointer
 C000:087C  3C 00             cmp al,0            ; end of buffer?
 C000:087E  75 0F             jnz C000:088F       ; no -> output byte
-C000:0880  C6 06 9214 00     mov byte [1492],0   ; mark output done
-C000:0885  80 26 3A14 FD     and byte [143A],FD  ; clear bit 1 in IRQ mask
-C000:088A  A0 3A14           mov al,[143A]
-C000:088D  E6 60             out 60,al           ; update IRQ mask
-C000:088F  1F                pop ds
-C000:0890  5B                pop bx
-C000:0891  58                pop ax
-C000:0892  FB                sti
-C000:0893  CF                iret
+C000:0880  80 0E 3A14 40     or byte [143A],40   ; set bit 6 in IRQ mask
+C000:0885  A0 3A14           mov al,[143A]
+C000:0888  E6 60             out 60,al           ; update IRQ mask
+C000:088A  1F                pop ds
+C000:088B  5B                pop bx
+C000:088C  58                pop ax
+C000:088D  FB                sti
+C000:088E  CF                iret
 ```
 
 At `C000:088F`, the byte output path writes to the Centronics data
