@@ -229,7 +229,16 @@ start	end	type	confidence	segment	label	notes
 0xF1852	0xF18F6	text	confirmed	EE17	printer-menu-strings	PRINT OUT, SET UP 1, SET UP 2.
 0xF18C2	0xF1930	text	confirmed	EE17	comm-menu-strings	SEND FILE x2, RECEIVE FILE x2, TERMINAL, SET UP.
 0xF245A	0xF2610	text	confirmed	EE17	orgn-menu-strings	CALCULATOR, CALENDAR, SCHEDULER, WORLD CLOCK, ADDRESS BOOK, error messages.
+0xF2920	0xF297A	resource	confirmed	DEF0	sched-grid-frame	Scheduler grid frame: 6 FF 44 rectangle column dividers (F292:0002, 0x5A bytes).
+0xF298C	0xF29A8	text	confirmed	DEF0	sched-please-wait	*** PLEASE WAIT *** loading message (F298:000C).
+0xF29A8	0xF2A28	resource	confirmed	DEF0	sched-weekly-legend	WEEKLY title + key legend: [TAB] CONTENT, [D] DATE, [BEGIN] BEGIN, [END] END (F29A:0008).
+0xF2B38	0xF2B56	resource	confirmed	DEF0	sched-date-field	Date input: FF 44 rectangle + Date label (F2B3:0008).
+0xF2B54	0xF2B82	resource	confirmed	DEF0	sched-date-entry	DATE entry frame: DATE, [↵] SET, [CAN] CANCEL (F2B5:0004).
+0xF2B82	0xF2B9A	data	confirmed	DEF0	sched-field-desc	Date edit field descriptors: 3 × 8 bytes (month/day/year) (F2B8:0002).
 0xF2B9A	0xF2BB0	text	confirmed	EE17	schedule-odb	SCHEDULE.ODB filename.
+0xF2BBA	0xF2BC4	resource	confirmed	DEF0	sched-alarm-title	FF 40 + FF 06 alarm display positioning (F2BB:000A).
+0xF2BC0	0xF2BD0	resource	confirmed	DEF0	sched-list-attr	FF 06 attribute set for schedule list area (F2BC:0000).
+0xF2BD0	0xF2BEE	resource	confirmed	DEF0	sched-detail-view	FF 02 cursor + FF 44 rectangles for detail view (F2BD:0000).
 0xF37D0	0xF37E0	text	confirmed	EE17	address-odb	ADDRESS.ODB filename.
 0xF6E30	0xF6E3E	code	confirmed		reset-trampoline	CLI, port 0x16/0x17 writes, JMP FAR C000:0000.
 0xFFFF0	0x100000	code	confirmed		reset-vector	CLI; JMP FAR F6E3:0000.

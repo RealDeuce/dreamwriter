@@ -212,6 +212,20 @@ tools/romtool.py find <text>
 | `0xF26E4` | `F26E:0004` | Display Form sub-screen: `DISPLAY FORM`, `[↵] SET`, `[CAN] CANCEL`. |
 | `0xF2690` | `F269:0000` | `Year` input label. |
 
+## Scheduler Strings
+
+| File offset | Segment:Offset | Notes |
+| ---: | ---: | --- |
+| `0xF298C` | `F298:000C` | `*** PLEASE WAIT ***` loading message. |
+| `0xF29AF` | `F29A:0018` | `WEEKLY` scheduler title. |
+| `0xF29BC` | `F29A:0025` | `[TAB]   CONTENT` key legend. |
+| `0xF29CF` | `F29A:0038` | `[D]     DATE` key legend. |
+| `0xF29DF` | `F29A:0048` | `[BEGIN] BEGIN` key legend. |
+| `0xF29EF` | `F29A:0058` | `[END]   END` key legend. |
+| `0xF2A17` | `F29A:0080` | `CONTENT` header for content view. |
+| `0xF2B38` | `F2B3:0008` | `Date` input label (with `FF 44` field rectangle). |
+| `0xF2B54` | `F2B5:0004` | Date entry: `DATE`, `[↵] SET`, `[CAN] CANCEL`. |
+
 ## Miscellaneous
 
 | File offset | Segment:Offset | Notes |
