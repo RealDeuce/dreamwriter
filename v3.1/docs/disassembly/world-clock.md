@@ -321,9 +321,10 @@ Called with AX=alarm index.
 | `F2E2:0000` | `0xF2E20` | — | Display form options: ` 24 H`. |
 | `F2E7:0000` | `0xF2E70` | 72 | `DAILY ALARM` legend with `[↵] EDIT`, `[BACK] DELETE`, `[CAN] EXIT`. |
 | `F2EB:0000` | `0xF2EB0` | 23 | `TIME` column header for alarm list. |
-| `F2F0:0008` | `0xF2F08` | — | Clock icon bitmap (7×6). |
-| `F2F0:000F` | `0xF2F0F` | — | Clock icon bitmap (alternate position). |
-| `F2F1:0006` | `0xF2F16` | — | Time digit segment bitmaps (2 panels × 6 bytes). |
+| `F2F0:0008` | `0xF2F08` | 7 | Clock icon (filled, 6×7). ![](images/wc-clock-icon1-0xF2F08.png) |
+| `F2F0:000F` | `0xF2F0F` | 7 | Clock icon (hollow frame, 6×7). ![](images/wc-clock-icon2-0xF2F0F.png) |
+| `F2F1:0006` | `0xF2F16` | 6 | Time indicator (filled, 6×6). ![](images/wc-time-ind0-0xF2F16.png) |
+| `F2F1:000C` | `0xF2F1C` | 6 | Time indicator (hollow frame, 6×6). ![](images/wc-time-ind1-0xF2F1C.png) |
 | `F2F2:0002` | `0xF2F22` | 24 | Time input field descriptors (3 × 8 bytes). |
 
 ## String Data
