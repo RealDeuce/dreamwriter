@@ -226,6 +226,25 @@ tools/romtool.py find <text>
 | `0xF2B38` | `F2B3:0008` | `Date` input label (with `FF 44` field rectangle). |
 | `0xF2B54` | `F2B5:0004` | Date entry: `DATE`, `[↵] SET`, `[CAN] CANCEL`. |
 
+## World Clock Strings
+
+| File offset | Segment:Offset | Notes |
+| ---: | ---: | --- |
+| `0xF2C6C` | `F2C6:000C` | `WORLD CLOCK` title. |
+| `0xF2C7E` | `F2C6:001E` | `[H] SET HOME CITY` key legend. |
+| `0xF2C8E` | `F2C6:002E` | `[2] SET 2ND CITY` key legend. |
+| `0xF2C9E` | `F2C6:003E` | `[S] SET TIME/DATE` key legend. |
+| `0xF2CAE` | `F2C6:004E` | `[F] DISPLAY FORM` key legend. |
+| `0xF2CBE` | `F2C6:005E` | `[A] DAILY ALARM` key legend. |
+| `0xF2CF4` | `F2CE:0014` | `SET TIME/DATE` sub-screen title. |
+| `0xF2D2C` | `F2D2:000C` | `SET HOME CITY` sub-screen title. |
+| `0xF2D3E` | `F2D2:001E` | `[TAB] ORDER` key legend. |
+| `0xF2D4E` | `F2D2:002E` | `[INS] DAYLIGHT TIME` key legend. |
+| `0xF2D8C` | `F2D8:000C` | `SET 2ND CITY` sub-screen title. |
+| `0xF2DEA` | `F2DE:000A` | `DISPLAY FORM` sub-screen title. |
+| `0xF2E78` | `F2E7:0008` | `DAILY ALARM` sub-screen title. |
+| `0xF382E` | `F382:000E` | Timezone city/country database (222 records × 56 bytes). |
+
 ## Miscellaneous
 
 | File offset | Segment:Offset | Notes |

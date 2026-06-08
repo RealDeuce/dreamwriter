@@ -238,7 +238,19 @@ start	end	type	confidence	segment	label	notes
 0xF2B9A	0xF2BB0	text	confirmed	EE17	schedule-odb	SCHEDULE.ODB filename.
 0xF2BBA	0xF2BC4	resource	confirmed	DEF0	sched-alarm-title	FF 40 + FF 06 alarm display positioning (F2BB:000A).
 0xF2BC0	0xF2BD0	resource	confirmed	DEF0	sched-list-attr	FF 06 attribute set for schedule list area (F2BC:0000).
-0xF2BD0	0xF2BEE	resource	confirmed	DEF0	sched-detail-view	FF 02 cursor + FF 44 rectangles for detail view (F2BD:0000).
+0xF2BD0	0xF2C2A	resource	confirmed	DEF0	wc-grid-frame	Grid frame: FF 02 cursor + 6 FF 44 rectangles (F2BD:0000, 0x5A bytes). Shared with scheduler.
+0xF2C40	0xF2C4F	resource	confirmed	DEF0	wc-alarm-attr	FF 06 attribute set for alarm list area (F2C4:0000).
+0xF2C60	0xF2CE2	resource	confirmed	DEF0	wc-legend	WORLD CLOCK title + key legend: [H] SET HOME CITY, [2] SET 2ND CITY, [S] SET TIME/DATE, [F] DISPLAY FORM, [A] DAILY ALARM (F2C6:0000, 0x82 bytes).
+0xF2CE0	0xF2D18	resource	confirmed	DEF0	wc-set-time	SET TIME/DATE sub-screen legend (F2CE:0000, 0x38 bytes).
+0xF2D20	0xF2D81	resource	confirmed	DEF0	wc-set-home	SET HOME CITY legend: [TAB] ORDER, [INS] DAYLIGHT TIME, [↵] SET, [CAN] CANCEL (F2D2:0000, 0x61 bytes).
+0xF2D80	0xF2DE0	resource	confirmed	DEF0	wc-set-2nd	SET 2ND CITY legend (F2D8:0000, 0x60 bytes).
+0xF2DE0	0xF2E17	resource	confirmed	DEF0	wc-disp-form	DISPLAY FORM legend (F2DE:0000, 0x37 bytes).
+0xF2E70	0xF2EB8	resource	confirmed	DEF0	wc-alarm-legend	DAILY ALARM legend: [↵] EDIT, [BACK] DELETE, [CAN] EXIT (F2E7:0000, 0x48 bytes).
+0xF2EB0	0xF2EC7	resource	confirmed	DEF0	wc-time-header	TIME column header for alarm list (F2EB:0000, 0x17 bytes).
+0xF2F00	0xF2F30	resource	confirmed	DEF0	wc-clock-icons	Clock icon bitmaps and time digit segments (F2F0/F2F1).
+0xF382E	0xF68BE	data	confirmed	DEF0	tz-database	Timezone database: 222 records × 56 bytes (city name, UTC offset, country name).
+0xF68BE	0xF68C0	data	confirmed	DEF0	tz-count	Timezone record count: 0x00DE (222).
+0xF68C0	0xF6A78	data	confirmed	DEF0	tz-index	Timezone index table: 222 word-sized entries mapping display position to record number.
 0xF37D0	0xF37E0	text	confirmed	EE17	address-odb	ADDRESS.ODB filename.
 0xF6E30	0xF6E3E	code	confirmed		reset-trampoline	CLI, port 0x16/0x17 writes, JMP FAR C000:0000.
 0xFFFF0	0x100000	code	confirmed		reset-vector	CLI; JMP FAR F6E3:0000.
