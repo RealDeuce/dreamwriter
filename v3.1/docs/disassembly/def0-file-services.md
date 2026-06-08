@@ -12,27 +12,27 @@ INT 21h file handlers these eventually call.
 | # | RAM addr | Target | Calls | Purpose |
 | ---: | --- | --- | --- | --- |
 | 16 | `[0240]` | `DEF0:DAD6` | — | File service (standalone). |
-| 17 | `[0244]` | `DEF0:DB47` | `DEF0:E14C` | File service. |
-| 18 | `[0248]` | `DEF0:E022` | `DEF0:DFD5` | File op via core. |
-| 19 | `[024C]` | `DEF0:DC5E` | `DEF0:E08C` | File op via E08C helper. |
-| 20 | `[0250]` | `DEF0:E048` | `DEF0:DFD5` | File op via core. |
-| 21 | `[0254]` | `DEF0:E05A` | `DEF0:DFD5` | File op via core. |
-| 22 | `[0258]` | `DEF0:E05A` | `DEF0:DFD5` | Same as #21 (duplicate entry). |
+| 17 | `[0244]` | `DEF0:DB47` | `DEF0:E14C` | File open/create. Calls `DEF0:E14C` (INT 21h AH=3Ch/3Dh). |
+| 18 | `[0248]` | `DEF0:E022` | `DEF0:DFD5` | File operation via core. |
+| 19 | `[024C]` | `DEF0:DC5E` | `DEF0:E08C` | File write with seek. Calls E08C (INT 21h AH=42h) then writes. |
+| 20 | `[0250]` | `DEF0:E048` | `DEF0:DFD5` | File close (INT 21h AH=3Eh). |
+| 21 | `[0254]` | `DEF0:E05A` | `DEF0:DFD5` | File delete (INT 21h AH=41h). |
+| 22 | `[0258]` | `DEF0:E05A` | `DEF0:DFD5` | File delete (duplicate of #21). |
 | 23 | `[025C]` | `DEF0:E070` | — | File service (standalone). |
-| 24 | `[0260]` | `DEF0:E08C` | `DEF0:DFD5` | File helper (also called by #19, #27, #28). |
-| 25 | `[0264]` | `DEF0:E0A4` | `DEF0:DFD5` | File op via core. |
+| 24 | `[0260]` | `DEF0:E08C` | `DEF0:DFD5` | File seek (INT 21h AH=42h). AX=handle, BX=offset_hi, CX=offset_lo, DX=mode. |
+| 25 | `[0264]` | `DEF0:E0A4` | `DEF0:DFD5` | File read/write (INT 21h AH=3Fh/40h). |
 | 26 | `[0268]` | `DEF0:DCA2` | — | File service (standalone). |
 | 27 | `[026C]` | `DEF0:DD27` | `DEF0:E08C` | File op via E08C helper. |
 | 28 | `[0270]` | `DEF0:DE34` | `DEF0:E0A4,E08C` | File op via both helpers. |
 | 29 | `[0274]` | `DEF0:E0C0` | — | File service (standalone). |
 | 30 | `[0278]` | `DEF0:DE90` | — | File service (standalone). |
 | 31 | `[027C]` | `DEF0:DF1C` | — | File service (standalone). |
-| 32 | `[0280]` | `DEF0:E1F0` | `DEF0:DFD5` | File op via core. |
-| 33 | `[0284]` | `DEF0:E195` | `DEF0:DFD5` | File op via core. |
-| 34 | `[0288]` | `DEF0:E1B4` | `DEF0:DFD5` | File op via core. |
+| 32 | `[0280]` | `DEF0:E1F0` | `DEF0:DFD5` | Drive check / free space (INT 21h AH=36h). Returns 4 words at [DI]. |
+| 33 | `[0284]` | `DEF0:E195` | `DEF0:DFD5` | File operation via core. |
+| 34 | `[0288]` | `DEF0:E1B4` | `DEF0:DFD5` | File operation via core. |
 | 35 | `[028C]` | `DEF0:E21A` | — | File service (standalone). |
 | 36 | `[0290]` | `DEF0:E232` | — | File service (standalone). |
-| 37 | `[0294]` | `DEF0:E254` | `DEF0:DFD5` | File op via core. |
+| 37 | `[0294]` | `DEF0:E254` | `DEF0:DFD5` | Set file attributes (INT 21h AX=4301h). |
 | 38 | `[0298]` | `DEF0:E26C` | `DEF0:DFD5` | File op via core. |
 
 ## Entry #39 — Display + File Composite
