@@ -36,6 +36,7 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 | [`disassembly/display-stream.md`](disassembly/display-stream.md) | Display script renderer (C000:6557) and far wrapper (C000:3F35, 136 callers). |
 | [`disassembly/diagnostic-keyboard-check.md`](disassembly/diagnostic-keyboard-check.md) | F+J+SPACE keyboard chord check, diagnostic entry gate. |
 | [`disassembly/diagnostic-application.md`](disassembly/diagnostic-application.md) | Full diagnostic mode: command processor (M/S/I/O/L/Y/Z/K/T/N/P/Q/R), keyboard check UI with glyph rendering. |
+| [`disassembly/calculator.md`](disassembly/calculator.md) | Organizer calculator: entry flow, register structure, key dispatch, BCD arithmetic, digit glyphs. |
 | [`disassembly/diagnostic-monitor.md`](disassembly/diagnostic-monitor.md) | Terminal command monitor (banked thunk slot 7). |
 | [`disassembly/subsystem-init.md`](disassembly/subsystem-init.md) | Bank mirrors, RAM clear, file/drive/storage init, state validation, full 2E72 init chain. |
 | [`disassembly/int21-dispatch.md`](disassembly/int21-dispatch.md) | INT 21h DOS-like service dispatcher and function table. |
