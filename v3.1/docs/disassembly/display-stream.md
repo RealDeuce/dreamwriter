@@ -131,30 +131,6 @@ C000:3F45  5D                pop bp
 C000:3F46  CB                retf
 ```
 
-## C000:3F47 — Display Script Far Wrapper (Alternate)
-
-Same pattern, slightly different register setup. Also in the far-call
-table at `[023C]`.
-
-```asm
-; file 0xC3F47
-C000:3F47  55                push bp
-C000:3F48  57                push di
-C000:3F49  56                push si
-C000:3F4A  52                push dx
-C000:3F4B  51                push cx
-C000:3F4C  8B D3             mov dx,bx
-C000:3F4E  8B F0             mov si,ax
-C000:3F50  8B CB             mov cx,bx
-C000:3F52  E8 0226           call C000:6557
-C000:3F55  59                pop cx
-C000:3F56  5A                pop dx
-C000:3F57  5E                pop si
-C000:3F58  5F                pop di
-C000:3F59  5D                pop bp
-C000:3F5A  CB                retf
-```
-
 ## C000:6557 — Display Script Core Renderer
 
 The actual renderer. Called with:
