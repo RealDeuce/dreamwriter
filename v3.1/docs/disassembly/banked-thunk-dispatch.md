@@ -51,15 +51,15 @@ C000:19FE  FF E0             jmp ax           ; dispatch
 
 | Slot | Handler | Purpose |
 | ---: | --- | --- |
-| 0 | `C000:1AA2` | Read byte from segment via ES:SI. |
-| 1 | `C000:1A9D` | Load DI from `[710F]`. |
-| 2 | `C000:1A18` | Key event dispatch. |
-| 3 | `C000:1A95` | |
-| 4 | `C000:1A55` | |
+| 0 | `C000:1AA2` | Multi-function dispatch on AX: renders display scripts (`C000:6557`), calls `C000:2295` (state save), `C000:1DEA` (service), `C000:211E`, `C000:2144`. |
+| 1 | `C000:1A9D` | Load DI from `[710F]` (state pointer). |
+| 2 | `C000:1A18` | Key event dispatch: tests `[7195]`, calls `C000:316D` (serial I/O) and `C000:0A69` (key translate). |
+| 3 | `C000:1A95` | Fixed beep: calls `C000:0B12` (via `C000:1D85`). |
+| 4 | `C000:1A55` | DreamLink service: calls `C772:CF7C` (far) and `C000:0A69`. Falls through to error halt if DL invalid. |
 | 5 | `C000:1A18` | Same as slot 2. |
-| 6 | `C000:1AA2` | Same as slot 0. |
+| 6 | `C000:1AA2` | Same as slot 0 (used by spell check via `C772:970F`). |
 | 7 | `C000:1A18` | Same as slot 2. |
-| 8 | `C000:19E7` | Software error halt entry. |
+| 8 | `C000:19E7` | Software error halt entry (via `C000:1DCF`: dispatches on DreamLink endpoint `[6F51]`). |
 | 9 | `C000:19E7` | Same as slot 8. |
 | 10 | `C000:19E7` | Same as slot 8. |
 | 11 | `C000:1A9D` | Same as slot 1. |

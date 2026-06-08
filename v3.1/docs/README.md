@@ -13,7 +13,7 @@ banking, and protocol docs in `../../docs/` apply to both v2.1 and v3.1.
 
 ## Disassembly
 
-Generated from a full recursive trace (4199 blocks, 46511 instructions
+Generated from a full recursive trace (4389 blocks, 48252 instructions
 across 7 segments). Raw trace at [`disassembly/trace-full.txt`](disassembly/trace-full.txt).
 Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 
@@ -38,7 +38,8 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 | [`disassembly/int21-dispatch.md`](disassembly/int21-dispatch.md) | INT 21h DOS-like service dispatcher and function table. |
 | [`disassembly/int21-file-io.md`](disassembly/int21-file-io.md) | INT 21h file operation handlers: create, open, close, read, write, seek, delete, find, rename. |
 | [`disassembly/c000-serial-io.md`](disassembly/c000-serial-io.md) | Serial I/O and DreamLink: serial buffers, endpoint transport. |
-| [`disassembly/c000-editor-utility.md`](disassembly/c000-editor-utility.md) | Editor/spell utility (C000:929B..9D63): text buffer management, cursor, formatting. |
+| [`disassembly/c000-thunk-a-services.md`](disassembly/c000-thunk-a-services.md) | Thunk A service handlers (C000:1A00..22FF): display rendering, key input, DreamLink, text output. |
+| [`disassembly/c000-editor-utility.md`](disassembly/c000-editor-utility.md) | Editor utility / Edit Text (C000:929B..9D63): text buffer management, cursor, formatting. |
 
 ### C772 — Application Runtime
 

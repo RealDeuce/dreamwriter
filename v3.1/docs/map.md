@@ -84,7 +84,7 @@ Routine `C000:0327` seeds the default bank mirrors:
 
 ## Code Segment Map
 
-Confirmed from a full recursive disassembly trace (4199 blocks, 46511
+Confirmed from a full recursive disassembly trace (4389 blocks, 48252
 instructions) starting at `C000:0029` with IRQ, thunk, INT 21h,
 menu VM, and dispatch table seeds.
 
@@ -92,8 +92,8 @@ menu VM, and dispatch table seeds.
 
 | Segment | File base | Instructions | Role |
 | --- | ---: | ---: | --- |
-| `C000` | `0xC0000` | 10342 | Low-level firmware: boot, IRQs, banking, I/O ports, diagnostics. |
-| `C772` | `0xC7720` | 9851 | Application runtime: word processor, organizer, menus. |
+| `C000` | `0xC0000` | 11025 | Low-level firmware: boot, IRQs, banking, I/O ports, diagnostics. |
+| `C772` | `0xC7720` | 10868 | Application runtime: word processor, organizer, menus. |
 | `DEF0` | `0xDEF00` | 20494 | Service/wrapper layer between C000 and C772. Far-call table targets. |
 
 All three segments share window 6. `DEF0` is the v3.1 equivalent of
