@@ -252,6 +252,19 @@ start	end	type	confidence	segment	label	notes
 0xF382E	0xF68BE	data	confirmed	DEF0	tz-database	Timezone database: 222 records × 56 bytes (city name, UTC offset, country name).
 0xF68BE	0xF68C0	data	confirmed	DEF0	tz-count	Timezone record count: 0x00DE (222).
 0xF68C0	0xF6A78	data	confirmed	DEF0	tz-index	Timezone index table: 222 word-sized entries mapping display position to record number.
+0xF3340	0xF335B	text	confirmed	DEF0	abook-please-wait	*** PLEASE WAIT *** loading message (F334:0000).
+0xF3390	0xF33D0	resource	confirmed	DEF0	abook-content-labels	Content view field labels: FREE, TEL, FAX, ADRS, MEMO, SALUTATION (F339:0000).
+0xF33C0	0xF33F0	resource	confirmed	DEF0	abook-delete-confirm	Deletes this entry confirmation display (F33C:0000).
+0xF33F0	0xF344A	resource	confirmed	DEF0	abook-grid-frame	Grid frame: 6 FF 44 rectangles (F33F:0000, 0x5A bytes).
+0xF3450	0xF34D9	resource	confirmed	DEF0	abook-index-legend	INDEX view key legend (F345:0000, 0x89 bytes).
+0xF34D0	0xF3559	resource	confirmed	DEF0	abook-content-legend	CONTENT view key legend (F34D:0000, 0x89 bytes).
+0xF3560	0xF3591	resource	confirmed	DEF0	abook-edit-legend	EDIT sub-screen legend (F356:0000).
+0xF3590	0xF35C6	resource	confirmed	DEF0	abook-new-legend	NEW ENTRY sub-screen legend (F359:0000).
+0xF35C0	0xF35CE	resource	confirmed	DEF0	abook-delete-legend	DELETE sub-screen title (F35C:0000).
+0xF35F0	0xF3630	resource	confirmed	DEF0	abook-search-legend	SEARCH sub-screen legend (F35F:0000).
+0xF3660	0xF367C	text	confirmed	DEF0	abook-confirm-string	Are you sure? (Y/N) confirmation (F366:0000).
+0xF367C	0xF36D0	data	confirmed	DEF0	abook-field-desc	Field editor descriptors: 6 × 14 bytes (F367:000C).
+0xF36D0	0xF3750	data	confirmed	DEF0	abook-sort-table	Character sort-order table: case-insensitive alphabetical (F36D:0000, 128 bytes).
 0xF37D0	0xF37E0	text	confirmed	EE17	address-odb	ADDRESS.ODB filename.
 0xF6E30	0xF6E3E	code	confirmed		reset-trampoline	CLI, port 0x16/0x17 writes, JMP FAR C000:0000.
 0xFFFF0	0x100000	code	confirmed		reset-vector	CLI; JMP FAR F6E3:0000.

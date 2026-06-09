@@ -245,6 +245,20 @@ tools/romtool.py find <text>
 | `0xF2E78` | `F2E7:0008` | `DAILY ALARM` sub-screen title. |
 | `0xF382E` | `F382:000E` | Timezone city/country database (222 records × 56 bytes). |
 
+## Address Book Strings
+
+| File offset | Segment:Offset | Notes |
+| ---: | ---: | --- |
+| `0xF3347` | `F334:0007` | `*** PLEASE WAIT ***` loading message. |
+| `0xF3397` | `F339:0007` | Field labels: `FREE`, `TEL`, `FAX`, `ADRS`, `MEMO`, `SALUTATION`. |
+| `0xF33E3` | `F33C:0023` | `Deletes this entry` confirmation. |
+| `0xF3457` | `F345:0007` | `INDEX` view title + key legend: `[↵] EDIT`, `[INS] NEW ENTRY`, `[BACK] DELETE`, `[TAB] CONTENT`, `[SEARCH] SEARCH`, `[NEXT] NEXT`. |
+| `0xF34D7` | `F34D:0007` | `CONTENT` view title + key legend (same keys, `[TAB] INDEX`). |
+| `0xF3567` | `F356:0007` | `EDIT` sub-screen: `[↵] ENTER`, `[CAN] CANCEL`. |
+| `0xF3597` | `F359:0007` | `NEW ENTRY` sub-screen. |
+| `0xF35FD` | `F35F:000D` | `SEARCH` sub-screen: `[↵] EXECUTE`, `[CAN] CANCEL`. |
+| `0xF3665` | `F366:0005` | `Are you sure? (Y/N)` delete confirmation. |
+
 ## Miscellaneous
 
 | File offset | Segment:Offset | Notes |

@@ -40,6 +40,7 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 | [`disassembly/calendar.md`](disassembly/calendar.md) | Organizer calendar: month grid rendering, date math, year/display form sub-screens. |
 | [`disassembly/scheduler.md`](disassembly/scheduler.md) | Organizer scheduler: SCHEDULE.ODB database, weekly view, entry editing, alarm display. |
 | [`disassembly/world-clock.md`](disassembly/world-clock.md) | World clock: 222-city timezone database, dual-panel display, time/date setting, daily alarms. |
+| [`disassembly/address-book.md`](disassembly/address-book.md) | Address book: ADDRESS.ODB database, 6-field records (name/TEL/FAX/ADRS/MEMO/SALUTATION), sorted index, search. |
 | [`disassembly/diagnostic-monitor.md`](disassembly/diagnostic-monitor.md) | Terminal command monitor (banked thunk slot 7). |
 | [`disassembly/subsystem-init.md`](disassembly/subsystem-init.md) | Bank mirrors, RAM clear, file/drive/storage init, state validation, full 2E72 init chain. |
 | [`disassembly/int21-dispatch.md`](disassembly/int21-dispatch.md) | INT 21h DOS-like service dispatcher and function table. |
