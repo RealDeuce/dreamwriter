@@ -172,13 +172,13 @@ tools/romtool.py find <text>
 
 | File offset | Segment:Offset | Notes |
 | ---: | ---: | --- |
-| `0xF131C` | `EE17:31AC` | `EROMCARD.X` ROM card executable filename. |
+| `0xF131C` | `EE17:31AC` | `EROMCARD.X` ROM card executable filename used by the launcher at `DEF0:2C37`. |
 | `0xF1344` | `EE17:31D4` | Others submenu: `COMMUNICATE`, `SYSTEM`, `PREFERENCES`, `ROM CARD`. |
 | `0xF13B4` | `EE17:3244` | `T I M E` spaced time menu label. |
 | `0xF140F` | `EE17:329F` | `SYSTEM SET UP` / `AUTO POWER OFF PERIOD` with `{ 2 } { 3 } { 5 } { 10 } { 15 } { 20 } { UNLIMITED }` and `(minutes)`. |
 | `0xF1476` | `EE17:3306` | `POWER ON BUZZER` with `{ TYPE 1 } { TYPE 2 } { TYPE 3 } { NO }`. |
 | `0xF14E1` | `EE17:3371` | `EDITOR PREFERENCES` / `STICKY SHIFT KEY` / `BIG FONT MODE` / `SPELL CHECKING` / `PASSWORDS` / `SAVE ONLY TEXT ON FDD`. |
-| `0xF15B8` | `EE17:3448` | ROM card error messages: `No ROM card is in the slot`, `Inadequate work memory`, `Can not open EROMCARD.X`, `Not enough memory`, `ROM Card ID error`. |
+| `0xF15B8` | `EE17:3448` | ROM card launcher/error messages: `No ROM card is in the slot`, `Inadequate work memory`, `Can not open EROMCARD.X`, `Not enough memory`, `ROM Card ID error`; the visible failure prompts except ID-error are referenced by `DEF0:2C37`, while the local v3.1 launcher body does not directly reference the ID-error string. |
 | `0xF16B0` | `EE17:3540` | Filename invalid characters: `"\ *+,/:<=>?[]|`. |
 | `0xF16C1` | `EE17:3551` | `Password Registry` password UI. |
 | `0xF1716` | `EE17:35A6` | `teacher123` — default password (same as C000:3F2A). |

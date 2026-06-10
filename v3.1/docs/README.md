@@ -69,6 +69,7 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 | [`disassembly/def0-cursor-state.md`](disassembly/def0-cursor-state.md) | Cursor state, wrapper inner routines (CE03/CE36/CE6A/CE92), date/time, CFDE display refresh. |
 | [`disassembly/def0-menu-display.md`](disassembly/def0-menu-display.md) | Menu display system (DEF0:2000..29DB), interactive menus, C772 callbacks. |
 | [`disassembly/def0-file-dialogs.md`](disassembly/def0-file-dialogs.md) | File management UI (DEF0:29DC..4AA9), directory listing, file open/save/delete dialogs. |
+| [`disassembly/rom-card-launcher.md`](disassembly/rom-card-launcher.md) | OTHERS -> ROM CARD `EROMCARD.X` launcher at DEF0:2C37: path search, load to `0xA4F0`, handoff through C772:0212. |
 | [`disassembly/def0-file-services.md`](disassembly/def0-file-services.md) | Far-call table file entries #16-#39, DEF0:DFD5 file service core. |
 | [`disassembly/def0-keyboard-subsystem.md`](disassembly/def0-keyboard-subsystem.md) | Keyboard/input processing (DEF0:6278..6FFF), input fields, character handling. |
 | [`disassembly/def0-storage-subsystem.md`](disassembly/def0-storage-subsystem.md) | Internal storage management (DEF0:7000..9FFF), file handle table, document format. |

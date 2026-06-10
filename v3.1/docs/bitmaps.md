@@ -110,7 +110,9 @@ Called from `DEF0:2DF1`.
 | `0xF117E` | `F117:000E` | PREFERENCES | ![](disassembly/images/wp-others-preferences-0xF117E.png) |
 | `0xF081E` | `F011:070E` | ROM CARD | ![](disassembly/images/wp-others-romcard-0xF081E.png) |
 
-Note: SYSTEM reuses the SET UP 1 icon from the Printer submenu.
+Note: SYSTEM reuses the SET UP 1 icon from the Printer submenu. The ROM CARD
+item enters the `EROMCARD.X` filesystem launcher at `DEF0:2C37`; see
+[`disassembly/rom-card-launcher.md`](disassembly/rom-card-launcher.md).
 
 ## Organizer Main Menu (F243, AX=0xE, type=0, 5 items)
 

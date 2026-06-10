@@ -149,9 +149,9 @@ calling `C772:78FE` and `C772:795D` for page layout updates.
 
 | Address | Caller | Purpose |
 | --- | --- | --- |
-| `C772:01CD` | `DEF0:2CDD` | File dialog: init (calls 45A7, 8526, 92AA) |
-| `C772:01F3` | `DEF0:2CDD` | File dialog: finalize (calls 941D, 9715) |
-| `C772:0212` | `DEF0:2D9C` | File dialog: indirect call via `[CA04]` |
+| `C772:01CD` | `DEF0:2CDD` | ROM-card launcher prep: calls 45A7, 8526, 92AA; sets `[1442] = 1`; returns `[7576] * 0x80` byte work limit |
+| `C772:01F3` | `DEF0:2CF0`, `DEF0:2D41`, `DEF0:2D7D`, `DEF0:2DAC` | ROM-card launcher finalize: calls 941D, 9715; clears `[1442]` |
+| `C772:0212` | `DEF0:2D9C` | ROM-card executable trampoline: after `EROMCARD.X` is loaded to `0xA4F0`, calls far `[CA04]`, which is file offset `+0x2514` in the loaded image |
 | `C772:0221` | `DEF0:2ADA` | File dialog: clear flag `[7A44] &= 0x7F` |
 
 ## DEF0 Callbacks (E800-EFFF, 32 blocks)

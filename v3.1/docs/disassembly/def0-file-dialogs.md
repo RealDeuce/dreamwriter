@@ -7,6 +7,11 @@ services for screen rendering and file services for storage
 operations. Supports three storage targets switchable via TAB:
 Built-in memory, Card memory (PCMCIA), and DreamLink.
 
+The same address range also contains the OTHERS -> ROM CARD software-card
+launcher at `DEF0:2C37`. That path is a separate `EROMCARD.X` filesystem loader,
+not the AD00 ROM CARD storage command processor. See
+[`rom-card-launcher.md`](rom-card-launcher.md).
+
 Called from the menu display system (`DEF0:2DF1` via `DEF0:27C8`) and
 from the application init path (`DEF0:5B14`).
 
@@ -18,6 +23,7 @@ underlying file operations.
 
 | Address | Caller | Purpose |
 | --- | --- | --- |
+| `DEF0:2C37` | `DEF0:2E89` | OTHERS -> ROM CARD `EROMCARD.X` launcher |
 | `DEF0:2DF1` | `DEF0:27C8` | File dialog main entry |
 | `DEF0:32A4` | `DEF0:5B14` | Copy NUL-terminated string |
 | `DEF0:32B3` | `DEF0:5B14` | Compare NUL-terminated strings |
@@ -39,7 +45,7 @@ DEF0:2E0C  E803F8         call DEF0:2612        ; menu display init
 
 The loop at `DEF0:2DF5..2EA8` dispatches through:
 - `DEF0:29DC` — render file list dialog box
-- `DEF0:2C37` — render file operation confirmation dialog
+- `DEF0:2C37` — OTHERS -> ROM CARD `EROMCARD.X` launcher
 - `DEF0:3E56` — directory listing and file selection
 
 ## DEF0:3E56 — Directory Listing
@@ -174,7 +180,7 @@ and file services (`DEF0:E195`, `DEF0:E048`, etc.).
 
 | Address range | Blocks | Purpose |
 | --- | --- | --- |
-| `DEF0:29DC..2DBB` | 17 | File list dialog render |
+| `DEF0:29DC..2DBB` | 17 | File list dialog render plus `EROMCARD.X` launcher at `DEF0:2C37` |
 | `DEF0:2DF1..2EA8` | 8 | File dialog entry + main loop |
 | `DEF0:2EAB..310E` | 24 | Dialog render + file selection dispatch |
 | `DEF0:310E..32D8` | 9 | Special handlers + display |

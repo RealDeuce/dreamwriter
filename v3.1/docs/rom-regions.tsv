@@ -202,7 +202,7 @@ start	end	type	confidence	segment	label	notes
 0xDEF00	0xDEF0A	data	confirmed	DEF0	def0-header	Glyph bitmap/pixel mask data before first wrapper.
 0xDEF0B	0xE12F3	code	confirmed	DEF0	def0-000B	DEF0:000B..23F3 (9192 bytes, traced)
 0xE1335	0xE1830	code	confirmed	DEF0	def0-2435	DEF0:2435..2930 (1275 bytes, traced)
-0xE18DC	0xE1CBB	code	confirmed	DEF0	def0-29DC	DEF0:29DC..2DBB (991 bytes, traced)
+0xE18DC	0xE1CBB	code	confirmed	DEF0	def0-29DC	DEF0:29DC..2DBB (991 bytes, traced); includes EROMCARD.X launcher at DEF0:2C37.
 0xE1CF1	0xE38AA	code	confirmed	DEF0	def0-2DF1	DEF0:2DF1..49AA (7097 bytes, traced)
 0xE3919	0xE39A9	code	confirmed	DEF0	def0-4A19	DEF0:4A19..4AA9 (144 bytes, traced)
 0xE40FD	0xEC95C	code	confirmed	DEF0	def0-51FD	DEF0:51FD..DA5C (34911 bytes, traced)
@@ -218,11 +218,11 @@ start	end	type	confidence	segment	label	notes
 0xEDFCE	0xEE15B	code	confirmed	ED1B	ed1b-0E1E	ED1B:0E1E..0FAB (397 bytes, traced)
 0xEE179	0xEF8AF	code	confirmed	EE17	ee17-0009	EE17:0009..173F (5942 bytes, traced)
 0xEF8AF	0xEFB1D	code	confirmed	EF8A	ef8a-000F	EF8A:000F..027D (622 bytes, traced)
-0xF131C	0xF1344	text	confirmed	EE17	eromcard-filename	EROMCARD.X ROM card executable filename.
+0xF131C	0xF1344	text	confirmed	EE17	eromcard-filename	EROMCARD.X ROM card executable filename used by DEF0:2C37.
 0xF1344	0xF13C0	text	confirmed	EE17	others-menu-strings	COMMUNICATE, SYSTEM, PREFERENCES, ROM CARD.
 0xF140F	0xF14E1	text	confirmed	EE17	system-setup-strings	SYSTEM SET UP: AUTO POWER OFF PERIOD, POWER ON BUZZER with type/duration choices.
 0xF14E1	0xF15B8	text	confirmed	EE17	editor-preferences	EDITOR PREFERENCES: STICKY SHIFT KEY, BIG FONT MODE, SPELL CHECKING, PASSWORDS, SAVE ONLY TEXT ON FDD.
-0xF15B8	0xF162E	text	confirmed	EE17	romcard-error-msgs	ROM card error messages: no card, inadequate memory, can not open, ID error.
+0xF15B8	0xF162E	text	confirmed	EE17	romcard-error-msgs	ROM card launcher/error messages: no card, inadequate memory, can not open, not enough memory, ID error; DEF0:2C37 does not directly reference ID error.
 0xF16B0	0xF16C1	data	confirmed	EE17	filename-invalid-chars	Filename invalid characters: "\ *+,/:<=>?[]|.
 0xF16C1	0xF1716	text	confirmed	EE17	password-ui	Password Registry UI and default password (teacher123).
 0xF1772	0xF1830	text	confirmed	EE17	wp-menu-strings	EDIT TEXT, FILE, CLEAR TEXT, PRINTER, T I M E, OTHERS, RECALL, STORE, DELETE, RENAME, COPY, INITIALIZE.

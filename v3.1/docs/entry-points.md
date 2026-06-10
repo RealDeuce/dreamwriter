@@ -654,9 +654,9 @@ See [`disassembly/app-entry.md`](disassembly/app-entry.md), [`disassembly/menu-i
 
 | Address | File offset | Description |
 | --- | ---: | --- |
-| `C772:01CD` | `0xC78ED` | Called from `DEF0:2CDD`: display setup with `C772:45A7`, `C772:8526`, `C772:92AA`. |
-| `C772:01F3` | `0xC7913` | Called from `DEF0:2CDD`: calls `C772:941D`, `C772:9715`. |
-| `C772:0212` | `0xC7932` | File dialog indirect call: `CALL FAR [CA04]` (runtime far pointer). |
+| `C772:01CD` | `0xC78ED` | ROM-card launcher prep from `DEF0:2CDD`: display/app setup with `C772:45A7`, `C772:8526`, `C772:92AA`; returns `[7576] * 0x80` byte work limit. |
+| `C772:01F3` | `0xC7913` | ROM-card launcher finalize: calls `C772:941D`, `C772:9715`, clears `[1442]`. |
+| `C772:0212` | `0xC7932` | ROM-card executable trampoline from `DEF0:2D9C`: `CALL FAR [CA04]` after `EROMCARD.X` is loaded to `0xA4F0`; `[CA04]` is file offset `+0x2514` in the loaded image. |
 | `C772:0221` | `0xC7941` | File dialog flag clear: `AND byte [7A44],0x7F`. |
 | `C772:0802` | `0xC7F22` | Display helper: calls `C772:022D`. |
 | `C772:0DC0` | `0xC84E0` | Display helper: calls `C772:022D`. |
