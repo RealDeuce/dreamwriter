@@ -43,10 +43,11 @@ base byte at `[0x1005]`.
 
 ## File Format
 
-The minimum loaded image is ROM-version specific. The T400 2.1 row below is
-audited from `t4_ir_2.1.ic303` and the local disassembly notes. The other rows
-are comparative results from external ROM images under `../roms`; keep them
-separate from T400 source-of-truth claims unless those images are rechecked.
+The minimum loaded image is ROM-version specific. The T400 2.1 and v3.1 rows
+below are audited from checked-in ROM images and local disassembly notes. The
+non-T400 rows are comparative results from external ROM images under `../roms`;
+keep them separate from T400 source-of-truth claims unless those images are
+rechecked.
 
 These are the ROM CARD envelopes observed so far:
 

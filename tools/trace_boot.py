@@ -6,7 +6,8 @@ near branches, and far calls/jumps within known segments. Deduplicates
 at the instruction level so no address is disassembled twice.
 
 Usage:
-    python3 tools/trace_boot.py [--rom PATH] [--seed SEG:OFF ...] [--irqs] [--thunks]
+    python3 tools/trace_boot.py [--profile v31|v31-260] [--rom PATH]
+        [--seed SEG:OFF ...] [--irqs] [--thunks]
         [--int21] [--menu-vm] [--dispatch] [--load FILE]
 
 Default seeds: C000:0029 (boot entry).
@@ -47,10 +48,150 @@ class Segment:
         return self.file_base <= phys < self.file_base + self.max_offset
 
 
+@dataclass(frozen=True)
+class TraceProfile:
+    name: str
+    default_rom: str
+    segments: tuple[tuple[str, int, int, int | None], ...]
+    default_seeds: tuple[tuple[str, int, str], ...]
+    irq_seeds: tuple[tuple[str, int, str], ...]
+    thunk_tables: tuple[int, ...]
+    menu_segment: str
+    menu_table_offset: int
+    int21_validity_offset: int
+    int21_dispatch_offset: int
+    dispatch_tables: tuple[tuple[str, int, int, str], ...]
+    app_segment: str
+    format_table_offset: int
+    format_targets: tuple[tuple[int, str], ...]
+    landing_targets: tuple[tuple[int, str], ...]
+    search_table_offset: int | None
+    inline_data_calls: tuple[tuple[str, int], ...]
+    stop_addrs: tuple[tuple[str, int], ...]
+
+
 # Window 6 segments for v3.1 (1 MiB ROM, bank 14 at file 0xC0000)
 WINDOW6_START = 0xC0000
 WINDOW6_END = 0xE0000
 
+PROFILES: dict[str, TraceProfile] = {
+    "v31": TraceProfile(
+        name="v31",
+        default_rom="v3.1/t4_ir_3.1_e588.ic303",
+        segments=(
+            ("C000", 0xC000, 0x10000, None),
+            ("C772", 0xC772, 0x188E0, None),
+            ("DEF0", 0xDEF0, 0x10F00, None),
+            ("6000", 0x6000, 0x20000, 0x80000),
+            ("8000", 0x8000, 0x20000, 0xA0000),
+            ("AD00", 0xAD00, 0x13000, None),
+            ("ED1B", 0xED1B, 0x12E50, None),
+            ("EE17", 0xEE17, 0x11E90, None),
+        ),
+        default_seeds=(("C000", 0x0029, "boot_entry"),),
+        irq_seeds=(
+            ("C000", 0x1832, "int_01h_debug"),
+            ("C000", 0x04D0, "int_02h_nmi"),
+            ("C000", 0x04D0, "irq_f8_nmi"),
+            ("C000", 0x05C0, "irq_f9"),
+            ("C000", 0x05D4, "irq_fa"),
+            ("C000", 0x05F7, "irq_fb_keyboard"),
+            ("C000", 0x0676, "irq_fc"),
+            ("C000", 0x084A, "irq_fd"),
+            ("C000", 0x085E, "irq_fe"),
+            ("C000", 0x03FC, "irq_ff_warm"),
+        ),
+        thunk_tables=(0x1A00, 0x1B38),
+        menu_segment="C772",
+        menu_table_offset=0x396F,
+        int21_validity_offset=0x61DF,
+        int21_dispatch_offset=0x623F,
+        dispatch_tables=(
+            ("AD00", 0x0202, 21, "ad00_op"),
+            ("C000", 0x6865, 32, "disp_cmd"),
+            ("C000", 0x7421, 5, "blit_ext"),
+            ("AD00", 0x1B3B, 7, "ad00_sub"),
+            ("C000", 0x6BCF, 10, "disp_sub"),
+        ),
+        app_segment="C772",
+        format_table_offset=0x40ED,
+        format_targets=(
+            (0x04E4, "fmt_tgt_0"),
+            (0x0584, "fmt_tgt_1"),
+            (0x061C, "fmt_tgt_2"),
+            (0x0620, "fmt_tgt_3"),
+        ),
+        landing_targets=(
+            (0x69D8, "landing_69D8"),
+            (0x1756, "landing_1756"),
+            (0x215F, "landing_215F"),
+            (0x6BE3, "landing_6BE3"),
+        ),
+        search_table_offset=0x963B,
+        inline_data_calls=(("C772", 0x022D), ("C772", 0x968A), ("C772", 0x968D)),
+        stop_addrs=(("ED1B", 0x959E), ("ED1B", 0x99B4), ("ED1B", 0xA948)),
+    ),
+    "v31-260": TraceProfile(
+        name="v31-260",
+        default_rom="v3.1.260/t4_ir_3.1_8c8f.ic303",
+        segments=(
+            ("C000", 0xC000, 0x10000, None),
+            ("C774", 0xC774, 0x188C0, None),
+            ("DF80", 0xDF80, 0x10000, None),
+            ("6000", 0x6000, 0x20000, 0x80000),
+            ("8000", 0x8000, 0x20000, 0xA0000),
+            ("AD00", 0xAD00, 0x13000, None),
+            ("EDAB", 0xEDAB, 0x12550, None),
+            ("EF50", 0xEF50, 0x10B00, None),
+            ("F185", 0xF185, 0x0E7B0, None),
+        ),
+        default_seeds=(("C000", 0x0029, "boot_entry"),),
+        irq_seeds=(
+            ("C000", 0x1832, "int_01h_debug"),
+            ("C000", 0x04D0, "int_02h_nmi"),
+            ("C000", 0x04D0, "irq_f8_nmi"),
+            ("C000", 0x05C0, "irq_f9"),
+            ("C000", 0x05D4, "irq_fa"),
+            ("C000", 0x05F7, "irq_fb_keyboard"),
+            ("C000", 0x0676, "irq_fc"),
+            ("C000", 0x084A, "irq_fd"),
+            ("C000", 0x085E, "irq_fe"),
+            ("C000", 0x03FC, "irq_ff_warm"),
+        ),
+        thunk_tables=(0x1A11, 0x1B49),
+        menu_segment="C774",
+        menu_table_offset=0x396E,
+        int21_validity_offset=0x61E8,
+        int21_dispatch_offset=0x6248,
+        dispatch_tables=(
+            ("AD00", 0x0202, 21, "ad00_op"),
+            ("C000", 0x687B, 32, "disp_cmd"),
+            ("C000", 0x7437, 5, "blit_ext"),
+            ("AD00", 0x1B3B, 7, "ad00_sub"),
+            ("C000", 0x6BE5, 10, "disp_sub"),
+        ),
+        app_segment="C774",
+        format_table_offset=0x40EC,
+        format_targets=(
+            (0x04E3, "fmt_tgt_0"),
+            (0x0583, "fmt_tgt_1"),
+            (0x061B, "fmt_tgt_2"),
+            (0x061F, "fmt_tgt_3"),
+        ),
+        landing_targets=(
+            (0x69D7, "landing_69D7"),
+            (0x1755, "landing_1755"),
+            (0x215E, "landing_215E"),
+            (0x6BE2, "landing_6BE2"),
+        ),
+        search_table_offset=None,
+        inline_data_calls=(("C774", 0x022C),),
+        stop_addrs=(("EDAB", 0x959E), ("EDAB", 0x99B4), ("EDAB", 0xA948)),
+    ),
+}
+
+
+PROFILE: TraceProfile
 SEGMENTS: dict[str, Segment] = {}
 
 
@@ -363,9 +504,10 @@ def read_thunk_table(table_offset: int = 0x1B38, count: int = 12) -> list[tuple[
     return seeds
 
 
-def read_menu_vm_table(table_offset: int = 0x396F, count: int = 96) -> list[tuple[str, int, str]]:
-    """Read the C772 menu VM bytecode dispatch table and return seed entries."""
-    seg = SEGMENTS["C772"]
+def read_menu_vm_table(table_offset: int | None = None, count: int = 96) -> list[tuple[str, int, str]]:
+    """Read the menu VM bytecode dispatch table and return seed entries."""
+    table_offset = PROFILE.menu_table_offset if table_offset is None else table_offset
+    seg = SEGMENTS[PROFILE.menu_segment]
     seeds = []
     for i in range(count):
         file_off = seg.file_base + table_offset + i * 2
@@ -399,66 +541,39 @@ def read_dispatch_tables() -> list[tuple[str, int, str]]:
     """Read all known indirect-jump dispatch tables not covered by other flags."""
     seeds = []
 
-    # AD00:0202 — ROM CARD operation dispatch (21 word entries)
-    # Reached via AD00:01FD  jmp [cs:bx+0x202]
-    seeds.extend(read_word_table("AD00", 0x0202, 21, "ad00_op"))
+    for seg_name, table_offset, count, label_prefix in PROFILE.dispatch_tables:
+        seeds.extend(read_word_table(seg_name, table_offset, count, label_prefix))
 
-    # C000:6865 — display stream FF-command dispatch (32 word entries)
-    # Reached via C000:6860  jmp [cs:si+0x6865]
-    seeds.extend(read_word_table("C000", 0x6865, 32, "disp_cmd"))
+    seeds.extend(read_word_table(
+        PROFILE.app_segment, PROFILE.format_table_offset, 7, "fmt_op"
+    ))
 
-    # C000:7421 — extended blit dispatch (5 word entries)
-    # Reached via C000:7414  jmp si  where si = [cs:bx+0x7421], bx = 0..4
-    seeds.extend(read_word_table("C000", 0x7421, 5, "blit_ext"))
+    for addr, label in PROFILE.format_targets:
+        seeds.append((PROFILE.app_segment, addr, label))
 
-    # C772:40ED — format sub-dispatch (7 word entries)
-    # Reached via C772:3FA6  jmp dx  where dx = [cs:si], si = 0x40ED + (al-1)*2
-    seeds.extend(read_word_table("C772", 0x40ED, 7, "fmt_op"))
+    for addr, label in PROFILE.landing_targets:
+        seeds.append((PROFILE.app_segment, addr, label))
 
-    # AD00:1B3B — ROM Card sub-dispatch (7 word entries)
-    # Reached via AD00:1B36  jmp [cs:bx+0x1B3B]
-    seeds.extend(read_word_table("AD00", 0x1B3B, 7, "ad00_sub"))
-
-    # C000:6BCF — display renderer sub-dispatch (10 word entries)
-    # Reached via C000:6BC2  jmp [cs:bx+0x6BCF]
-    seeds.extend(read_word_table("C000", 0x6BCF, 10, "disp_sub"))
-
-    # C772:0494 format entry targets — SI loaded from fmt_op handlers
-    for addr, label in [(0x04E4, "fmt_tgt_0"), (0x0584, "fmt_tgt_1"),
-                         (0x061C, "fmt_tgt_2"), (0x0620, "fmt_tgt_3")]:
-        seeds.append(("C772", addr, label))
-
-    # C772:69D8 — character processing landing pad
-    # Reached via C772:6667  jmp si  where si = [74E6] & 0xFF + 0x69D8
-    seeds.append(("C772", 0x69D8, "landing_69D8"))
-
-    # C772:1756 — text operation landing pad (JMP SHORT fan-out)
-    # Reached via C772:1754  jmp si  where si = (AL & 0xF) * 2 + 0x1756
-    seeds.append(("C772", 0x1756, "landing_1756"))
-
-    # C772:215F — computed-jump landing pad (JMP SHORT fan-out)
-    # Reached via C772:215D  jmp si  where si = byte_index + 0x215F
-    seeds.append(("C772", 0x215F, "landing_215F"))
-
-    # C772:6BE3 — character class landing pad (JMP SHORT fan-out)
-    # Reached via C772:6BE1  jmp si  where si = nibble*2 + 0x6BE3
-    seeds.append(("C772", 0x6BE3, "landing_6BE3"))
-
-    # C772:968A inline search table targets (CALL 968A pattern at 9638)
-    # Table at 963B: match_byte, target_word triples
-    seg = SEGMENTS["C772"]
-    table_off = seg.file_base + 0x963B
-    seen = set()
-    i = 0
-    while i < 30:
-        match_byte = ROM[table_off + i]
-        if match_byte == 0:
-            break
-        target = struct.unpack_from("<H", ROM, table_off + i + 1)[0]
-        if 0 < target < seg.max_offset and target not in seen:
-            seen.add(target)
-            seeds.append(("C772", target, f"search_96_{match_byte:02X}"))
-        i += 3
+    # Inline search-table targets. Format is match_byte, target_word triples.
+    if PROFILE.search_table_offset is not None:
+        seg = SEGMENTS[PROFILE.app_segment]
+        table_off = seg.file_base + PROFILE.search_table_offset
+        seen = set()
+        i = 0
+        while i < 30:
+            match_byte = ROM[table_off + i]
+            if match_byte == 0:
+                break
+            target = struct.unpack_from("<H", ROM, table_off + i + 1)[0]
+            if 0 < target < seg.max_offset and target not in seen:
+                seen.add(target)
+                label = (
+                    f"search_96_{match_byte:02X}"
+                    if PROFILE.name == "v31"
+                    else f"search_{match_byte:02X}"
+                )
+                seeds.append((PROFILE.app_segment, target, label))
+            i += 3
 
     return seeds
 
@@ -583,11 +698,13 @@ def load_trace(path: str) -> int:
 
 
 def main():
-    global ROM
+    global ROM, PROFILE
 
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--rom", type=str, default="v3.1/t4_ir_3.1_e588.ic303")
+    parser.add_argument("--profile", choices=sorted(PROFILES), default=None,
+                        help="ROM layout/profile to use; defaults from --rom path or v31")
+    parser.add_argument("--rom", type=str, default=None)
     parser.add_argument("--seed", action="append", default=[], metavar="SEG:OFF",
                         help="Additional seed entry point (e.g. C000:0029)")
     parser.add_argument("--irqs", action="store_true",
@@ -611,30 +728,22 @@ def main():
                         help="Blacklist address: stop tracing if reached (e.g. C772:40C1)")
     args = parser.parse_args()
 
-    ROM = open(args.rom, "rb").read()
+    profile_name = args.profile
+    if profile_name is None:
+        rom_hint = args.rom or ""
+        if "v3.1.260" in rom_hint or "8c8f" in rom_hint:
+            profile_name = "v31-260"
+        else:
+            profile_name = "v31"
+    PROFILE = PROFILES[profile_name]
+    rom_path = args.rom or PROFILE.default_rom
 
-    # Set up segments for window 6 (port 0x16=0x01, bank 14, file 0xC0000)
-    add_segment("C000", 0xC000, 0x10000)     # C000:0000..FFFF
-    add_segment("C772", 0xC772, 0x188E0)     # C772:0000 to end of window
-    add_segment("DEF0", 0xDEF0, 0x10F00)     # DEF0:0000 to end of window
+    ROM = open(rom_path, "rb").read()
 
-    # Window 3 (port 0x13=0x03 during spell check, bank 12, file 0x80000)
-    # CPU 0x60000-0x7FFFF maps to ROM file 0x80000-0x9FFFF
-    add_segment("6000", 0x6000, 0x20000, file_base=0x80000)
+    for name, seg_value, max_offset, file_base in PROFILE.segments:
+        add_segment(name, seg_value, max_offset, file_base=file_base)
 
-    # Window 4 (port 0x14=0x02 during spell check, bank 13, file 0xA0000)
-    # CPU 0x80000-0x9FFFF maps to ROM file 0xA0000-0xBFFFF
-    add_segment("8000", 0x8000, 0x20000, file_base=0xA0000)
-
-    # Window 5 (port 0x15=0x02 during banked call, bank 13, file 0xA0000)
-    add_segment("AD00", 0xAD00, 0x13000)     # AD00:0000 to end of window
-
-    # Window 7 (port 0x17=0x00, bank 15, file 0xE0000) — fixed, not banked
-    add_segment("ED1B", 0xED1B, 0x12E50)     # ED1B:0000 to end of window
-    add_segment("EE17", 0xEE17, 0x11E90)     # EE17:0000 to end of window
-
-    # Default seeds
-    seeds: list[tuple[str, int, str]] = [("C000", 0x0029, "boot_entry")]
+    seeds: list[tuple[str, int, str]] = list(PROFILE.default_seeds)
 
     # Parse --seed arguments
     for s in args.seed:
@@ -694,17 +803,12 @@ def main():
         else:
             print(f"warning: ignoring unparseable alias '{a}'", file=sys.stderr)
 
-    # C772:022D is a dispatch entry (JMP 3944) used as an inline-data call.
-    # Callers do "CALL 022D" followed by inline parameter bytes, not code.
-    # The handler reads the data from the return address on the stack.
-    # Auto-blacklist every address following a "CALL 022D" in the C772 segment.
-    INLINE_DATA_CALLS = {("C772", 0x022D), ("C772", 0x968A), ("C772", 0x968D)}
-    for seg_name, call_target in INLINE_DATA_CALLS:
+    # Inline-data calls are followed by parameter bytes, not code. Auto-blacklist
+    # every address immediately after a matching near call in that segment.
+    for seg_name, call_target in PROFILE.inline_data_calls:
         seg = SEGMENTS.get(seg_name)
         if seg is None:
             continue
-        call_bytes = struct.pack("<BH", 0xE8, (call_target - 3) & 0xFFFF)  # placeholder
-        # Scan the ROM for "E8 xx xx" where target resolves to call_target
         for off in range(0, seg.max_offset - 2):
             file_pos = seg.file_base + off
             if file_pos + 3 > len(ROM):
@@ -716,37 +820,21 @@ def main():
                     stop_at = off + 3
                     STOP_ADDRS.add((seg_name, stop_at))
 
-    # ED1B: city database and padding regions reached via fake branches
-    STOP_ADDRS.add(("ED1B", 0x959E))
-    STOP_ADDRS.add(("ED1B", 0x99B4))
-    STOP_ADDRS.add(("ED1B", 0xA948))
+    for stop_addr in PROFILE.stop_addrs:
+        STOP_ADDRS.add(stop_addr)
 
     if args.irqs:
-        irq_seeds = [
-            # Explicit IVT vectors (installed by C000:1161)
-            ("C000", 0x1832, "int_01h_debug"),
-            ("C000", 0x04D0, "int_02h_nmi"),
-            # Hardware IRQs F8-FF
-            ("C000", 0x04D0, "irq_f8_nmi"),
-            ("C000", 0x05C0, "irq_f9"),
-            ("C000", 0x05D4, "irq_fa"),
-            ("C000", 0x05F7, "irq_fb_keyboard"),
-            ("C000", 0x0676, "irq_fc"),
-            ("C000", 0x084A, "irq_fd"),
-            ("C000", 0x085E, "irq_fe"),
-            ("C000", 0x03FC, "irq_ff_warm"),
-        ]
-        seeds.extend(irq_seeds)
+        seeds.extend(PROFILE.irq_seeds)
 
     if args.thunks:
-        seeds.extend(read_thunk_table(0x1A00, 12))   # thunk A
-        seeds.extend(read_thunk_table(0x1B38, 12))   # thunk B
+        for table_offset in PROFILE.thunk_tables:
+            seeds.extend(read_thunk_table(table_offset, 12))
 
     if args.int21:
-        # INT 21h validity table at C000:61DF maps AH (0..5F) to slot index.
-        # Dispatch table at C000:623F has word entries indexed by slot.
-        validity_off = 0xC0000 + 0x61DF
-        dispatch_off = 0xC0000 + 0x623F
+        # INT 21h validity table maps AH (0..5F) to a dispatch-table slot.
+        c000 = SEGMENTS["C000"]
+        validity_off = c000.file_base + PROFILE.int21_validity_offset
+        dispatch_off = c000.file_base + PROFILE.int21_dispatch_offset
         dos_names = {
             0x03: "aux_input", 0x04: "aux_output", 0x05: "printer_output",
             0x08: "char_input", 0x0B: "input_status", 0x0E: "select_disk",

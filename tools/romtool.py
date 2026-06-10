@@ -15,7 +15,7 @@ Usage:
   romtool.py segdisasm <seg:off> [cnt]  Disassemble at segment:offset
 
 All offsets accept hex (0x prefix or plain hex) or decimal.
-Default ROM is v3.1; pass --v21 for v2.1.
+Default ROM is v3.1; pass --v31-260 for v3.1.260 or --v21 for v2.1.
 """
 
 from __future__ import annotations
@@ -41,6 +41,22 @@ ROMS = {
             "EE17": (0xEE170, 0x10000),
             "EF8A": (0xEF8A0, 0x10000),
             "ED1B": (0xED1B0, 0x10000),
+            "AD00": (0xAD000, 0x10000),
+            "3000": (0x80000, 0x10000),  # banked
+            "6000": (0x80000, 0x20000),  # banked window 3
+            "8000": (0xA0000, 0x20000),  # banked window 4
+        },
+    },
+    "v31_260": {
+        "path": REPO_DIR / "v3.1.260" / "t4_ir_3.1_8c8f.ic303",
+        "size": 0x100000,
+        "segments": {
+            "C000": (0xC0000, 0x10000),
+            "C774": (0xC7740, 0x10000),
+            "DF80": (0xDF800, 0x10000),
+            "EF50": (0xEF500, 0x10000),
+            "F185": (0xF1850, 0x10000),
+            "EDAB": (0xEDAB0, 0x10000),
             "AD00": (0xAD000, 0x10000),
             "3000": (0x80000, 0x10000),  # banked
             "6000": (0x80000, 0x20000),  # banked window 3
@@ -301,6 +317,7 @@ def main():
         description="DreamWriter T400 ROM data inspection tools"
     )
     parser.add_argument("--v21", action="store_true", help="Use v2.1 ROM instead of v3.1")
+    parser.add_argument("--v31-260", action="store_true", help="Use v3.1.260 ROM instead of v3.1")
     sub = parser.add_subparsers(dest="command")
 
     p = sub.add_parser("dump", help="Hex+ASCII dump at file offset")
@@ -350,7 +367,9 @@ def main():
         parser.print_help()
         return
 
-    rom_key = "v21" if args.v21 else "v31"
+    if args.v21 and args.v31_260:
+        parser.error("--v21 and --v31-260 are mutually exclusive")
+    rom_key = "v21" if args.v21 else "v31_260" if args.v31_260 else "v31"
     rom_info = ROMS[rom_key]
     rom = load_rom(rom_info)
 

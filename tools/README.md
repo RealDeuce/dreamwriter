@@ -14,6 +14,21 @@ Use `--rom PATH` before the subcommand to inspect a different file:
 tools/rom2.py --rom v2.1/t4_ir_2.1.ic303 verify
 ```
 
+For the 1 MiB v3.1-family images, use the small wrappers that patch the shared
+`rom2.py` constants before verification and address conversion:
+
+```sh
+python3 tools/rom3.py
+python3 tools/rom3_260.py
+```
+
+`trace_boot.py` also has version profiles for the 1 MiB v3.1-family layouts:
+
+```sh
+python3 tools/trace_boot.py --profile v31 --irqs --thunks --int21 --menu-vm --dispatch
+python3 tools/trace_boot.py --profile v31-260 --irqs --thunks --int21 --menu-vm --dispatch
+```
+
 The script assumes the 2.1 ROM is loaded at physical `0x80000`, matching the
 local MAME model. File offsets therefore map to physical addresses by adding
 `0x80000`.

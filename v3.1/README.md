@@ -15,6 +15,10 @@ notes.
 
 MAME supports this ROM via `drwrt400 -bios v3_1`.
 
+A later v3.1.260 image is checked in under [`../v3.1.260/`](../v3.1.260/).
+Most v3.1 notes still use the `e588` image as the primary address target; known
+260 deltas are called out where they have been checked.
+
 ## Boot Path
 
 Startup begins at `C000:0000` (file `0xC0000`):
