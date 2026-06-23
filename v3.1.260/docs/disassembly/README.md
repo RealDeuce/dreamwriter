@@ -31,3 +31,9 @@ Current 3.1.260 profile landmarks:
 | INT 21h validity / dispatch tables | `C000:61E8` / `C000:6248` |
 | Display command table | `C000:687B` |
 | Extended blit table | `C000:7437` |
+
+Repair-focused startup notes:
+
+- [`boot-storage-init.md`](boot-storage-init.md) tracks the cold-start path,
+  built-in storage formatter, `0..160` progress counter, and the post-counter
+  `DF80:58F8` cold service init.

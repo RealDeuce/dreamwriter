@@ -61,18 +61,18 @@ These are the ROM CARD envelopes observed so far:
 | `nts_325_basic.ic303` | `[6005]` | read/call `0x09C00` | `0x1210` | `0x1992` | supported, entry `09C0:0008` | [`EROMCARD-MEMCHECK-Original.X`](../examples/eromcard/EROMCARD-MEMCHECK-Original.X) |
 | `t100_2.3.ic303` | none found | none found | none found | none found | unsupported | none |
 | `t4_ir_2.1.ic303` | `[6805]` | read/call `0x0A4F0` | `0xA4F0` | `0x1997` | supported, entry `0A4F:0008` | [`EROMCARD-MEMCHECK-T400.X`](../examples/eromcard/EROMCARD-MEMCHECK-T400.X) |
-| `t4_ir_3.1_e588.ic303` | `[1005]` | read `0x0A4F0`, call pointer at file `+0x2514` (`[0x0CA04]`) | not checked | not checked | documented, no example yet | none |
-| `t4_ir_3.1_8c8f.ic303` | `[1005]` | read `0x0A4F0`, call pointer at file `+0x2514` (`[0x0CA04]`) | not checked | not checked | documented, no example yet | none |
+| `t4_ir_3.1_e588.ic303` | `[1005]` | read `0x0A4F0`, call pointer at file `+0x2514` (`[0x0CA04]`) | not checked | not checked | documented, example built | [`EROMCARD-MEMCHECK-T400-3.1.260.X`](../examples/eromcard/EROMCARD-MEMCHECK-T400-3.1.260.X) |
+| `t4_ir_3.1_8c8f.ic303` | `[1005]` | read `0x0A4F0`, call pointer at file `+0x2514` (`[0x0CA04]`) | not checked | not checked | documented, example built | [`EROMCARD-MEMCHECK-T400-3.1.260.X`](../examples/eromcard/EROMCARD-MEMCHECK-T400-3.1.260.X) |
 | `t4_ir_35ba308.ic303` | `[1005]` | read `0x0A4F0`, call `[0x0CA04]` | not checked | not checked | 1 MiB ROM, unsupported | none |
 | `wales210.ic303` | `[6005]` | read/call `0x09C00` | `0x1210` | `0x1992` | supported, entry `09C0:0008` | [`EROMCARD-MEMCHECK-Original.X`](../examples/eromcard/EROMCARD-MEMCHECK-Original.X) |
 
 The 512 KiB ROM CARD-capable families are now covered by the checked-in
 examples. `drwrt200.bin` is a supported 1 MiB exception because its loader reads
 and calls through the same `0x0CA00` base. The 1 MiB T400 ROM CARD loaders have
-different call-through behavior. For v3.1, `DEF0:2C37` is now documented as a
-real `EROMCARD.X` launcher: it reads the file to `0xA4F0` and calls the far
-pointer loaded at file offset `+0x2514` (`[0xCA04]`). This repository does not
-currently ship a supported v3.1 `EROMCARD.X` example.
+different call-through behavior. For the 1 MiB T400 v3.1 family, `DEF0:2C37`
+(`e588`) and `DF80:2C39` (`8c8f` / v3.1.260) are real `EROMCARD.X` launchers:
+they read the file to `0xA4F0` and call the far pointer loaded at file offset
+`+0x2514` (`[0xCA04]`).
 
 For the T400 2.1 ROM, the checked header is:
 
@@ -86,6 +86,30 @@ For the T400 2.1 ROM, the checked header is:
 For the `0x09C00` loader family, use `0x1210, 0x1992` and an entry segment
 matching the `0x09C00` handoff address. The checked loaders currently validate
 only the first two words before calling the far pointer.
+
+For the 1 MiB T400 v3.1/v3.1.260 loader family, there is no checked two-word
+magic header. The file is still loaded to physical `0x0A4F0`, but the firmware
+calls the far pointer at loaded address `0x0CA04`. Since
+`0x0CA04 - 0x0A4F0 = 0x2514`, a minimal same-segment payload is:
+
+```text
++0x0000..+0x2513  padding or data not used by the firmware handoff
++0x2514           entry offset word, little-endian
++0x2516           entry segment word, normally 0x0A4F
++0x2518           first byte available for code/data if the entry points here
+```
+
+For example, code linked at `org 0` can place the entry immediately after the
+vector and store:
+
+```text
++0x2514  word 0x2518
++0x2516  word 0x0A4F
+```
+
+The resulting entry linear address is `0x0A4F0 + 0x2518 = 0x0CA08`. If the
+entry segment is `0x0A4F`, the entry offset is also the file offset of the entry
+code.
 
 See also:
 
@@ -114,7 +138,7 @@ Known constraints:
 | Size | The file must fit within the loader's available work-memory limit. Oversized files show `Inadequate work memory`. |
 | Load address | The entire file is copied to the ROM-specific load address; it is not executed in place from card storage. |
 | Header | Words at file offsets `+0x00/+0x02` must match the ROM-specific header when the loader checks them. |
-| Entry | For checked header-pointer loaders, file offset `+0x04` holds the far pointer the firmware calls. T400 v3.1 instead calls the far pointer at loaded address `[0xCA04]`, which corresponds to file offset `+0x2514`. |
+| Entry | For checked header-pointer loaders, file offset `+0x04` holds the far pointer the firmware calls. T400 v3.1/v3.1.260 instead calls the far pointer at loaded address `[0xCA04]`, which corresponds to file offset `+0x2514`. |
 | Return | A normal payload can return with `retf`; the firmware then runs the ROM CARD cleanup path. |
 | `AX` | The entry sees the byte work-memory limit used for the size check. |
 | `DS` | Preserve the caller's `DS` before returning. The firmware expects its data segment to survive the external program. |
@@ -148,7 +172,7 @@ Then choose `OTHERS` -> `ROM CARD`.
 
 ## Example Payload
 
-The three `EROMCARD-MEMCHECK-*.X` files under
+The `EROMCARD-MEMCHECK-*.X` files under
 [`../examples/eromcard`](../examples/eromcard) are checked-in examples copied
 from the shared `dw-basic/src/eromcard_memcheck.asm` source with the matching
 ROM CARD envelope selected at build time. Multiple ROMs share the same binary
@@ -165,6 +189,7 @@ Current envelope sizes and hashes:
 T400:    0x0A4F0 / 0xA4F0,0x1997: 378 bytes, 977cd0f0ce738fe182409fe6c86631d1b48bfc3b67bf15d6b06f46ce199a7e38
 Original: 0x09C00 / 0x1210,0x1992: 378 bytes, c6b928201ae7399cc9f8eb856c645f0ad8a8b683d3f9a73ed41050345b465555
 200:      0x0CA00 direct / local marker: 378 bytes, aa0ea8782813eef6f27ea095e1735881e886080bf3bf156fd6a632d7bc25dd46
+T400 v3.1/v3.1.260: 0x0A4F0 / vector at +0x2514: 9866 bytes, 3ce1285f18c71cb97a51f791e54d5231df23bfab784d1f443dfa5797b50bf271
 ```
 
 When installed, the payload file still needs to be named `EROMCARD.X`; the

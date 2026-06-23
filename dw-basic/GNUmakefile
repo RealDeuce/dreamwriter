@@ -15,10 +15,12 @@ SPLIT_SPIKE_DAT_ORG ?= 0x1000
 EROMCARD := $(BUILD_DIR)/EROMCARD.X
 MEMCHECK_EROMCARD := $(BUILD_DIR)/EROMCARD-MEMCHECK.X
 MEMCHECK31_EROMCARD := $(BUILD_DIR)/EROMCARD-MEMCHECK-3.1UK.X
+MEMCHECK31260_EROMCARD := $(BUILD_DIR)/EROMCARD-MEMCHECK-T400-3.1.260.X
 MEMCHECK1M_EROMCARD := $(BUILD_DIR)/EROMCARD-MEMCHECK-1M.X
 MEMCHECK_EXAMPLE_DIR ?= ../examples/eromcard
 MEMCHECK_CARD_OUT ?= /tmp/dw-card-1m-memcheck.bin
 MEMCHECK31_CARD_OUT ?= /tmp/dw-card-1m-memcheck-31uk.bin
+MEMCHECK31260_CARD_OUT ?= /tmp/dw-card-1m-memcheck-t400-31.bin
 GW_EROMCARD := $(BUILD_DIR)/EROMCARD-GW.X
 DW_BASIC_FLT := $(BUILD_DIR)/DW-BASIC.FLT
 DW_BASIC_COD := $(BUILD_DIR)/DW-BASIC.COD
@@ -122,7 +124,7 @@ GW_EROMCARD_IMAGE_FLAGS = -D GW_OVR_SIZE=$$(stat -f %z $(DW_BASIC_FLT))
 endif
 GW_EROMCARD_DEBUG_FLAGS ?=
 
-.PHONY: all basic-card basic-payload clean card flat-size-report flatlink gw-basic-bin gw-objects gw-sources gw-math2-source large-smoke-card large-smoke-payload memcheck-all-payloads memcheck-card memcheck-examples memcheck-payload memcheck1m-payload memcheck31-card memcheck31-payload omf-unresolved omf-unused-public split-basic-card split-basic-files split-basic-nvram split-basic-payload split-gw-basic-bin split-spike-files split-spike-nvram truncate-card truncate-payload
+.PHONY: all basic-card basic-payload clean card flat-size-report flatlink gw-basic-bin gw-objects gw-sources gw-math2-source large-smoke-card large-smoke-payload memcheck-all-payloads memcheck-card memcheck-examples memcheck-payload memcheck1m-payload memcheck31-card memcheck31-payload memcheck31260-card memcheck31260-payload omf-unresolved omf-unused-public split-basic-card split-basic-files split-basic-nvram split-basic-payload split-gw-basic-bin split-spike-files split-spike-nvram truncate-card truncate-payload
 
 all: $(EROMCARD)
 
@@ -137,6 +139,9 @@ $(MEMCHECK_EROMCARD): src/eromcard_memcheck.asm src/include/dwapi.asm | $(BUILD_
 
 $(MEMCHECK31_EROMCARD): src/eromcard_memcheck.asm src/include/dwapi.asm | $(BUILD_DIR)
 	$(NASM) -f bin -I src/include/ -D DW_ROMCARD_PROFILE=31 -o $@ $<
+
+$(MEMCHECK31260_EROMCARD): src/eromcard_memcheck.asm src/include/dwapi.asm | $(BUILD_DIR)
+	$(NASM) -f bin -I src/include/ -D DW_ROMCARD_PROFILE=31260 -o $@ $<
 
 $(MEMCHECK1M_EROMCARD): src/eromcard_memcheck.asm src/include/dwapi.asm | $(BUILD_DIR)
 	$(NASM) -f bin -I src/include/ -D DW_ROMCARD_PROFILE=100 -o $@ $<
@@ -308,9 +313,14 @@ memcheck31-payload: $(MEMCHECK31_EROMCARD)
 memcheck31-card: memcheck31-payload
 	$(PYTHON) tools/install_eromcard.py --card-in $(CARD_IN) --card-out $(MEMCHECK31_CARD_OUT) --payload $(MEMCHECK31_EROMCARD)
 
+memcheck31260-payload: $(MEMCHECK31260_EROMCARD)
+
+memcheck31260-card: memcheck31260-payload
+	$(PYTHON) tools/install_eromcard.py --card-in $(CARD_IN) --card-out $(MEMCHECK31260_CARD_OUT) --payload $(MEMCHECK31260_EROMCARD)
+
 memcheck1m-payload: $(MEMCHECK1M_EROMCARD)
 
-memcheck-all-payloads: $(MEMCHECK_EROMCARD) $(MEMCHECK31_EROMCARD) $(MEMCHECK1M_EROMCARD)
+memcheck-all-payloads: $(MEMCHECK_EROMCARD) $(MEMCHECK31_EROMCARD) $(MEMCHECK31260_EROMCARD) $(MEMCHECK1M_EROMCARD)
 
 memcheck-examples: memcheck-all-payloads
 	mkdir -p $(MEMCHECK_EXAMPLE_DIR)
@@ -318,6 +328,7 @@ memcheck-examples: memcheck-all-payloads
 	cp $(MEMCHECK_EROMCARD) $(MEMCHECK_EXAMPLE_DIR)/EROMCARD-MEMCHECK-T400.X
 	cp $(MEMCHECK1M_EROMCARD) $(MEMCHECK_EXAMPLE_DIR)/EROMCARD-MEMCHECK-200.X
 	cp $(MEMCHECK31_EROMCARD) $(MEMCHECK_EXAMPLE_DIR)/EROMCARD-MEMCHECK-Original.X
+	cp $(MEMCHECK31260_EROMCARD) $(MEMCHECK_EXAMPLE_DIR)/EROMCARD-MEMCHECK-T400-3.1.260.X
 
 large-smoke-payload: $(GW_EROMCARD) src/eromcard.asm src/gw/dwio.asm src/include/dwapi.asm src/include/dwconsole.asm src/include/dwoem.inc | $(BUILD_DIR)
 	$(NASM) -f bin -I src/include/ -DEROMCARD_PAD_SIZE=$$(stat -f %z $(GW_EROMCARD)) -o $(EROMCARD) src/eromcard.asm

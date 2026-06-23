@@ -20,12 +20,24 @@ DW_ROMCARD_HEADER_OFFSET equ 0
 DW_ROMCARD_HEADER_WORD0 equ 0xCA00
 DW_ROMCARD_HEADER_WORD1 equ 0x1997
 DW_ROMCARD_ENTRY_SEGMENT equ 0x0CA0
+%elif DW_ROMCARD_PROFILE = 31260
+DW_ROMCARD_VECTOR_OFFSET equ 0x2514
+DW_ROMCARD_ENTRY_SEGMENT equ 0x0A4F
+%define DW_ROMCARD_HAS_VECTOR 1
 %else
-%error "DW_ROMCARD_PROFILE must be 21, 31, or 100"
+%error "DW_ROMCARD_PROFILE must be 21, 31, 100, or 31260"
 %endif
 
+%ifdef DW_ROMCARD_HAS_VECTOR
+    times DW_ROMCARD_VECTOR_OFFSET - ($ - $$) db 0
+
+; T400 v3.1/v3.1.260 executable vector. The loader reads to physical 0x0A4F0
+; and calls the far pointer at loaded address 0x0CA04, i.e. file offset 0x2514.
+    dw entry
+    dw DW_ROMCARD_ENTRY_SEGMENT
+%else
 %if DW_ROMCARD_HEADER_OFFSET > 0
-    times DW_ROMCARD_HEADER_OFFSET db 0
+    times DW_ROMCARD_HEADER_OFFSET - ($ - $$) db 0
 %endif
 
 ; DreamWriter ROM CARD executable header.
@@ -33,6 +45,7 @@ DW_ROMCARD_ENTRY_SEGMENT equ 0x0CA0
     dw DW_ROMCARD_HEADER_WORD1
     dw entry
     dw DW_ROMCARD_ENTRY_SEGMENT
+%endif
 
 entry:
     mov [cs:launch_ax], ax

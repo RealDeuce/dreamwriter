@@ -18,6 +18,8 @@ VALID_EROMCARD_HEADERS = {
     (0, 0x1210, 0x1992): "T400 3.1",
     (0, 0xCA00, 0x1997): "T200 1 MiB call-through",
 }
+T400_V31_VECTOR_OFFSET = 0x2514
+T400_V31_LOAD_SEGMENT = 0x0A4F
 
 
 def read_word(data: bytes | bytearray, offset: int) -> int:
@@ -138,6 +140,24 @@ def install_file(card: bytearray, geometry: int, name: str, payload: bytes) -> N
     write_dword(card, entry + 0x1C, len(payload))
 
 
+def eromcard_profile_name(payload: bytes) -> str | None:
+    for offset, word0, word1 in VALID_EROMCARD_HEADERS:
+        if (
+            len(payload) >= offset + 8
+            and read_word(payload, offset) == word0
+            and read_word(payload, offset + 2) == word1
+        ):
+            return VALID_EROMCARD_HEADERS[(offset, word0, word1)]
+
+    if len(payload) >= T400_V31_VECTOR_OFFSET + 4:
+        entry_offset = read_word(payload, T400_V31_VECTOR_OFFSET)
+        entry_segment = read_word(payload, T400_V31_VECTOR_OFFSET + 2)
+        if entry_segment == T400_V31_LOAD_SEGMENT and entry_offset < len(payload):
+            return "T400 3.1/3.1.260 vector"
+
+    return None
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--card-in", default="/tmp/dw-card-1m.bin")
@@ -169,12 +189,8 @@ def main() -> None:
 
     if read_word(card, 0) != 0x1997 or read_word(card, 2) != 0x0126:
         raise ValueError("input does not look like a formatted DreamWriter SRAM card")
-    if not any(
-        len(payload) >= offset + 8
-        and read_word(payload, offset) == word0
-        and read_word(payload, offset + 2) == word1
-        for offset, word0, word1 in VALID_EROMCARD_HEADERS
-    ):
+    payload_profile = eromcard_profile_name(payload)
+    if payload_profile is None:
         raise ValueError("payload does not look like a DreamWriter EROMCARD.X image")
 
     geometry = read_word(card, 4)
@@ -189,7 +205,7 @@ def main() -> None:
         installed.append(f"{name} ({len(extra_payload)} bytes)")
     image[store_offset:] = card
     Path(args.card_out).write_bytes(image)
-    print(f"installed {', '.join(installed)} into {args.card_out}")
+    print(f"installed {', '.join(installed)} [{payload_profile}] into {args.card_out}")
 
 
 if __name__ == "__main__":

@@ -60,6 +60,18 @@ Checks the ROM size and SHA-256 digest.
 tools/rom2.py verify
 ```
 
+### `compare_rom_dumps.py`
+
+Generates a first-pass report for one or more newly dumped ROM images. The
+report includes size, SHA-256/SHA-1/CRC32, decoded reset-vector tail, diagnostic
+banner strings, exact reference matches, byte-difference counts, and exact
+128 KiB block matches against the checked-in reference ROMs.
+
+```sh
+tools/compare_rom_dumps.py /path/to/new-dump.ic303
+tools/compare_rom_dumps.py dumps/*.bin
+```
+
 ### `addr`
 
 Converts between ROM file offsets, physical addresses, and canonical

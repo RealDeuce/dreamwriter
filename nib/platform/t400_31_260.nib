@@ -1,0 +1,144 @@
+// DreamWriter T400 ROM v3.1.260 platform service declarations for Nib.
+//
+// This module describes confirmed service-level ROM entry points for
+// t4_ir_3.1_8c8f.ic303. The low-RAM table shape matches v3.1, but service
+// targets moved again from DEF0 to DF80 and adjacent C000 helpers shifted.
+
+pub const DW_PLATFORM_T400_31_260 = 31260;
+
+pub const DW_LOWRAM_SEG = 0x0000;
+pub const DW_LOWRAM_VECTOR_TABLE = 0x0200;
+pub const DW_LOWRAM_VECTOR_COUNT = 41;
+
+pub const DW_VEC_DISPLAY_STREAM = 0x0200;
+pub const DW_VEC_DISPLAY_TEXT = 0x0204;
+pub const DW_VEC_DISPLAY_RECTS = 0x0208;
+pub const DW_VEC_DISPLAY_SETUP = 0x0220;
+pub const DW_VEC_KEY_READ = 0x0230;
+pub const DW_VEC_KEY_IDLE = 0x0234;
+pub const DW_VEC_DATE_SET = 0x0238;
+pub const DW_VEC_SERIAL_INPUT = 0x023C;
+pub const DW_VEC_FILE_OPEN_DEFAULT = 0x0240;
+pub const DW_VEC_FILE_OPEN = 0x0244;
+pub const DW_VEC_FILE_READ = 0x0248;
+pub const DW_VEC_FILE_WRITE = 0x024C;
+pub const DW_VEC_FILE_CLOSE = 0x0250;
+pub const DW_VEC_FILE_DELETE = 0x0254;
+pub const DW_VEC_FILE_RENAME = 0x025C;
+pub const DW_VEC_FILE_SEEK = 0x0260;
+pub const DW_VEC_FILE_TELL = 0x0264;
+pub const DW_VEC_FILE_LENGTH = 0x0270;
+pub const DW_VEC_FREE_SPACE = 0x0280;
+pub const DW_VEC_FIND_FIRST = 0x0284;
+pub const DW_VEC_FIND_NEXT = 0x0288;
+
+pub const DW_STATUS_OK = 0x0000;
+pub const DW_STATUS_ERROR = 0xffff;
+
+pub const DW_FILE_OPEN_ACCESS_MASK = 0x0003;
+pub const DW_FILE_OPEN_APPEND = 0x0010;
+pub const DW_FILE_OPEN_CREATE_IF_MISSING = 0x0020;
+pub const DW_FILE_OPEN_REPLACE = 0x0040;
+pub const DW_FILE_OPEN_DEFAULT_MODE = 0x0061;
+
+pub const DW_SEEK_SET = 0x0000;
+pub const DW_SEEK_CUR = 0x0001;
+pub const DW_SEEK_END = 0x0002;
+
+pub const DW_ROMCARD_T400_31_260_LOAD_SEG = 0x0a4f;
+pub const DW_ROMCARD_T400_31_260_ENTRY_VECTOR_OFFSET = 0x2514;
+pub const DW_ROMCARD_T400_31_260_ENTRY_CODE_OFFSET = 0x2518;
+
+pub far32[DW_LOWRAM_VECTOR_COUNT] dw_lowram_vectors at(0x0000:0x0200);
+
+// [0200] -> C000:3F3E. AX:BX is offset:segment, CX is byte count.
+extern fn far [0xC000:0x3F3E] dw_display_stream_raw(
+    resource_off: u16 in AX,
+    resource_seg: u16 in BX,
+    byte_count: u16 in CX
+) ds(0x0000) clobbers(BX, ES, FLAGS);
+
+// [0204] -> DF80:0D93. AX:BX is offset:segment for NUL-terminated text.
+// The wrapper writes coord_dx then coord_cx into the FF 40 display record.
+extern fn far [0xDF80:0x0D93] dw_display_text_raw(
+    text_off: u16 in AX,
+    text_seg: u16 in BX,
+    coord_dx: u16 in DX,
+    coord_cx: u16 in CX
+) ds(0x0000) clobbers(AX, CX, DX, BX, ES, FLAGS);
+
+// [0220] -> DF80:0D82. Emits the standard display setup resource.
+extern fn far [0xDF80:0x0D82] dw_display_setup()
+    ds(0x0000)
+    clobbers(AX, BX, ES, FLAGS);
+
+// [0230] -> DF80:0045. Blocking translated key/event read.
+extern fn far [0xDF80:0x0045] dw_key_read() -> u16 in AX
+    ds(0x0000)
+    clobbers(CX, DX, BX, SI, DI, ES, FLAGS);
+
+// [0234] -> DF80:0065. Keyboard input status / idle wait helper.
+extern fn far [0xDF80:0x0065] dw_key_idle() -> u16 in AX
+    ds(0x0000)
+    clobbers(CX, DX, BX, SI, DI, ES, FLAGS);
+
+// C000:0A45 is a far wrapper around the C000:0B30 near tone helper.
+// BX=timer divisor, CX=duration loop count; CF is set on interruption.
+extern fn far [0xC000:0x0A45] dw_tone_duration(
+    divisor: u16 in BX,
+    duration: u16 in CX
+) ds(none) clobbers(FLAGS);
+
+// [023C] -> C000:3F50. Serial input wrapper; AH is cleared on return.
+extern fn far [0xC000:0x3F50] dw_serial_input() -> u16 in AX
+    ds(0x0000)
+    clobbers(AX, ES, FLAGS);
+
+// [0240] -> DF80:F005. Opens with firmware default mode 0x0061.
+// DS must address the caller's NUL-terminated path buffer.
+extern fn far [0xDF80:0xF005] dw_file_open_default(
+    path_off: u16 in AX
+) -> u16 in AX ds(caller) clobbers(CX, DX, BX, SI, DI, ES, FLAGS);
+
+// [0248] -> DF80:F551. DS:buffer_off is the destination buffer.
+extern fn far [0xDF80:0xF551] dw_file_read(
+    handle: u16 in AX,
+    buffer_off: u16 in BX,
+    byte_count: u16 in CX
+) -> u16 in AX ds(caller) clobbers(CX, BX, ES, FLAGS);
+
+// [024C] -> DF80:F18D. DS:buffer_off is the source buffer.
+extern fn far [0xDF80:0xF18D] dw_file_write(
+    handle: u16 in AX,
+    buffer_off: u16 in BX,
+    byte_count: u16 in CX
+) -> u16 in AX ds(caller) clobbers(CX, DX, BX, SI, DI, ES, FLAGS);
+
+// [0250] -> DF80:F577. Returns 0 on success, FFFF on error.
+extern fn far [0xDF80:0xF577] dw_file_close(
+    handle: u16 in AX
+) -> u16 in AX ds(caller) clobbers(BX, ES, FLAGS);
+
+// [0254]/[0258] -> DF80:F589. DS:path_off is the path to delete.
+extern fn far [0xDF80:0xF589] dw_file_delete(
+    path_off: u16 in AX
+) -> u16 in AX ds(caller) clobbers(DX, ES, FLAGS);
+
+// [025C] -> DF80:F59F. DS addresses both old and new path buffers.
+extern fn far [0xDF80:0xF59F] dw_file_rename(
+    old_path_off: u16 in AX,
+    new_path_off: u16 in BX
+) -> u16 in AX ds(caller) clobbers(DX, BX, DI, ES, FLAGS);
+
+// [0260] -> DF80:F5BB. Returns new position in BX:AX, or FFFF:FFFF.
+extern fn far [0xDF80:0xF5BB] dw_file_seek(
+    handle: u16 in AX,
+    origin: u16 in BX,
+    offset_low: u16 in CX,
+    offset_high: u16 in DX
+) -> u16 in AX, u16 in BX ds(caller) clobbers(CX, DX, ES, FLAGS);
+
+// [0270] -> DF80:F363. Returns file length in BX:AX, preserving position.
+extern fn far [0xDF80:0xF363] dw_file_length(
+    handle: u16 in AX
+) -> u16 in AX, u16 in BX ds(caller) clobbers(CX, DX, SI, DI, ES, FLAGS);

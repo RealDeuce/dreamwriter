@@ -239,6 +239,20 @@ path: read to `0xA4F0`, close, `C772:0212`, then `C772:0217 call far [0xca04]`.
 Therefore the vector setup is the file read itself, and a v3.1 `EROMCARD.X`
 must place its far entry pointer at file offset `+0x2514`.
 
+The practical binary envelope is therefore:
+
+```text
++0x0000..+0x2513  padding or payload data not used by the handoff
++0x2514           entry offset word
++0x2516           entry segment word
++0x2518           first byte available for code if the entry points here
+```
+
+A same-segment payload loaded at `0x0A4F0` can use segment `0x0A4F` and an
+entry offset equal to the code's file offset. If the entry starts immediately
+after the vector, the words at `+0x2514` are `0x2518, 0x0A4F`, and execution
+starts at physical `0x0CA08`.
+
 ## Later v3.1 8c8f Variant
 
 `t4_ir_3.1_8c8f.ic303` keeps the same launcher ABI, but the surrounding code
@@ -265,10 +279,10 @@ The later ROM still reads `EROMCARD.X` to `0xA4F0`, then calls through
 | Condition | Action |
 | --- | --- |
 | Neither candidate path is found | Display `No ROM card is in the slot` plus `Press CAN to exit`; wait for `0x03` or `0x0B`. |
-| File size exceeds `C772:01CD` work-memory limit | Cleanup via `C772:01F3`; display `Inadequate work memory` plus `Press CAN to exit`; wait for `0x03` or `0x0B`. |
-| Open fails | Cleanup via `C772:01F3`; display `Can not open EROMCARD.X`; wait once; return zero. |
-| Read count is less than DTA file size | Close, cleanup via `C772:01F3`; display `Not enough memory`; wait once; return zero. |
-| Read succeeds | Close, call payload through `C772:0212`, cleanup via `C772:01F3`, return payload `AX`. |
+| File size exceeds `C772:01CD` (`8c8f`: `C774:01CC`) work-memory limit | Cleanup via `C772:01F3` (`8c8f`: `C774:01F2`); display `Inadequate work memory` plus `Press CAN to exit`; wait for `0x03` or `0x0B`. |
+| Open fails | Cleanup via `C772:01F3` (`8c8f`: `C774:01F2`); display `Can not open EROMCARD.X`; wait once; return zero. |
+| Read count is less than DTA file size | Close, cleanup via `C772:01F3` (`8c8f`: `C774:01F2`); display `Not enough memory`; wait once; return zero. |
+| Read succeeds | Close, call payload through `C772:0212` (`8c8f`: `C774:0211`), cleanup via `C772:01F3` (`8c8f`: `C774:01F2`), return payload `AX`. |
 
 ## Call Flow
 
