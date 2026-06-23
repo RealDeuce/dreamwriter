@@ -653,15 +653,19 @@ without reprogramming the USART, so the active transfer line discipline appears
 to be the forced probe discipline rather than the user's configured one.
 
 The WP -> COMMUNICATE -> TERMINAL entry point is `C688:EC5A`, which calls the
-low-ROM terminal service through `C000:1712` with `AH=7`. The terminal loop at
-`C000:1089` initializes the serial path, polls translated keys through
-`int 21h AH=08`, and sends bytes through `int 21h AH=04`.
+low-ROM terminal service through `C000:1712` with `AH=7`. In the older mapped
+ROMs, the terminal loop at `C000:1089` initializes the serial path, polls
+translated keys through `int 21h AH=08`, and sends bytes through
+`int 21h AH=04`. The later 31BAB260 ROM uses the same low-ROM service shape;
+its terminal monitor starts at `C000:132E` and sends through `int 21h AH=04`.
 
-The terminal key translation at `C000:10E4` is a small one-byte remap, not an
-ECMA-48 or VT52 escape-sequence generator:
+The terminal key translation is a small one-byte remap, not an ECMA-48 or VT52
+escape-sequence generator. The older table is at `C000:10E4`; the 31BAB260
+table is at `C000:1389`.
 
 | Physical key | Translated key code | Sent byte | Meaning |
 | --- | ---: | ---: | --- |
+| `BACK`/`BACKSPACE` | `0x08` | `0x08` | BS; present in 31BAB260 |
 | `LEFT` | `0x11` | `0x08` | BS |
 | `RIGHT` | `0x10` | `0x0C` | FF |
 | `DOWN` | `0x12` | `0x0A` | LF |
@@ -673,7 +677,9 @@ The keyboard tables backing this are at `C000:53E9` and related shifted/control
 variants. In the normal table, the physical arrow positions translate to
 `LEFT=0x11`, `DOWN=0x12`, `RIGHT=0x10`, and `UP=0x13`. The terminal loop sends
 ordinary printable bytes unchanged for `0x20..0xBF`; other control-like key
-codes are mostly ignored unless present in the `C000:10E4` remap table.
+codes are mostly ignored unless present in the remap table. In 31BAB260,
+translated code `0xEC` also re-sends the saved byte at `[1498]` through the same
+single-byte send helper.
 
 The receive side does not expose a raw path into the display-resource opcode
 stream. `C000:1118` passes the received byte to `DC98:0038`, whose inner
@@ -686,34 +692,56 @@ operations rather than copying arbitrary bytes into the display stream.
 display stream containing `FF 02` cursor positioning, optional style bytes from
 terminal state, and the sanitized character before calling `C000:67AD`. So
 serial input can exercise the terminal's character/control handling, but not the
-raw `FF 40`/`FF 42`/`FF 44` bitmap and drawing opcodes.
+raw `FF 40`/`FF 42`/`FF 44` bitmap and drawing opcodes. In 31BAB260, the
+equivalent received-character path is `DF80:E3C1`; printable input is sanitized
+the same way before drawing, and `ESC` enters the parser at `DF80:E783`.
 
 The terminal control parser is small and mostly ANSI/VT100-like. It enters the
 parser on `ESC` (`0x1B`), requires `[`, accumulates decimal parameters and
-semicolons in the buffer at `8C83`, and dispatches on the final byte:
+semicolons, and dispatches on the final byte. The older parser stores its
+parameter text at `8C83`; the 31BAB260 parser uses `A7BB` and clips decoded
+parameter values at 99 in `DF80:EF4A`.
 
-| Sequence | Handler | Operation |
-| --- | --- | --- |
-| `ESC [ row ; col H` | `DC98:E17B` | Move cursor to `row,col`; parameters are 1-based, clamped to the 8x80 terminal area, and missing/zero values become 0. |
-| `ESC [ row ; col f` | `DC98:E17B` | Same as `H`. |
-| `ESC [ n A` | `DC98:E2D3` | Move cursor up `n` rows; default `n=1`, clamped at row 0. |
-| `ESC [ n B` | `DC98:E31A` | Move cursor down `n` rows; default `n=1`, clamped at row 7. |
-| `ESC [ n C` | `DC98:E249` | Move cursor right `n` columns; default `n=1`, clamped at column 79. |
-| `ESC [ n D` | `DC98:E28C` | Move cursor left `n` columns; default `n=1`, clamped at column 0. |
-| `ESC [ n J` | `DC98:E35D` | Erase display: `0` clears from cursor to end, `1` clears from start through cursor and leaves the cursor at home, `2` clears all and homes the cursor. |
-| `ESC [ n K` | `DC98:E38E` | Erase line: `0` clears from cursor to end, `1` clears from start through cursor and leaves column 0 selected, `2` clears the whole line and leaves column 0 selected. |
-| `ESC [ n L` | `DC98:E47D` | Insert `n` blank lines at the cursor row; default `n=1`, clamped to the remaining rows, and column becomes 0. |
-| `ESC [ n M` | `DC98:E5AD` | Delete `n` lines at the cursor row; default `n=1`, clamped to the remaining rows, and column becomes 0. |
-| `ESC [ s` | `DC98:E74C` | Save cursor column and row to `8C79`/`8C7B`. |
-| `ESC [ u` | `DC98:E759` | Restore cursor column and row from `8C79`/`8C7B`. |
-| `ESC [ ... m` | `DC98:E1CF` | SGR-style attributes. Recognized parameters are `0` reset, `1` bold (`F8` style byte), `4` underline-like (`F0` style byte), `7` reverse-like (`F2` style byte), and `8` conceal printable bytes as spaces. Multiple parameters are accepted. |
-| `ESC [ > 5 h` | `DC98:E236` | Private cursor-state toggle; this path passes `0` to `DC98:DC69`, clearing the cursor-visible flag. |
-| `ESC [ > 5 l` | `DC98:E236` | Private cursor-state toggle; this path passes `1` to `DC98:DC69`, setting the cursor-visible flag. |
+| Sequence | Older handler | 31BAB260 handler | Operation |
+| --- | --- | --- | --- |
+| `ESC [ row ; col H` | `DC98:E17B` | `DF80:E8AB` | Move cursor to `row,col`; parameters are 1-based and clamped to the 8x80 terminal area. Missing or zero parameters select internal coordinate 0, so they behave like row/column 1 on the wire. |
+| `ESC [ row ; col f` | `DC98:E17B` | `DF80:E8AB` | Same as `H`. |
+| `ESC [ n A` | `DC98:E2D3` | `DF80:EA03` | Move cursor up `n` rows; default `n=1`, clamped at row 0. |
+| `ESC [ n B` | `DC98:E31A` | `DF80:EA4A` | Move cursor down `n` rows; default `n=1`, clamped at row 7. |
+| `ESC [ n C` | `DC98:E249` | `DF80:E979` | Move cursor right `n` columns; default `n=1`, clamped at column 79. |
+| `ESC [ n D` | `DC98:E28C` | `DF80:E9BC` | Move cursor left `n` columns; default `n=1`, clamped at column 0. |
+| `ESC [ n J` | `DC98:E35D` | `DF80:EA8D` | Erase display; missing `n` defaults to `0`. `0` clears from cursor to end, `1` clears from start through cursor, `2` clears all. The older `1`/`2` paths home the cursor; 31BAB260 homes on `2`. |
+| `ESC [ n K` | `DC98:E38E` | `DF80:EABE` | Erase line; missing `n` defaults to `0`. `0` clears from cursor to end, `1` clears from start through cursor, `2` clears the whole line. The older `1`/`2` paths leave column 0 selected. |
+| `ESC [ n L` | `DC98:E47D` | `DF80:EBAD` | Insert `n` blank lines at the cursor row; default `n=1`, clamped to the remaining rows, and column becomes 0. |
+| `ESC [ n M` | `DC98:E5AD` | `DF80:ECDD` | Delete `n` lines at the cursor row; default `n=1`, clamped to the remaining rows, and column becomes 0. |
+| `ESC [ s` | `DC98:E74C` | `DF80:EE7C` | Save cursor column and row; parameters are ignored. The saved state lives at `8C79`/`8C7B` in the older parser and `A7B1`/`A7B3` in 31BAB260. |
+| `ESC [ u` | `DC98:E759` | `DF80:EE89` | Restore the saved cursor column and row; parameters are ignored. |
+| `ESC [ ... m` | `DC98:E1CF` | `DF80:E8FF` | SGR-style attributes; a missing parameter defaults to `0`, so `ESC [ m` resets. Recognized parameters are `0` reset, `1` bold (`F8` style byte), `4` underline-like (`F0` style byte), `7` reverse-like (`F2` style byte), and `8` conceal printable bytes as spaces. Multiple parameters are accepted; 31BAB260 keeps the style bits combinable until reset. Selective disables such as `22`, `24`, `27`, and `28` are not recognized. |
+| `ESC [ > 5 h` | `DC98:E236` | `DF80:E966` | Private cursor-state toggle; only private parameter `5` is recognized. This path passes `0` to the cursor-visible setter, clearing the cursor-visible flag. |
+| `ESC [ > 5 l` | `DC98:E236` | `DF80:E966` | Private cursor-state toggle; only private parameter `5` is recognized. This path passes `1` to the cursor-visible setter, setting the cursor-visible flag. |
 
-No terminal query/report sequences are recognized in this parser. Final bytes
-such as `n` for DSR/status report, `c` for device attributes, or cursor-position
-report requests are not dispatched, and this receive-side parser does not call
-the serial transmit helper.
+The 31BAB260 received-character path also handles the following C0 controls
+before CSI parsing:
+
+| Byte | Name | 31BAB260 handler | Operation |
+| ---: | --- | --- | --- |
+| `0x07` | BEL | `DF80:00FB` | Sound the terminal bell. |
+| `0x08` | BS | `DF80:E706` | Move left one cell; wraps to column 79 of the previous row when possible. |
+| `0x09` | HT | `DF80:E664` | Move to the next 8-column tab stop; wraps or scrolls if that reaches column 80. |
+| `0x0A` | LF | `DF80:E69F` | Line feed, scrolling at the bottom row. |
+| `0x0B` | VT | `DF80:E73A` | Move up one row if not already on row 0. |
+| `0x0C` | FF | `DF80:E6D6` | Move right one cell; wraps to column 0 of the next row or scrolls at the bottom row. |
+| `0x0D` | CR | `DF80:E6C9` | Carriage return. |
+| `0x1A` | SUB | `DF80:EB3C` | Clear all display and home the cursor. |
+| `0x1B` | ESC | `DF80:E776` | Enter the CSI parser state. |
+| `0x1E` | RS | `DF80:E6B6` | Home the cursor. |
+
+No terminal query/report sequences are recognized in either parser. Final bytes
+such as `n` for DSR/status report, `c` for device attributes, or
+cursor-position report requests are not dispatched, and the receive-side parser
+does not call the serial transmit helper. In 31BAB260, the `n` comparisons found
+outside this parser are Y/N prompt validators at `DF80:17F9` and `DF80:D0BA`,
+not terminal responses.
 
 MAME now maps ports `0xC0..0xC1` to the generic `I8251` device with the device
 tag `upd71051`, matching the likely NEC uPD71051-compatible part. Port `0x30`
