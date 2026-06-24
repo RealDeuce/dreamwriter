@@ -16,6 +16,66 @@ host file format (`RTF` or `TEXT`).
 
 All byte values below are hexadecimal unless stated otherwise.
 
+## ROM 3.1 Comparison
+
+The T400 3.1-family ROMs keep the same DreamLink wire protocol and command
+set, but the implementation moved and the response parser changed one important
+error case. The checked `v3.1/t4_ir_3.1_e588.ic303` image has the shared
+DreamLink parser at `C000:5A0B`; `v3.1.260/t4_ir_3.1_8c8f.ic303` has the same
+logic shifted by nine bytes; `../roms/t4_ir_35ba308.ic303` has the same parser
+shape at `C000:5C2E` with a different low-RAM scratch block.
+
+Wire-level behavior that matches the 2.1 extraction:
+
+| Behavior | 3.1 evidence |
+| --- | --- |
+| `18` startup handshake | Still sends `13 18 11` and strictly expects `13 18 06 11`. |
+| directory probe/listing | Still sends `47`, then `4E`, then up to 127 `4F` requests. |
+| file command bytes | Still uses `13`, `17`, `3C`, `3D`, `3E`, `3F`, `40`, and `44` for the same operations. |
+| ACK policy | The no-ACK list is still `13 17 3C 3D 3E 3F 40 44`; successful `47`, `4E`, and `4F` responses still get `06 11`. |
+| alternate second byte handling | `06` and `0F` as the response's second byte still read one following byte and return success. Other unexpected second bytes still return success/no-op. |
+| escaped file streams | The `08 <byte+60>` escape and unescaped `1A` EOF model remains unchanged. |
+
+The parser difference is the first response byte. In 2.1, a first byte other
+than `13` is treated as success/no-op. In 3.1, the parser records error `31`,
+shows an error path, records error `15`, and returns failure. The later
+`35ba308` build also displays both the expected command byte and the actual bad
+prefix byte on that path, but this is diagnostic/UI behavior rather than a
+different wire protocol.
+
+3.1 moved the DreamLink scratch state:
+
+| Meaning | 2.1 | 3.1 e588 / 8c8f | 35ba308 |
+| --- | ---: | ---: | ---: |
+| expected response command | `7037` | `6FEE` | `6EEE` |
+| directory page index | `7038` | `6FEF` | `6EEF` |
+| returned handle/word | `703B` | `6FF2` | `6EF2` |
+| additive accumulator/check byte | `7049` | `6FF6` | `6EF6` |
+| data block position | `704A` | `6FF7` | `6EF7` |
+| response scratch bytes | `704C..7054` | `6FF9..7001` | `6EF9..6F01` |
+| status byte | `7051` | `6FFE` | `6EFE` |
+| error/detail byte | `7052` | `6FFF` | `6EFF` |
+| command extra/check byte | `7053` | `7000` | `6F00` |
+| trailer byte, normally `11` | `7054` | `7001` | `6F01` |
+
+3.1 also moved the temporary serial settings used by the DreamLink probe. The
+e588 and 8c8f builds save and rewrite `132E..1332`; the `35ba308` build uses
+`1332..1336`. Both write the same effective probe settings: `06 01 00 00 00`,
+matching 9600 bps, 8 data bits, no parity, 1 stop bit, and XON/XOFF disabled.
+
+The e588 command senders are:
+
+| File API / operation | 3.1 e588 routine | DreamLink command |
+| --- | --- | ---: |
+| create/truncate, `AH=3C` | `C000:5D25` | `3C` |
+| delete, likely `AH=41` | `C000:5DB7` | `13` |
+| open, `AH=3D` | `C000:5DFA` | `3D` |
+| read setup/data, `AH=3F` | `C000:5E61`, `C000:5EB2` | `3F` |
+| write setup/data/finish, `AH=40` | `C000:5FC2`, `C000:5FE7`, `C000:60A7` | `40` |
+| close, `AH=3E` | `C000:6116` | `3E` |
+| rename, likely `AH=56` | `C000:6149` | `17` |
+| initialize/format, private `AH=FF BL=A5 DL=0A` | `C000:61BB` | `44` |
+
 ## Serial Setup
 
 The DreamLink endpoint probe is `C000:41A8`. It temporarily rewrites the serial
