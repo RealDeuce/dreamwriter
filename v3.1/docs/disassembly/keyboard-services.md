@@ -81,10 +81,70 @@ Key layout (unshifted): `32qwe`, `sd4`, `zxarfbvtygc6`, `\/hn=7`,
 `umk8-]'ij,09`, `p;lo.` — matching the DreamWriter physical key
 arrangement.
 
+Selected non-printing keys from the same unshifted table are:
+
+| Physical key | Matrix position | Translated byte |
+| --- | --- | ---: |
+| `ENTER` / Return | row 0 bit 4 | `DA` |
+| `INS` | row 6 bit 2 | `0D` |
+| `CAN` | row 1 bit 2 | `03` |
+| `WP` | row 7 bit 4 | `0B` |
+
+This is UI-command translation, not terminal-mode transmitted characters.
+Terminal mode remaps several physical keys separately before serial output.
+
 ### ROM Key Code Mapping Source (C000:3927, 80 bytes)
 
 Copied to RAM `[1643..1692]` by `C000:3EBB`. Maps key repeat
 pairings.
+
+## Translation Modes
+
+The IRQ path does not enqueue a final character byte directly. `C000:3D0E`
+stores a packed event in the ring buffer at `[1694...]`: `DL` is the matrix
+index (`row * 8 + column`) and `DH` contains modifier flags built by
+`C000:3D44`. The dequeue path `C000:3DBA` then translates that packed event.
+
+Important `C000:3DBA` cases:
+
+| Condition | Translation behavior |
+| --- | --- |
+| `[143C] & 0x01` | Diagnostic/special table at `C000:3E5C`. |
+| `[143C] & 0x08` | Six 80-byte tables copied to `[1126...]`; modifier state indexes the pointer table at `[1114...]`. This is the mode that exposes the editor command bytes from the `C000:3A17` control table. |
+| Normal mode, `DH & 0x80` and not Alt | Uses the separate key-code mapping table at `[1643...]` copied from `C000:3927`, not the `C000:3A17` control table. |
+| Normal mode, no Ctrl special case | Uses the six translation tables through `C000:3EAC`. |
+
+This distinction matters when naming word-processor commands. In the editor
+six-table mode, the control table at `C000:3A17` maps the manual's text-layout
+keys to these command bytes:
+
+| Manual key | Matrix key | Editor command byte |
+| --- | --- | ---: |
+| `CTRL+1` | `1` | `E2` |
+| `CTRL+2` | `2` | `E3` |
+| `CTRL+5` | `5` | `EE` |
+| `CTRL+6` | `6` | `EF` |
+| `CTRL+7` | `7` | `F1` |
+| `CTRL+8` | `8` | `F2` |
+| `CTRL+9` | `9` | `18` |
+| `CTRL+0` | `0` | `05` |
+| `CTRL+TAB` | `TAB` | `07` |
+| `CTRL+INS` | `INS` | `E7` |
+| `CTRL+_` | `-` / `_` | `ED` |
+| `CTRL+C` | `C` | `1E` |
+| `CTRL+R` | `R` | `19` |
+| `CTRL+E` | `E` | `D6` |
+| `CTRL+G` | `G` | `D8` |
+| `CTRL+H` | `H` | `D1` |
+| `CTRL+V` | `V` | `D4` |
+| `CTRL+X` | `X` | `F4` |
+| `CTRL+B` | `B` | `E0` |
+| `CTRL+Z` | `Z` | `E1` |
+| `CTRL+Q` | `Q` | `FC` |
+| `CTRL+W` | `W` | `FB` |
+
+Those are editor input command bytes. They should not be confused with stored
+word-processor body markers of the same numeric value.
 
 ### State Variables
 

@@ -88,10 +88,42 @@ Dispatches on `[6F51]` (DreamLink endpoint):
 - `0x0B` → `C000:0D53`
 - other → `C000:0D61`
 
-## C000:2295 — State Save
+## C000:2295 — Request-Record Service Dispatcher
 
-Saves display state: reads `[7195]`, stores configuration to
-`[143C]` flag byte. Called from slot 0 before display operations.
+Called from thunk-A multi-function service `AL=5` (`C000:1AD6`). The caller
+passes a request script through `[ES:SI]`; `C000:2295` follows the script
+pointer to the request record, reads the subservice byte, and dispatches
+through the word table at `C000:22EF`.
+
+Result convention:
+
+| Request offset | Meaning |
+| ---: | --- |
+| `+0x04` | Returned pointer, usually a buffer or count word such as `[1006]`. |
+| `+0x06` | Returned status word. Low byte is cleared; high byte receives the service status/error value. |
+
+Subservices used by the word-processor file paths include:
+
+| Subservice | Handler | Current read |
+| ---: | --- | --- |
+| `0x00` | `C000:2309` | Find-first/probe selected file via `AH=4Eh`; maps common DOS errors into UI status codes. |
+| `0x01` | `C000:2339` | Rename: get attributes with `AH=43h`, reject read-only files, then rename with `AH=56h`. |
+| `0x02` | `C000:238D` | Delete with `AH=41h`. |
+| `0x03` | `C000:23BB` | Device/drive control call through `INT 21h AH=FFh`. |
+| `0x04` | `C000:2417` | Open/read selected file: open with `AH=3Dh`, read up to 128 bytes with `AH=3Fh`, close with `AH=3Eh` at EOF. |
+| `0x05` | `C000:24C0` | Create/open and write selected file: create with `AH=3Ch` or open with `AH=3Dh` on endpoint `0x0B`, hand off `[1006]` count plus `[1008]` data buffers, write full 128-byte chunks with `AH=40h`, close on final short write. Local native STORE does not append a payload `0x1A`; DreamLink EOF is transport-level. |
+| `0x06` | `C000:25EC` | Drive free-space/status summary via `AH=36h`; formats counts into `[7A4C...]`. |
+| `0x07` | `C000:2798` | Plain-text export: creates a text file and writes a filtered editor-stream view. |
+| `0x08` | `C000:29A5` | Plain-text import: opens a text file and feeds translated bytes to the editor endpoint. |
+| `0x09` | `C000:2B82` | Finish/EOF helper: sends an output `0x1A` and closes/finishes the transfer path. |
+| `0x0A` | `C000:23E8` | Get/set file attributes with `AH=43h`; returns attributes in `SI`. |
+| `0x0B` | `C000:2B90` | Handshaked file send/read path using 128-byte file reads and endpoint `AH=03h/04h`. |
+| `0x0C` | `C000:2C85` | Handshaked receive/write path using endpoint `AH=04h`, block/checksum validation, and `AH=40h` file writes. |
+
+The native WP edited-file converter in `C772:8046` reaches this dispatcher via
+`C772:861B`/`C772:863C` and thunk-A slot 6 (`C772:970F` with `AH=6`). Those
+paths are documented with the edited-file format in
+[`wp-edited-file-format.md`](wp-edited-file-format.md).
 
 ## C772 Blocks Reached via Thunk A
 

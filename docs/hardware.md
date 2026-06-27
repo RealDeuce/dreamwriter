@@ -145,20 +145,25 @@ on these keys, unconditional MAME keypad aliases are acceptable.
 
 ## LCD / Framebuffer
 
-MAME models the display as a RAM scanout window selected by I/O port `0x00`.
+MAME/Dreamulator model the display as a RAM scanout window selected by I/O port
+`0x00`.
 
-ROM boot writes:
+The selected framebuffer base is state-dependent:
 
 ```asm
+; v2.1 cold boot
 C000:0055  mov al,08
-C000:0057  out 00,al
+C000:0057  out 00,al       ; 0x08 << 9 = 0x1000
+
+; v3.1 cold boot
+C000:004A  mov al,40
+C000:004C  out 00,al       ; 0x40 << 9 = 0x8000
 ```
 
-MAME interprets that as:
+The emulator interprets the port value as:
 
 ```text
 lcd_base = value << 9
-0x08 << 9 = 0x1000
 ```
 
 Display geometry in MAME:
@@ -201,7 +206,7 @@ C000:08A2  retf
 
 | Port | Evidence |
 | ---: | --- |
-| `0x00` | LCD scanout base select. Boot writes `0x08`. |
+| `0x00` | LCD scanout base select. v2.1 cold boot writes `0x08` for framebuffer base `0x1000`; v3.1 cold boot writes `0x40` for framebuffer base `0x8000`. |
 | `0x10..0x17` | Bank select registers for eight 128 KiB CPU windows. Values `0x00..0x07` select ROM banks, and values with bit `0x10` set select RAM. The current MAME patch also enables bit `0x08` as RAM for specific DreamWriter configs that need it for their startup/internal-store windows; for that bit-3-only case the RAM page follows the CPU window. |
 | `0x20` | CSiMON monitor-entry/status handshake candidate. Normal DreamWriter startup writes `0x00` at `C000:005B`; the high-ROM CSiMON entry stub at `FFDF:0005` writes `0x20` after it is already running. No reads or other confirmed values have been found. |
 | `0x30` | Control latch mirrored at `[6D94]`. Bits `0..2` select the RS-232 baud-clock divider, bit `0x08` is pulsed during USART setup, bit `0x10` is a persistent RS-232 enable/setup bit, bit `0x20` is pulsed for Centronics `-STB`, and diagnostic `T`/`N` temporarily writes bit `0x80`. No confirmed firmware read has been found. |
@@ -322,10 +327,17 @@ Port `0x20` has only direct writes in early-startup style code. Normal
 DreamWriter startup clears it:
 
 ```asm
+; v2.1
 C000:0055  mov  al,08
-C000:0057  out  00,al       ; LCD scanout base
+C000:0057  out  00,al       ; LCD scanout base 0x1000
 C000:0059  mov  al,00
 C000:005B  out  20,al
+
+; v3.1
+C000:004A  mov  al,40
+C000:004C  out  00,al       ; LCD scanout base 0x8000
+C000:004E  mov  al,F0
+C000:0050  out  DE,al
 ```
 
 A separate high-ROM CSiMON entry stub at physical `0xFFDF5` / file `0x7FDF5`

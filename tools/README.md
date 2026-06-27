@@ -72,6 +72,89 @@ tools/compare_rom_dumps.py /path/to/new-dump.ic303
 tools/compare_rom_dumps.py dumps/*.bin
 ```
 
+### `extract_wp_nvram.py`
+
+Lists or extracts files from the built-in store volume in a Dreamulator T400
+NVRAM image. The default offsets match the isolated WP STORE captures used by
+the v3.1 edited-file-format notes.
+
+```sh
+python3 tools/extract_wp_nvram.py /home/admin/.fltk/dreamulator/dreamulator/wpformat_hyphen_31.ic303.nvram --list
+python3 tools/extract_wp_nvram.py /home/admin/.fltk/dreamulator/dreamulator/wpformat_hyphen_31.ic303.nvram --extract hyph --hex
+```
+
+### `decode_wp_payload.py`
+
+Decodes the native word-processor edited-file payload after it has been
+extracted from the built-in store volume or captured through another path. The
+tool validates the leading `FF length header` shape, prints the seven serialized
+page-format words, checks the tab-stop tail, and can walk the body stream using
+the fixed-width record grammar documented in
+`v3.1/docs/disassembly/wp-edited-file-format.md`.
+
+It also annotates known `E9`/`EF` subtypes, `EC` pitch values, `ED` line-spacing
+values, and `[745F]` style bits. It does not try to reflow text or reconstruct
+the live editor buffer's temporary formatter state.
+
+For recalled files that do not start with `FF`, `--legacy-preview` shows the
+ROM-style legacy/plain-text normalization: CR/LF become `0x0C`, unsupported C0
+controls and bytes `>= 0xE0` are dropped, and tabs can optionally be expanded
+to eight-column stops.
+
+Use `--strict --require-native` when checking a native STORE capture that
+should have a valid header and well-formed fixed-width body records.
+
+```sh
+python3 tools/extract_wp_nvram.py /home/admin/.fltk/dreamulator/dreamulator/wpformat_hyphen_31.ic303.nvram --extract hyph --output /tmp/hyph.wp
+python3 tools/decode_wp_payload.py /tmp/hyph.wp --body
+python3 tools/decode_wp_payload.py /tmp/hyph.wp --body --strict --require-native
+python3 tools/decode_wp_payload.py /tmp/plain.txt --legacy-preview --legacy-expand-tabs
+```
+
+Focused decoder tests cover native header parsing, malformed-header warnings,
+legacy/plain normalization, strict native record validation, truncated
+fixed-width records, `EF` sign-extension checks, unknown `E9`/`EF` subtype
+record preservation, and `--require-native` behavior:
+
+```sh
+python3 tools/test_decode_wp_payload.py
+```
+
+### `dump_dreamulator_remote_mem.py`
+
+Dumps memory through Dreamulator's `--remote` debug socket. Dreamulator accepts
+at most 256 bytes per `mem` command, so the helper chunks larger reads and
+writes a binary dump or hex text.
+
+For the active Dreamulator LCD framebuffer, start Dreamulator with a remote
+port and dump 4 KiB from the selected LCD base. Common candidates are
+`0000:1000` and `0000:8000`:
+
+```sh
+/usr/home/admin/T400/dreamulator/build/dreamulator --remote 9999 --rom ../dreamulator/roms/t4_ir_3.1_T4-067979
+python3 tools/dump_dreamulator_remote_mem.py --port 9999 0000:1000 0x1000 -o /tmp/t400-framebuffer-1000.bin
+python3 tools/dump_dreamulator_remote_mem.py --port 9999 0000:8000 0x1000 -o /tmp/t400-framebuffer-8000.bin
+python3 tools/render_dreamwriter_framebuffer.py /tmp/t400-framebuffer-1000.bin /tmp/t400-framebuffer-1000.png
+python3 tools/render_dreamwriter_framebuffer.py /tmp/t400-framebuffer-8000.bin /tmp/t400-framebuffer-8000.png
+```
+
+The LCD base comes from port `0x00` as `value << 9`, so it is
+state-dependent. v2.1 cold boot uses `0x08` (`0000:1000`), while v3.1 cold boot
+uses `0x40` (`0000:8000`). In a live v3.1 `t4_ir_3.1_T4-067979` Dreamulator
+run, `0000:8000` rendered the menu screen and `0000:1000` held stale or
+alternate pixel data. Dump the two candidates sequentially; Dreamulator's
+remote socket accepts only one client at a time.
+
+### `render_dreamwriter_framebuffer.py`
+
+Renders a raw DreamWriter LCD framebuffer dump to a PNG. The default geometry
+is the T400 display: 480 visible pixels, 64 scanlines, and a 64-byte stride
+for each 512-bit framebuffer row.
+
+```sh
+python3 tools/render_dreamwriter_framebuffer.py /tmp/t400-framebuffer.bin /tmp/t400-framebuffer.png --scale 2
+```
+
 ### `addr`
 
 Converts between ROM file offsets, physical addresses, and canonical

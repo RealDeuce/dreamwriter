@@ -56,6 +56,7 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 | [`disassembly/app-entry.md`](disassembly/app-entry.md) | C772:0004 (cold) and C772:0008 (warm) entry points, cold init chain, storage endpoint cycling. |
 | [`disassembly/menu-interpreter.md`](disassembly/menu-interpreter.md) | Menu scripting engine: bytecode interpreter loop, dispatch table (96 opcodes), handler classification. |
 | [`disassembly/c772-native-helpers.md`](disassembly/c772-native-helpers.md) | Native helpers: state management (45A7/4556), text buffer ops (3BB6-3C2D), service dispatcher (8415), DEF0 callbacks (E800-E946). |
+| [`disassembly/wp-edited-file-format.md`](disassembly/wp-edited-file-format.md) | Word-processor edited-file payload: `FF length` state header, C772 serializer/parser, and current body-stream markers. |
 
 ### DEF0 — Service/Wrapper Layer
 
@@ -72,7 +73,7 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 | [`disassembly/rom-card-launcher.md`](disassembly/rom-card-launcher.md) | OTHERS -> ROM CARD `EROMCARD.X` launcher at DEF0:2C37: path search, load to `0xA4F0`, handoff through C772:0212. |
 | [`disassembly/def0-file-services.md`](disassembly/def0-file-services.md) | Far-call table file entries #16-#39, DEF0:DFD5 file service core. |
 | [`disassembly/def0-keyboard-subsystem.md`](disassembly/def0-keyboard-subsystem.md) | Keyboard/input processing (DEF0:6278..6FFF), input fields, character handling. |
-| [`disassembly/def0-storage-subsystem.md`](disassembly/def0-storage-subsystem.md) | Internal storage management (DEF0:7000..9FFF), file handle table, document format. |
+| [`disassembly/def0-storage-subsystem.md`](disassembly/def0-storage-subsystem.md) | Internal storage management (DEF0:7000..9FFF), file handle table, organizer ODB container. |
 
 ### Dispatch and Thunks
 

@@ -106,6 +106,45 @@ is no evidence yet that it lets the user place the live editing buffer on the
 card or in any other storage window. The editor heap and block allocator are
 tracked in [`wp-editor-heap.md`](wp-editor-heap.md).
 
+## Edited Document File Format Status
+
+The edited word-processor document payload is not fully documented yet. The
+filesystem container is reasonably well understood: a custom DreamWriter volume
+header, FAT12-style allocation, 32-byte directory entries, standard attribute
+bits, packed DOS/FAT timestamps, and file sizes. The document bytes inside a
+stored WP file are a separate editor stream consumed by `C688:4F63` and produced
+by the STORE path through `C688:7308`.
+
+Current confirmed payload evidence is limited:
+
+| Evidence | Current read |
+| --- | --- |
+| `RECALL` loader | `C688:4F63` resets editor state through `C688:1A71`, then feeds bytes into the word-processor stream interpreter at `C688:0240`. |
+| `STORE` writer | The FILE handler reaches `C688:7308` after filename/overwrite/secret prompts; that routine has not been fully decoded as a byte-format writer. |
+| Stored editor marker | Test files seen so far begin with `0xFF`, a one-byte header length, then an editor/document header. The v3.1 native serializer confirms this `FF length` shape. |
+| Header length | A saved `Test.txt` and the BASIC-card test both use `0x10`, i.e. a 16-byte editor header. This is a length byte, not a fixed file type. |
+| Text body | Plain text bytes are accepted after the header; observed examples use `0x0C` as the editor line separator. |
+| Live representation | The imported document is converted into the private editor block heap documented in [`wp-editor-heap.md`](wp-editor-heap.md), not kept as a flat file image. |
+
+Unknowns include the 16-byte header field meanings, the complete control-byte
+grammar for formatting and document state, the exact STORE serialization rules,
+and the interaction with the secret/password file flags. Treat any generated
+document file using only `FF 10 <16-byte header> <plain text with 0C line
+separators>` as a compatibility subset, not a full native format specification.
+
+The v3.1-family ROM gives a more complete native WP payload read in
+[`../../v3.1/docs/disassembly/wp-edited-file-format.md`](../../v3.1/docs/disassembly/wp-edited-file-format.md):
+the leading bytes are `FF <header-length>`, followed by seven serialized editor
+state words and a variable table. A `0x10` length means a 14-byte fixed header
+plus two bytes of variable-table data.
+
+The later v3.1-family ROM also contains an indexed ODB database container used
+by Scheduler and Address Book. That format is documented from the v3.1.260
+storage code in
+[`../../v3.1/docs/disassembly/def0-storage-subsystem.md`](../../v3.1/docs/disassembly/def0-storage-subsystem.md#indexed-organizer-database-format).
+Do not treat that ODB evidence as the WP edited-file format until the C772
+document STORE/RECALL path is tied to it.
+
 ## DOS-Like API Surface
 
 The storage layer uses a DOS-like `int 21h` API. The wrappers around

@@ -144,6 +144,29 @@ The local directory entry format is DOS-shaped:
 | `+0x1A..0x1B` | First cluster. |
 | `+0x1C..0x1F` | File size. |
 
+The attribute byte follows the normal DOS/FAT bit layout:
+
+| Bit | Name | Use seen here |
+| ---: | --- | --- |
+| `0x01` | Read-only | Blocks write/delete-like paths. |
+| `0x02` | Hidden | Used by find-first/find-next attribute filtering. |
+| `0x04` | System | Used by find-first/find-next attribute filtering. |
+| `0x08` | Volume label | Standard DOS meaning; no normal document-file use seen. |
+| `0x10` | Directory | Standard DOS meaning; no subdirectory flow seen. |
+| `0x20` | Archive | Normal file/default document attribute. |
+
+Bits outside `0x3F` have no confirmed local-storage meaning.
+
+The timestamp words are little-endian DOS/FAT directory timestamps:
+
+```text
+time = (hour << 11) | (minute << 5) | (second / 2)
+date = ((year - 1980) << 9) | (month << 5) | day
+```
+
+The ROM packer stores seconds at two-second granularity. If `year - 1980` is
+`>= 100`, it subtracts another `100` before writing the seven-bit year field.
+
 The create helper seeds time/date from the existing `INT 21h` date/time
 services:
 

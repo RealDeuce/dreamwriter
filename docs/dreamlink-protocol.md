@@ -252,6 +252,10 @@ host -> DreamWriter: 13 4F 00 <compact-entry> 00 <extra> 11
 DreamWriter -> host: 06 11
 ```
 
+The `06 11` ACK is sent only for successful `4E`/`4F` responses. A nonzero
+status response used for end-of-list is handled on the parser's failure path and
+does not get this ACK.
+
 `4E` resets page index `7038` to zero. Each `4F` increments it. The parser
 expands each compact host record into one 32-byte local directory entry at
 `[6FA3]:(page_index << 5)`. For DreamLink listings, the filename parser selects
@@ -262,10 +266,10 @@ The compact record is position-based. Positions `0..20` are meaningful:
 | Compact position | Expanded directory-entry offset | Current interpretation |
 | ---: | ---: | --- |
 | `0` | `0B` | attribute/status byte |
-| `1` | `16` | time/date or metadata byte |
-| `2` | `17` | time/date or metadata byte |
-| `3` | `18` | time/date or metadata byte |
-| `4` | `19` | time/date or metadata byte |
+| `1` | `16` | packed FAT/DOS time low byte |
+| `2` | `17` | packed FAT/DOS time high byte |
+| `3` | `18` | packed FAT/DOS date low byte |
+| `4` | `19` | packed FAT/DOS date high byte |
 | `5` | `1C` | size byte |
 | `6` | `1D` | size byte |
 | `7` | `1E` | size byte |
@@ -273,13 +277,38 @@ The compact record is position-based. Positions `0..20` are meaningful:
 | `9..16` | `00..07` | 8-character base name |
 | `17..20` | `0C..0F` | 4-character DreamLink suffix/format field |
 
+The byte at expanded offset `0B` uses the normal DOS/FAT attribute bit layout:
+
+| Bit | Name | Notes for DreamLink hosts |
+| ---: | --- | --- |
+| `0x01` | Read-only | The ROM blocks write/delete-like operations on matching local entries. |
+| `0x02` | Hidden | Participates in the ROM's find-first/find-next attribute filtering. |
+| `0x04` | System | Participates in the ROM's find-first/find-next attribute filtering. |
+| `0x08` | Volume label | Not a normal document file. Avoid in DreamLink listings unless a trace shows PC software using it. |
+| `0x10` | Directory | Not a normal document file. No DreamLink subdirectory flow has been found. |
+| `0x20` | Archive | Best default for ordinary host files/documents. |
+
+Bits outside `0x3F` have no confirmed DreamWriter-side meaning in this path.
+
+The timestamp words are little-endian DOS/FAT directory timestamps:
+
+```text
+time = (hour << 11) | (minute << 5) | (second / 2)
+date = ((year - 1980) << 9) | (month << 5) | day
+```
+
+Seconds therefore have two-second granularity. The ROM-side packer subtracts
+1980 from the current year, and if the result is `>= 100` it subtracts another
+100 before writing the seven-bit year field; hosts should stay in the normal
+FAT date range unless a trace shows otherwise.
+
 Important details:
 
 | Behavior | Note |
 | --- | --- |
 | entry slots are prefilled | Offsets `00..0A` are spaces; offsets `0C..0F` are zero. |
 | NUL before compact position `9` | Stored as data and parsing continues. |
-| NUL at compact position `9` or later | Terminates the compact record/page. |
+| NUL at compact position `9` or later | Terminates the compact record/page; the response is still successful and gets the normal `06 11` ACK. It does not terminate the whole listing loop. |
 | compact positions `21..254` | Ignored, except they advance the position counter. |
 | compact position `255` | Treated as parser error. |
 
@@ -289,16 +318,40 @@ separator. When logical character index 8 is reached, it skips four bytes in the
 expanded entry, matching the host listing layout above (`0C..0F` rather than
 plain DOS offsets `08..0B`).
 
-End-of-list handling needs a capture. The ROM treats a failed `4E`/`4F`
-response with detail byte `7052 == 12` as a successful end/empty listing. The
-status byte only needs to be nonzero for the parser to enter this path:
+DreamLink filename parsing is case-sensitive. Unlike endpoint `0B`, endpoint
+`0A` does not call the parser helper that maps `a..z` to `A..Z`; the parsed name
+buffer and the cached listing entry are compared byte-for-byte, except for `?`
+wildcards in the parsed name. A host should therefore list filenames in the same
+case it expects the DreamWriter to send back in later open/delete/rename
+commands. For rename in particular, a case-insensitive host filesystem can
+successfully rename a file while the ROM's post-rename cache update still
+reports "File not found" if the old name's case does not match the cached
+listing entry.
+
+Wildcard matching is a DreamWriter-side directory-cache operation, not a
+host-side listing operation. The `4E`/`4F` request frames carry no filename or
+pattern, so the host should return directory entries in normal order and let the
+ROM's find-first/find-next scan apply `?` wildcards against the cached entries.
+For command frames that do carry a filename (`13`, `17`, `3C`, `3D`), no
+separate wildcard expansion has been found in the DreamLink protocol; treat the
+received name as the operation's exact target unless a real PC trace proves
+otherwise.
+
+End-of-list handling uses a nonzero-status response with detail byte
+`7052 == 12`. The status byte only needs to be nonzero for the parser to enter
+this path:
 
 ```text
 host -> DreamWriter: 13 4E <nonzero-status> 12 11
+host -> DreamWriter: 13 4F <nonzero-status> 12 11
 ```
 
 The exact status byte used by the PC software should be confirmed, but the
-DreamWriter-side branch keys on detail byte `12`, not on the status value.
+DreamWriter-side branch keys on detail byte `12`, not on the status value. The
+parser consumes the detail byte and trailer, returns failure, then the
+directory-listing wrapper converts detail `12` to clean end-of-list. No block
+finish helper runs, no `15 11` block-status prompt is involved, and no `06 11`
+ACK is sent for this failed response.
 
 ## Command Details
 
@@ -315,13 +368,44 @@ up to 12 non-NUL bytes and a final NUL. The final NUL is not added to `sum`.
 
 ### `17`: Rename
 
+The file UI normally lists the DreamLink directory first so the user can select
+the old name, then prompts for the new name. The actual rename operation is a
+single command frame; it does not open either file and does not start a data
+stream:
+
 ```text
 DreamWriter -> host: 13 17 <old-name NUL> <new-name NUL> <sum> 11
 host -> DreamWriter: 13 17 00 11
 ```
 
-Both names are sent through the same 12-byte maximum filename sender. The final
+Both names are sent through the same 12-byte maximum filename sender. The old
+name comes from the first path argument and the new name from the second path
+argument; the internal drive prefixes are skipped before transmission. The final
 NUL bytes are transmitted but are not included in `sum`.
+
+The accumulator starts at `17` and adds the non-NUL bytes from both names. Since
+`17` is in the no-ACK list, a successful `13 17 00 11` response is the whole
+transaction: the DreamWriter does not send a following `06 11` ACK, does not
+send a `15 11` block-status prompt, and does not call the `AX=4429` finish
+helper for rename. Host-side, perform the rename atomically if possible; if the
+old name is missing, the new name already exists, or the host rejects the
+operation, return a nonzero status/detail response:
+
+```text
+host -> DreamWriter: 13 17 <nonzero-status> <detail> 11
+```
+
+The exact PC-side status/detail values for rename failures are not yet known.
+
+Observed v3.1 ROM quirk: after `C000:6149` receives a successful host response,
+the `INT 21h AH=56` implementation still falls through to the shared local
+directory cleanup path at `C000:50F5`. That helper preloads DOS error `02`
+("File not found"), scans the currently cached directory page for the old parsed
+name, and only clears the error if it finds and rewrites that cached entry with
+the new parsed name. If the old entry is not present in the current cache/page,
+the host-side rename may have succeeded but the DreamWriter still reports "File
+not found" on return. This error is produced after the `17` transaction; do not
+add a second status frame or a block ACK to the host response.
 
 ### `3C`: Create Or Truncate
 
@@ -393,7 +477,20 @@ host -> DreamWriter: 13 40 00 11
 
 The three-byte response shown after `15 11` is inferred from the protocol's
 generic ACK shape. The decoded DreamWriter code only requires that three bytes
-are received; it stores them at `704C..704E` and does not compare them.
+are received; it stores them at `704C..704E` and does not compare them. That
+three-byte response is not the command completion status. After it is received,
+the ROM calls the shared response parser with expected command `40`, so the host
+must send the following `13 40 <status> ... 11` frame.
+
+This finish helper is exposed through the private IOCTL subfunction
+`AX=4429`. The ROM-side helper is state-light: it resolves the passed handle
+into the global endpoint byte and, if that endpoint is DreamLink, emits the raw
+EOF block above. It does not verify that a `40` write stream is active. The
+file-operation cleanup path can therefore send this EOF block after a DreamLink
+directory/listing probe, including after a `4E` end-of-list response, without a
+preceding `3C` create or `40` setup. A host should treat an out-of-command EOF
+block as cleanup/no-op: consume it, answer the `15 11` prompt, answer the final
+`40` status frame, and do not create or save a file for that trace.
 
 ### `44`: Initialize/Format
 
