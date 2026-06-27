@@ -133,7 +133,7 @@ document file using only `FF 10 <16-byte header> <plain text with 0C line
 separators>` as a compatibility subset, not a full native format specification.
 
 The v3.1-family ROM gives a more complete native WP payload read in
-[`../../v3.1/docs/disassembly/wp-edited-file-format.md`](../../v3.1/docs/disassembly/wp-edited-file-format.md):
+[`../../docs/wp-edited-file-format.md`](../../docs/wp-edited-file-format.md):
 the leading bytes are `FF <header-length>`, followed by seven serialized editor
 state words and a variable table. A `0x10` length means a 14-byte fixed header
 plus two bytes of variable-table data.

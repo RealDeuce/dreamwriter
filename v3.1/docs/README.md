@@ -56,7 +56,7 @@ Call graph at [`disassembly/call-graph.dot`](disassembly/call-graph.dot).
 | [`disassembly/app-entry.md`](disassembly/app-entry.md) | C772:0004 (cold) and C772:0008 (warm) entry points, cold init chain, storage endpoint cycling. |
 | [`disassembly/menu-interpreter.md`](disassembly/menu-interpreter.md) | Menu scripting engine: bytecode interpreter loop, dispatch table (96 opcodes), handler classification. |
 | [`disassembly/c772-native-helpers.md`](disassembly/c772-native-helpers.md) | Native helpers: state management (45A7/4556), text buffer ops (3BB6-3C2D), service dispatcher (8415), DEF0 callbacks (E800-E946). |
-| [`disassembly/wp-edited-file-format.md`](disassembly/wp-edited-file-format.md) | Word-processor edited-file payload: `FF length` state header, C772 serializer/parser, and current body-stream markers. |
+| [`../../docs/wp-edited-file-format.md`](../../docs/wp-edited-file-format.md) | Word-processor edited-file payload: `FF length` state header, C772 serializer/parser, and current body-stream markers. |
 
 ### DEF0 — Service/Wrapper Layer
 

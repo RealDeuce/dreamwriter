@@ -123,7 +123,7 @@ Subservices used by the word-processor file paths include:
 The native WP edited-file converter in `C772:8046` reaches this dispatcher via
 `C772:861B`/`C772:863C` and thunk-A slot 6 (`C772:970F` with `AH=6`). Those
 paths are documented with the edited-file format in
-[`wp-edited-file-format.md`](wp-edited-file-format.md).
+[`../../../docs/wp-edited-file-format.md`](../../../docs/wp-edited-file-format.md).
 
 ## C772 Blocks Reached via Thunk A
 

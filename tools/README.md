@@ -90,7 +90,7 @@ extracted from the built-in store volume or captured through another path. The
 tool validates the leading `FF length header` shape, prints the seven serialized
 page-format words, checks the tab-stop tail, and can walk the body stream using
 the fixed-width record grammar documented in
-`v3.1/docs/disassembly/wp-edited-file-format.md`.
+`docs/wp-edited-file-format.md`.
 
 It also annotates known `E9`/`EF` subtypes, `EC` pitch values, `ED` line-spacing
 values, and `[745F]` style bits. It does not try to reflow text or reconstruct
